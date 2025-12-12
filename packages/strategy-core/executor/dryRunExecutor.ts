@@ -17,6 +17,8 @@ import {
     BlockDefinition,
     BlockCategory,
     NodeConfig,
+    Port,
+    PortDataType,
     SCHEMA_VERSION,
 } from '../schema';
 
@@ -223,6 +225,32 @@ function validateStrategy(
         });
     }
 
+    // Check for duplicate node IDs
+    const seenNodeIds = new Set<string>();
+    for (const node of strategy.nodes) {
+        if (seenNodeIds.has(node.id)) {
+            errors.push({
+                code: 'DUPLICATE_NODE_ID',
+                message: `Duplicate node ID: ${node.id}`,
+                nodeId: node.id,
+            });
+        }
+        seenNodeIds.add(node.id);
+    }
+
+    // Check for duplicate edge IDs
+    const seenEdgeIds = new Set<string>();
+    for (const edge of strategy.edges) {
+        if (seenEdgeIds.has(edge.id)) {
+            errors.push({
+                code: 'DUPLICATE_EDGE_ID',
+                message: `Duplicate edge ID: ${edge.id}`,
+                edgeId: edge.id,
+            });
+        }
+        seenEdgeIds.add(edge.id);
+    }
+
     // Check all edge references and port existence
     for (const edge of strategy.edges) {
         const sourceNode = graph.nodeMap.get(edge.source);
@@ -421,36 +449,90 @@ function resolveInputs(
     nodeId: string,
     graph: GraphIndex,
     dataCache: Map<string, unknown>
-): { inputs: Record<string, unknown>; error?: ExecutionError } {
+): { inputs: Record<string, unknown>; error?: ExecutionError; warnings: ExecutionWarning[] } {
     const inputs: Record<string, unknown> = {};
+    const warnings: ExecutionWarning[] = [];
     const incomingData = graph.incomingDataEdges.get(nodeId) ?? [];
+
+    // Get target node's block definition for port metadata
+    const targetNode = graph.nodeMap.get(nodeId);
+    const targetBlockDef = targetNode ? blockDefinitions.get(targetNode.type) : null;
 
     for (const edge of incomingData) {
         const cacheKey = `${edge.source}:${edge.sourcePort}`;
         const value = dataCache.get(cacheKey);
 
-        if (value === undefined) {
-            // Check if source node was executed
-            const sourceNode = graph.nodeMap.get(edge.source);
-            const blockDef = sourceNode ? blockDefinitions.get(sourceNode.type) : null;
-            const outputPort = blockDef?.outputs.find((p) => p.id === edge.sourcePort);
+        // Find the target input port definition
+        const targetInputPort = targetBlockDef?.inputs.find((p) => p.id === edge.targetPort);
 
-            if (outputPort?.required) {
-                return {
-                    inputs,
-                    error: {
-                        code: 'MISSING_REQUIRED_INPUT',
-                        message: `Missing required input from ${edge.source}:${edge.sourcePort}`,
-                        nodeId,
-                    },
-                };
+        // Check if TARGET input port is required and value is missing
+        if ((value === undefined || value === null) && targetInputPort?.required) {
+            return {
+                inputs,
+                warnings,
+                error: {
+                    code: 'MISSING_REQUIRED_INPUT',
+                    message: `Required input '${edge.targetPort}' on node '${nodeId}' received null/undefined from ${edge.source}:${edge.sourcePort}`,
+                    nodeId,
+                },
+            };
+        }
+
+        // Type validation (emit TYPE_MISMATCH warning if types don't match)
+        if (value !== undefined && value !== null && targetInputPort) {
+            const typeWarning = validatePortType(value, targetInputPort, nodeId, edge.targetPort);
+            if (typeWarning) {
+                warnings.push(typeWarning);
             }
         }
 
         inputs[edge.targetPort] = value ?? null;
     }
 
-    return { inputs };
+    return { inputs, warnings };
+}
+
+/**
+ * Validates that a value matches the expected port dataType.
+ * Returns a TYPE_MISMATCH warning if validation fails, null otherwise.
+ */
+function validatePortType(
+    value: unknown,
+    port: Port,
+    nodeId: string,
+    portId: string
+): ExecutionWarning | null {
+    // 'any' and 'trigger' types accept all values
+    if (port.dataType === 'any' || port.dataType === 'trigger') {
+        return null;
+    }
+
+    const actualType = typeof value;
+    let expectedType: string;
+
+    switch (port.dataType) {
+        case 'number':
+            expectedType = 'number';
+            break;
+        case 'boolean':
+            expectedType = 'boolean';
+            break;
+        case 'string':
+            expectedType = 'string';
+            break;
+        default:
+            return null; // Unknown port type, skip validation
+    }
+
+    if (actualType !== expectedType) {
+        return {
+            code: 'TYPE_MISMATCH',
+            message: `Port '${portId}' on node '${nodeId}' expects ${expectedType}, got ${actualType}`,
+            nodeId,
+        };
+    }
+
+    return null;
 }
 
 // =============================================================================
@@ -533,6 +615,7 @@ export function executeDryRun(
 
         // Resolve inputs
         const inputResult = resolveInputs(nodeId, graph, dataCache);
+        warnings.push(...inputResult.warnings);
         if (inputResult.error) {
             errors.push(inputResult.error);
             log.push({

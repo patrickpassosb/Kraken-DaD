@@ -4,6 +4,15 @@
  * Implementation of KrakenAdapter using Kraken's public REST API.
  * Uses only public endpoints, no authentication required.
  *
+ * RUNTIME REQUIREMENT:
+ * This module requires global `fetch` which is available in:
+ * - Node.js >= 18 (native)
+ * - All modern browsers
+ * - Cloudflare Workers, Deno, Bun
+ *
+ * The project enforces Node.js >= 18 via package.json "engines" field.
+ * No polyfills are bundled or required.
+ *
  * @module strategy-core/kraken/krakenRestAdapter
  */
 
