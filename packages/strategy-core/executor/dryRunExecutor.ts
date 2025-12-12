@@ -20,7 +20,7 @@ import {
     Port,
     PortDataType,
     SCHEMA_VERSION,
-} from '../schema';
+} from '../schema.js';
 
 // =============================================================================
 // EXECUTION RESULT TYPES
@@ -275,7 +275,7 @@ function validateStrategy(
         if (sourceNode) {
             const sourceBlockDef = blockDefinitions.get(sourceNode.type);
             if (sourceBlockDef) {
-                const hasSourcePort = sourceBlockDef.outputs.some((p) => p.id === edge.sourcePort);
+                const hasSourcePort = sourceBlockDef.outputs.some((p: Port) => p.id === edge.sourcePort);
                 if (!hasSourcePort) {
                     errors.push({
                         code: 'PORT_NOT_FOUND',
@@ -289,7 +289,7 @@ function validateStrategy(
         if (targetNode) {
             const targetBlockDef = blockDefinitions.get(targetNode.type);
             if (targetBlockDef) {
-                const hasTargetPort = targetBlockDef.inputs.some((p) => p.id === edge.targetPort);
+                const hasTargetPort = targetBlockDef.inputs.some((p: Port) => p.id === edge.targetPort);
                 if (!hasTargetPort) {
                     errors.push({
                         code: 'PORT_NOT_FOUND',
@@ -315,7 +315,7 @@ function validateStrategy(
 
     // Check for entry points
     const entryPoints = strategy.nodes.filter(
-        (node) => (graph.incomingControlEdges.get(node.id)?.length ?? 0) === 0
+        (node: StrategyNode) => (graph.incomingControlEdges.get(node.id)?.length ?? 0) === 0
     );
     if (entryPoints.length === 0) {
         errors.push({
@@ -463,7 +463,7 @@ function resolveInputs(
         const value = dataCache.get(cacheKey);
 
         // Find the target input port definition
-        const targetInputPort = targetBlockDef?.inputs.find((p) => p.id === edge.targetPort);
+        const targetInputPort = targetBlockDef?.inputs.find((p: Port) => p.id === edge.targetPort);
 
         // Check if TARGET input port is required and value is missing
         if ((value === undefined || value === null) && targetInputPort?.required) {

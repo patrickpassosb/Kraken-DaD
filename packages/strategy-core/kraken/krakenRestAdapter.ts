@@ -16,7 +16,7 @@
  * @module strategy-core/kraken/krakenRestAdapter
  */
 
-import { KrakenAdapter, KrakenTicker } from './krakenAdapter';
+import { KrakenAdapter, KrakenTicker } from './krakenAdapter.js';
 
 // =============================================================================
 // CONSTANTS
@@ -94,7 +94,7 @@ export class KrakenRestAdapter implements KrakenAdapter {
             throw new Error(`Kraken API error: HTTP ${response.status}`);
         }
 
-        const data: KrakenTickerResponse = await response.json();
+        const data = (await response.json()) as KrakenTickerResponse;
 
         // Check for API errors
         if (data.error && data.error.length > 0) {
