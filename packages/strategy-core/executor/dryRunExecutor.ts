@@ -1,0 +1,612 @@
+/**
+ * Kraken DaD - Dry-Run Execution Engine
+ *
+ * Executes strategies in dry-run mode following the execution lifecycle.
+ * No side effects, no API calls, deterministic behavior.
+ *
+ * @module strategy-core/executor/dryRunExecutor
+ */
+
+
+
+import {
+    Strategy,
+    StrategyNode,
+    StrategyEdge,
+    ExecutionContext,
+    BlockDefinition,
+    BlockCategory,
+    NodeConfig,
+    SCHEMA_VERSION,
+} from '../schema';
+
+// =============================================================================
+// EXECUTION RESULT TYPES
+// =============================================================================
+
+export interface ExecutionError {
+    readonly code: string;
+    readonly message: string;
+    readonly nodeId?: string;
+    readonly edgeId?: string;
+}
+
+export interface ExecutionWarning {
+    readonly code: string;
+    readonly message: string;
+    readonly nodeId?: string;
+}
+
+export interface ActionIntent {
+    readonly nodeId: string;
+    readonly type: string;
+    readonly intent: {
+        readonly action: string;
+        readonly params: NodeConfig;
+    };
+    readonly executed: false;
+}
+
+export interface NodeExecutionLog {
+    readonly nodeId: string;
+    readonly nodeType: string;
+    readonly inputs: Record<string, unknown>;
+    readonly outputs: Record<string, unknown>;
+    readonly durationMs: number;
+    readonly status: 'success' | 'error' | 'skipped';
+}
+
+export interface ExecutionResult {
+    readonly success: boolean;
+    readonly mode: 'dry-run';
+    readonly startedAt: string;
+    readonly completedAt: string;
+    readonly nodesExecuted: number;
+    readonly log: readonly NodeExecutionLog[];
+    readonly errors: readonly ExecutionError[];
+    readonly warnings: readonly ExecutionWarning[];
+    readonly actionIntents: readonly ActionIntent[];
+}
+
+// =============================================================================
+// BLOCK HANDLER TYPE
+// =============================================================================
+
+type BlockHandler = (
+    node: StrategyNode,
+    inputs: Record<string, unknown>,
+    ctx: ExecutionContext
+) => { outputs: Record<string, unknown>; actionIntent?: ActionIntent };
+
+// =============================================================================
+// BLOCK REGISTRY
+// =============================================================================
+
+const blockDefinitions: Map<string, BlockDefinition> = new Map();
+const blockHandlers: Map<string, BlockHandler> = new Map();
+
+/**
+ * data.constant - Returns a static value from config
+ */
+blockDefinitions.set('data.constant', {
+    type: 'data.constant',
+    category: 'data',
+    name: 'Constant',
+    description: 'Outputs a constant value from configuration',
+    inputs: [],
+    outputs: [
+        { id: 'value', label: 'Value', dataType: 'any', required: true },
+    ],
+});
+
+blockHandlers.set('data.constant', (node, _inputs, _ctx) => {
+    const value = node.config.value ?? null;
+    return { outputs: { value } };
+});
+
+/**
+ * logic.equals - Compares two values for equality
+ */
+blockDefinitions.set('logic.equals', {
+    type: 'logic.equals',
+    category: 'logic',
+    name: 'Equals',
+    description: 'Compares two values and outputs a boolean',
+    inputs: [
+        { id: 'a', label: 'A', dataType: 'any', required: true },
+        { id: 'b', label: 'B', dataType: 'any', required: true },
+    ],
+    outputs: [
+        { id: 'result', label: 'Result', dataType: 'boolean', required: true },
+    ],
+});
+
+blockHandlers.set('logic.equals', (node, inputs, _ctx) => {
+    const a = inputs.a;
+    const b = inputs.b;
+    const result = a === b;
+    return { outputs: { result } };
+});
+
+/**
+ * action.logIntent - Logs an intent without side effects
+ */
+blockDefinitions.set('action.logIntent', {
+    type: 'action.logIntent',
+    category: 'action',
+    name: 'Log Intent',
+    description: 'Logs an action intent in dry-run mode',
+    inputs: [
+        { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [],
+});
+
+blockHandlers.set('action.logIntent', (node, _inputs, _ctx) => {
+    const actionIntent: ActionIntent = {
+        nodeId: node.id,
+        type: node.type,
+        intent: {
+            action: (node.config.action as string) ?? 'LOG',
+            params: node.config,
+        },
+        executed: false,
+    };
+    return { outputs: {}, actionIntent };
+});
+
+// =============================================================================
+// GRAPH UTILITIES
+// =============================================================================
+
+interface GraphIndex {
+    nodeMap: Map<string, StrategyNode>;
+    controlEdges: StrategyEdge[];
+    dataEdges: StrategyEdge[];
+    incomingControlEdges: Map<string, StrategyEdge[]>;
+    incomingDataEdges: Map<string, StrategyEdge[]>;
+    outgoingControlEdges: Map<string, StrategyEdge[]>;
+}
+
+function buildGraphIndex(strategy: Strategy): GraphIndex {
+    const nodeMap = new Map<string, StrategyNode>();
+    const controlEdges: StrategyEdge[] = [];
+    const dataEdges: StrategyEdge[] = [];
+    const incomingControlEdges = new Map<string, StrategyEdge[]>();
+    const incomingDataEdges = new Map<string, StrategyEdge[]>();
+    const outgoingControlEdges = new Map<string, StrategyEdge[]>();
+
+    for (const node of strategy.nodes) {
+        nodeMap.set(node.id, node);
+        incomingControlEdges.set(node.id, []);
+        incomingDataEdges.set(node.id, []);
+        outgoingControlEdges.set(node.id, []);
+    }
+
+    for (const edge of strategy.edges) {
+        if (edge.type === 'control') {
+            controlEdges.push(edge);
+            incomingControlEdges.get(edge.target)?.push(edge);
+            outgoingControlEdges.get(edge.source)?.push(edge);
+        } else {
+            dataEdges.push(edge);
+            incomingDataEdges.get(edge.target)?.push(edge);
+        }
+    }
+
+    return {
+        nodeMap,
+        controlEdges,
+        dataEdges,
+        incomingControlEdges,
+        incomingDataEdges,
+        outgoingControlEdges,
+    };
+}
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
+
+function validateStrategy(
+    strategy: Strategy,
+    graph: GraphIndex
+): { errors: ExecutionError[]; warnings: ExecutionWarning[] } {
+    const errors: ExecutionError[] = [];
+    const warnings: ExecutionWarning[] = [];
+
+    // Check schema version
+    if (strategy.version !== SCHEMA_VERSION) {
+        errors.push({
+            code: 'INVALID_SCHEMA_VERSION',
+            message: `Expected schema version ${SCHEMA_VERSION}, got ${strategy.version}`,
+        });
+    }
+
+    // Check all edge references and port existence
+    for (const edge of strategy.edges) {
+        const sourceNode = graph.nodeMap.get(edge.source);
+        const targetNode = graph.nodeMap.get(edge.target);
+
+        if (!sourceNode) {
+            errors.push({
+                code: 'NODE_NOT_FOUND',
+                message: `Edge references non-existent source node: ${edge.source}`,
+                edgeId: edge.id,
+            });
+        }
+        if (!targetNode) {
+            errors.push({
+                code: 'NODE_NOT_FOUND',
+                message: `Edge references non-existent target node: ${edge.target}`,
+                edgeId: edge.id,
+            });
+        }
+
+        // Validate port existence
+        if (sourceNode) {
+            const sourceBlockDef = blockDefinitions.get(sourceNode.type);
+            if (sourceBlockDef) {
+                const hasSourcePort = sourceBlockDef.outputs.some((p) => p.id === edge.sourcePort);
+                if (!hasSourcePort) {
+                    errors.push({
+                        code: 'PORT_NOT_FOUND',
+                        message: `Source port '${edge.sourcePort}' not found on node '${edge.source}' (type: ${sourceNode.type})`,
+                        edgeId: edge.id,
+                        nodeId: edge.source,
+                    });
+                }
+            }
+        }
+        if (targetNode) {
+            const targetBlockDef = blockDefinitions.get(targetNode.type);
+            if (targetBlockDef) {
+                const hasTargetPort = targetBlockDef.inputs.some((p) => p.id === edge.targetPort);
+                if (!hasTargetPort) {
+                    errors.push({
+                        code: 'PORT_NOT_FOUND',
+                        message: `Target port '${edge.targetPort}' not found on node '${edge.target}' (type: ${targetNode.type})`,
+                        edgeId: edge.id,
+                        nodeId: edge.target,
+                    });
+                }
+            }
+        }
+    }
+
+    // Check for unknown block types
+    for (const node of strategy.nodes) {
+        if (!blockDefinitions.has(node.type)) {
+            errors.push({
+                code: 'UNKNOWN_BLOCK_TYPE',
+                message: `Unknown block type: ${node.type}`,
+                nodeId: node.id,
+            });
+        }
+    }
+
+    // Check for entry points
+    const entryPoints = strategy.nodes.filter(
+        (node) => (graph.incomingControlEdges.get(node.id)?.length ?? 0) === 0
+    );
+    if (entryPoints.length === 0) {
+        errors.push({
+            code: 'NO_ENTRY_POINT',
+            message: 'No entry points found (all nodes have incoming control edges)',
+        });
+    }
+
+    // Check for orphan nodes (warning)
+    for (const node of strategy.nodes) {
+        const hasIncoming = (graph.incomingControlEdges.get(node.id)?.length ?? 0) > 0;
+        const hasOutgoing = (graph.outgoingControlEdges.get(node.id)?.length ?? 0) > 0;
+        const isEntryPoint = !hasIncoming;
+        const isTerminal = !hasOutgoing;
+
+        if (!hasIncoming && !hasOutgoing && strategy.nodes.length > 1) {
+            warnings.push({
+                code: 'ORPHAN_NODE',
+                message: `Node is not connected to any control flow: ${node.id}`,
+                nodeId: node.id,
+            });
+        }
+    }
+
+    // Check for ambiguous data sources
+    const dataTargetCounts = new Map<string, number>();
+    for (const edge of graph.dataEdges) {
+        const key = `${edge.target}:${edge.targetPort}`;
+        dataTargetCounts.set(key, (dataTargetCounts.get(key) ?? 0) + 1);
+    }
+    for (const [key, count] of dataTargetCounts) {
+        if (count > 1) {
+            const [nodeId, portId] = key.split(':');
+            errors.push({
+                code: 'AMBIGUOUS_DATA_SOURCE',
+                message: `Multiple data edges target the same port: ${key}`,
+                nodeId,
+            });
+        }
+    }
+
+    // Validate required input ports have incoming data edges
+    for (const node of strategy.nodes) {
+        const blockDef = blockDefinitions.get(node.type);
+        if (!blockDef) continue;
+
+        const incomingData = graph.incomingDataEdges.get(node.id) ?? [];
+        const connectedInputPorts = new Set(incomingData.map((e) => e.targetPort));
+
+        for (const inputPort of blockDef.inputs) {
+            if (inputPort.required && !connectedInputPorts.has(inputPort.id)) {
+                errors.push({
+                    code: 'MISSING_REQUIRED_INPUT',
+                    message: `Required input port '${inputPort.id}' on node '${node.id}' has no incoming data edge`,
+                    nodeId: node.id,
+                });
+            }
+        }
+    }
+
+    return { errors, warnings };
+}
+
+// =============================================================================
+// TOPOLOGICAL SORT
+// =============================================================================
+
+function topologicalSort(
+    strategy: Strategy,
+    graph: GraphIndex
+): { order: string[]; error?: ExecutionError } {
+    const inDegree = new Map<string, number>();
+
+    for (const node of strategy.nodes) {
+        inDegree.set(node.id, 0);
+    }
+
+    for (const edge of graph.controlEdges) {
+        inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
+    }
+
+    // Sort entry points by ID for determinism
+    const queue: string[] = [];
+    for (const node of strategy.nodes) {
+        if (inDegree.get(node.id) === 0) {
+            queue.push(node.id);
+        }
+    }
+    queue.sort();
+
+    const order: string[] = [];
+
+    while (queue.length > 0) {
+        const nodeId = queue.shift()!;
+        order.push(nodeId);
+
+        const outgoing = graph.outgoingControlEdges.get(nodeId) ?? [];
+        // Sort outgoing edges by target ID for determinism
+        const sortedOutgoing = [...outgoing].sort((a, b) =>
+            a.target.localeCompare(b.target)
+        );
+
+        for (const edge of sortedOutgoing) {
+            const targetDegree = (inDegree.get(edge.target) ?? 0) - 1;
+            inDegree.set(edge.target, targetDegree);
+            if (targetDegree === 0) {
+                queue.push(edge.target);
+                queue.sort(); // Maintain deterministic order
+            }
+        }
+    }
+
+    if (order.length < strategy.nodes.length) {
+        return {
+            order,
+            error: {
+                code: 'CONTROL_CYCLE_DETECTED',
+                message: 'Cycle detected in control flow graph',
+            },
+        };
+    }
+
+    return { order };
+}
+
+// =============================================================================
+// DATA RESOLUTION
+// =============================================================================
+
+function resolveInputs(
+    nodeId: string,
+    graph: GraphIndex,
+    dataCache: Map<string, unknown>
+): { inputs: Record<string, unknown>; error?: ExecutionError } {
+    const inputs: Record<string, unknown> = {};
+    const incomingData = graph.incomingDataEdges.get(nodeId) ?? [];
+
+    for (const edge of incomingData) {
+        const cacheKey = `${edge.source}:${edge.sourcePort}`;
+        const value = dataCache.get(cacheKey);
+
+        if (value === undefined) {
+            // Check if source node was executed
+            const sourceNode = graph.nodeMap.get(edge.source);
+            const blockDef = sourceNode ? blockDefinitions.get(sourceNode.type) : null;
+            const outputPort = blockDef?.outputs.find((p) => p.id === edge.sourcePort);
+
+            if (outputPort?.required) {
+                return {
+                    inputs,
+                    error: {
+                        code: 'MISSING_REQUIRED_INPUT',
+                        message: `Missing required input from ${edge.source}:${edge.sourcePort}`,
+                        nodeId,
+                    },
+                };
+            }
+        }
+
+        inputs[edge.targetPort] = value ?? null;
+    }
+
+    return { inputs };
+}
+
+// =============================================================================
+// MAIN EXECUTOR
+// =============================================================================
+
+export function executeDryRun(
+    strategy: Strategy,
+    ctx: ExecutionContext
+): ExecutionResult {
+    const startedAt = new Date().toISOString();
+    const log: NodeExecutionLog[] = [];
+    const errors: ExecutionError[] = [];
+    const warnings: ExecutionWarning[] = [];
+    const actionIntents: ActionIntent[] = [];
+    const dataCache = new Map<string, unknown>();
+
+    // Step 1 & 2: Build graph index
+    const graph = buildGraphIndex(strategy);
+
+    // Step 3: Validate
+    const validation = validateStrategy(strategy, graph);
+    errors.push(...validation.errors);
+    warnings.push(...validation.warnings);
+
+    if (errors.length > 0) {
+        return {
+            success: false,
+            mode: 'dry-run',
+            startedAt,
+            completedAt: new Date().toISOString(),
+            nodesExecuted: 0,
+            log,
+            errors,
+            warnings,
+            actionIntents,
+        };
+    }
+
+    // Step 4 & 5: Compute execution order
+    const sortResult = topologicalSort(strategy, graph);
+    if (sortResult.error) {
+        errors.push(sortResult.error);
+        return {
+            success: false,
+            mode: 'dry-run',
+            startedAt,
+            completedAt: new Date().toISOString(),
+            nodesExecuted: 0,
+            log,
+            errors,
+            warnings,
+            actionIntents,
+        };
+    }
+
+    const executionOrder = sortResult.order;
+
+    // Step 6: Execute nodes in order
+    for (const nodeId of executionOrder) {
+        const node = graph.nodeMap.get(nodeId)!;
+        const handler = blockHandlers.get(node.type);
+
+        if (!handler) {
+            errors.push({
+                code: 'UNKNOWN_BLOCK_TYPE',
+                message: `No handler for block type: ${node.type}`,
+                nodeId,
+            });
+            log.push({
+                nodeId,
+                nodeType: node.type,
+                inputs: {},
+                outputs: {},
+                durationMs: 0,
+                status: 'error',
+            });
+            break;
+        }
+
+        // Resolve inputs
+        const inputResult = resolveInputs(nodeId, graph, dataCache);
+        if (inputResult.error) {
+            errors.push(inputResult.error);
+            log.push({
+                nodeId,
+                nodeType: node.type,
+                inputs: inputResult.inputs,
+                outputs: {},
+                durationMs: 0,
+                status: 'error',
+            });
+            break;
+        }
+
+        // Execute node
+        const execStart = Date.now();
+        let outputs: Record<string, unknown> = {};
+        let actionIntent: ActionIntent | undefined;
+
+        try {
+            const result = handler(node, inputResult.inputs, ctx);
+            outputs = result.outputs;
+            actionIntent = result.actionIntent;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            errors.push({
+                code: 'NODE_EXECUTION_ERROR',
+                message: `Error executing node: ${message}`,
+                nodeId,
+            });
+            log.push({
+                nodeId,
+                nodeType: node.type,
+                inputs: inputResult.inputs,
+                outputs: {},
+                durationMs: Date.now() - execStart,
+                status: 'error',
+            });
+            break;
+        }
+
+        const durationMs = Date.now() - execStart;
+
+        // Store outputs in cache
+        for (const [portId, value] of Object.entries(outputs)) {
+            dataCache.set(`${nodeId}:${portId}`, value);
+        }
+
+        // Collect action intent
+        if (actionIntent) {
+            actionIntents.push(actionIntent);
+        }
+
+        log.push({
+            nodeId,
+            nodeType: node.type,
+            inputs: inputResult.inputs,
+            outputs,
+            durationMs,
+            status: 'success',
+        });
+    }
+
+    // Step 7: Return result
+    const completedAt = new Date().toISOString();
+
+    return {
+        success: errors.length === 0,
+        mode: 'dry-run',
+        startedAt,
+        completedAt,
+        nodesExecuted: log.filter((l) => l.status === 'success').length,
+        log,
+        errors,
+        warnings,
+        actionIntents,
+    };
+}
