@@ -207,6 +207,117 @@ blockHandlers.set('data.kraken.ticker', (node, _inputs, _ctx) => {
     };
 });
 
+/**
+ * action.placeOrder - Places a trading order (dry-run logs intent only)
+ */
+blockDefinitions.set('action.placeOrder', {
+    type: 'action.placeOrder',
+    category: 'action',
+    name: 'Place Order',
+    description: 'Places a trading order (dry-run mode logs intent only)',
+    inputs: [
+        { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'price', label: 'Price', dataType: 'number', required: false },
+    ],
+    outputs: [
+        { id: 'orderId', label: 'Order ID', dataType: 'string', required: true },
+    ],
+});
+
+blockHandlers.set('action.placeOrder', (node, inputs, _ctx) => {
+    const pair = (node.config.pair as string) ?? 'XBT/USD';
+    const side = (node.config.side as string) ?? 'buy';
+    const type = (node.config.type as string) ?? 'market';
+    const amount = (node.config.amount as number) ?? 0.1;
+    const price = (inputs.price as number) ?? node.config.price;
+
+    const actionIntent: ActionIntent = {
+        nodeId: node.id,
+        type: node.type,
+        intent: {
+            action: 'PLACE_ORDER',
+            params: {
+                pair,
+                side,
+                type,
+                amount,
+                ...(price !== undefined && { price }),
+            },
+        },
+        executed: false,
+    };
+
+    // Mock order ID for dry-run
+    const mockOrderId = `order-${Date.now()}`;
+
+    return {
+        outputs: { orderId: mockOrderId },
+        actionIntent,
+    };
+});
+
+/**
+ * action.cancelOrder - Cancels a trading order (dry-run logs intent only)
+ */
+blockDefinitions.set('action.cancelOrder', {
+    type: 'action.cancelOrder',
+    category: 'action',
+    name: 'Cancel Order',
+    description: 'Cancels a trading order (dry-run mode logs intent only)',
+    inputs: [
+        { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'orderId', label: 'Order ID', dataType: 'string', required: false },
+    ],
+    outputs: [],
+});
+
+blockHandlers.set('action.cancelOrder', (node, inputs, _ctx) => {
+    const orderId = (inputs.orderId as string) ?? (node.config.orderId as string) ?? 'unknown';
+
+    const actionIntent: ActionIntent = {
+        nodeId: node.id,
+        type: node.type,
+        intent: {
+            action: 'CANCEL_ORDER',
+            params: { orderId },
+        },
+        executed: false,
+    };
+
+    return { outputs: {}, actionIntent };
+});
+
+/**
+ * logic.if - Conditional routing based on boolean input
+ */
+blockDefinitions.set('logic.if', {
+    type: 'logic.if',
+    category: 'logic',
+    name: 'If',
+    description: 'Routes control flow based on a boolean condition',
+    inputs: [
+        { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'condition', label: 'Condition', dataType: 'boolean', required: true },
+    ],
+    outputs: [
+        { id: 'true', label: 'True', dataType: 'trigger', required: true },
+        { id: 'false', label: 'False', dataType: 'trigger', required: true },
+    ],
+});
+
+blockHandlers.set('logic.if', (node, inputs, _ctx) => {
+    const condition = inputs.condition as boolean;
+
+    // Route control flow based on condition
+    // In dry-run, we just pass through - actual routing would be in control flow
+    return {
+        outputs: {
+            true: condition === true,
+            false: condition === false,
+        },
+    };
+});
+
 // =============================================================================
 // GRAPH UTILITIES
 // =============================================================================

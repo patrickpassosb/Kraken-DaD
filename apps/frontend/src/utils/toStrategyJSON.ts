@@ -1,22 +1,22 @@
 import { Node, Edge } from '@xyflow/react';
 import { Strategy } from '../api/executeDryRun';
 
-const PORT_TYPES: Record<string, Record<string, 'data' | 'control'>> = {
-    'control.start': {
-        out: 'control',
-    },
-    'data.kraken.ticker': {
-        price: 'data',
-        out: 'control',
-    },
-    'action.logIntent': {
-        in: 'control',
-        price: 'data',
-    },
-};
+export function getPortType(handleId: string): 'data' | 'control' {
+    if (handleId.startsWith('control:')) {
+        return 'control';
+    }
+    return 'data';
+}
 
-export function getPortType(nodeType: string, portId: string): 'data' | 'control' {
-    return PORT_TYPES[nodeType]?.[portId] ?? 'data';
+export function getPortId(handleId: string): string {
+    // Strip the prefix (control: or data:) to get the actual port ID
+    if (handleId.startsWith('control:')) {
+        return handleId.slice(8);
+    }
+    if (handleId.startsWith('data:')) {
+        return handleId.slice(5);
+    }
+    return handleId;
 }
 
 export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
@@ -30,18 +30,16 @@ export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     }));
 
     const strategyEdges = edges.map((edge) => {
-        const sourceNode = nodes.find((n) => n.id === edge.source);
-        const sourcePortType = sourceNode
-            ? getPortType(sourceNode.type || '', edge.sourceHandle || '')
-            : 'data';
+        const sourceHandle = edge.sourceHandle || '';
+        const targetHandle = edge.targetHandle || '';
 
         return {
             id: edge.id,
-            type: sourcePortType,
+            type: getPortType(sourceHandle),
             source: edge.source,
-            sourcePort: edge.sourceHandle || '',
+            sourcePort: getPortId(sourceHandle),
             target: edge.target,
-            targetPort: edge.targetHandle || '',
+            targetPort: getPortId(targetHandle),
         };
     });
 

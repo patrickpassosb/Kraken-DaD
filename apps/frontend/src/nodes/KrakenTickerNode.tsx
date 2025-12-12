@@ -5,7 +5,7 @@ export interface KrakenTickerNodeData {
     pair: string;
 }
 
-export function KrakenTickerNode({ id, data }: NodeProps<{ data: KrakenTickerNodeData }>) {
+export function KrakenTickerNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const [pair, setPair] = useState((data as KrakenTickerNodeData)?.pair || 'XBT/USD');
 
@@ -49,14 +49,14 @@ export function KrakenTickerNode({ id, data }: NodeProps<{ data: KrakenTickerNod
             <Handle
                 type="source"
                 position={Position.Right}
-                id="price"
+                id="data:price"
                 className="data"
                 style={{ top: '60%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
-                id="out"
+                id="control:out"
                 className="control"
                 style={{ top: '80%' }}
             />

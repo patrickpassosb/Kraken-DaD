@@ -34,22 +34,16 @@ export function FlowCanvas({
 
     const isValidConnection = useCallback(
         (connection: Connection) => {
-            const sourceNode = nodes.find((n) => n.id === connection.source);
-            const targetNode = nodes.find((n) => n.id === connection.target);
+            const sourceHandle = connection.sourceHandle || '';
+            const targetHandle = connection.targetHandle || '';
 
-            if (!sourceNode || !targetNode) return false;
-
-            const sourcePortType = getPortType(
-                sourceNode.type || '',
-                connection.sourceHandle || ''
-            );
-            const targetPortType = getPortType(
-                targetNode.type || '',
-                connection.targetHandle || ''
-            );
+            // Get port types from handle IDs
+            const sourcePortType = getPortType(sourceHandle);
+            const targetPortType = getPortType(targetHandle);
 
             // Only allow connections between same port types
             if (sourcePortType !== targetPortType) {
+                console.log(`Blocked: ${sourcePortType} → ${targetPortType}`);
                 return false;
             }
 
@@ -60,9 +54,14 @@ export function FlowCanvas({
                     e.targetHandle === connection.targetHandle
             );
 
-            return !hasExistingConnection;
+            if (hasExistingConnection) {
+                console.log('Blocked: target port already connected');
+                return false;
+            }
+
+            return true;
         },
-        [nodes, edges]
+        [edges]
     );
 
     const onConnect = useCallback(
@@ -71,14 +70,13 @@ export function FlowCanvas({
                 return;
             }
 
-            const sourceNode = nodes.find((n) => n.id === connection.source);
-            const portType = sourceNode
-                ? getPortType(sourceNode.type || '', connection.sourceHandle || '')
-                : 'data';
+            const sourceHandle = connection.sourceHandle || '';
+            const portType = getPortType(sourceHandle);
 
             const edge: Edge = {
                 ...connection,
                 id: `e-${connection.source}-${connection.target}-${Date.now()}`,
+                type: portType === 'control' ? 'step' : 'default',
                 style: {
                     stroke: portType === 'control' ? '#ff9100' : '#00e676',
                     strokeWidth: 2,
@@ -87,27 +85,10 @@ export function FlowCanvas({
 
             setEdges((eds) => addEdge(edge, eds));
         },
-        [nodes, setEdges, isValidConnection]
+        [setEdges, isValidConnection]
     );
 
     // Sync state changes to parent
-    const handleNodesChangeWrapper = useCallback(
-        (changes: Parameters<typeof handleNodesChange>[0]) => {
-            handleNodesChange(changes);
-            setTimeout(() => onNodesChange(nodes), 0);
-        },
-        [handleNodesChange, onNodesChange, nodes]
-    );
-
-    const handleEdgesChangeWrapper = useCallback(
-        (changes: Parameters<typeof handleEdgesChange>[0]) => {
-            handleEdgesChange(changes);
-            setTimeout(() => onEdgesChange(edges), 0);
-        },
-        [handleEdgesChange, onEdgesChange, edges]
-    );
-
-    // Update parent when nodes/edges change
     useMemo(() => {
         onNodesChange(nodes);
     }, [nodes, onNodesChange]);
@@ -119,11 +100,26 @@ export function FlowCanvas({
     const addNode = useCallback(
         (type: string, position: { x: number; y: number }) => {
             const id = `${type}-${Date.now()}`;
+            let data: Record<string, unknown> = {};
+
+            // Set default data based on node type
+            switch (type) {
+                case 'data.kraken.ticker':
+                    data = { pair: 'XBT/USD' };
+                    break;
+                case 'action.placeOrder':
+                    data = { pair: 'XBT/USD', side: 'buy', type: 'market', amount: 0.1 };
+                    break;
+                case 'action.cancelOrder':
+                    data = { orderId: '' };
+                    break;
+            }
+
             const newNode: Node = {
                 id,
                 type,
                 position,
-                data: type === 'data.kraken.ticker' ? { pair: 'XBT/USD' } : {},
+                data,
             };
             setNodes((nds) => [...nds, newNode]);
         },
@@ -147,8 +143,27 @@ export function FlowCanvas({
                     Kraken Ticker
                 </div>
                 <div
+                    className="palette-item"
+                    style={{ borderLeft: '3px solid #ffd700' }}
+                    onClick={() => addNode('logic.if', { x: 50, y: 300 })}
+                >
+                    If
+                </div>
+                <div
                     className="palette-item action"
-                    onClick={() => addNode('action.logIntent', { x: 50, y: 300 })}
+                    onClick={() => addNode('action.placeOrder', { x: 50, y: 400 })}
+                >
+                    Place Order
+                </div>
+                <div
+                    className="palette-item action"
+                    onClick={() => addNode('action.cancelOrder', { x: 50, y: 500 })}
+                >
+                    Cancel Order
+                </div>
+                <div
+                    className="palette-item action"
+                    onClick={() => addNode('action.logIntent', { x: 50, y: 600 })}
                 >
                     Log Intent
                 </div>
@@ -156,8 +171,8 @@ export function FlowCanvas({
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                onNodesChange={handleNodesChangeWrapper}
-                onEdgesChange={handleEdgesChangeWrapper}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
                 onConnect={onConnect}
                 isValidConnection={isValidConnection}
                 nodeTypes={nodeTypes}

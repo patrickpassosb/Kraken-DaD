@@ -4,12 +4,76 @@ import { FlowCanvas } from './canvas/FlowCanvas';
 import { executeDryRun, ExecutionResult } from './api/executeDryRun';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
+// Demo strategy: Start → Kraken Ticker → If → Place Order
+const demoNodes: Node[] = [
+    {
+        id: 'start-1',
+        type: 'control.start',
+        position: { x: 50, y: 200 },
+        data: {},
+    },
+    {
+        id: 'ticker-1',
+        type: 'data.kraken.ticker',
+        position: { x: 250, y: 180 },
+        data: { pair: 'XBT/USD' },
+    },
+    {
+        id: 'if-1',
+        type: 'logic.if',
+        position: { x: 500, y: 200 },
+        data: {},
+    },
+    {
+        id: 'order-1',
+        type: 'action.placeOrder',
+        position: { x: 750, y: 150 },
+        data: { pair: 'XBT/USD', side: 'buy', type: 'market', amount: 0.1 },
+    },
+];
+
+const demoEdges: Edge[] = [
+    {
+        id: 'e-start-ticker',
+        source: 'start-1',
+        sourceHandle: 'control:out',
+        target: 'ticker-1',
+        targetHandle: 'control:out',
+        type: 'step',
+        style: { stroke: '#ff9100', strokeWidth: 2 },
+    },
+    {
+        id: 'e-ticker-if-control',
+        source: 'ticker-1',
+        sourceHandle: 'control:out',
+        target: 'if-1',
+        targetHandle: 'control:trigger',
+        type: 'step',
+        style: { stroke: '#ff9100', strokeWidth: 2 },
+    },
+    {
+        id: 'e-if-order',
+        source: 'if-1',
+        sourceHandle: 'control:true',
+        target: 'order-1',
+        targetHandle: 'control:trigger',
+        type: 'step',
+        style: { stroke: '#ff9100', strokeWidth: 2 },
+    },
+    {
+        id: 'e-ticker-order-price',
+        source: 'ticker-1',
+        sourceHandle: 'data:price',
+        target: 'order-1',
+        targetHandle: 'data:price',
+        type: 'default',
+        style: { stroke: '#00e676', strokeWidth: 2 },
+    },
+];
 
 function App() {
-    const [nodes, setNodes] = useState<Node[]>(initialNodes);
-    const [edges, setEdges] = useState<Edge[]>(initialEdges);
+    const [nodes, setNodes] = useState<Node[]>(demoNodes);
+    const [edges, setEdges] = useState<Edge[]>(demoEdges);
     const [result, setResult] = useState<ExecutionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -70,8 +134,8 @@ function App() {
             </header>
 
             <FlowCanvas
-                initialNodes={initialNodes}
-                initialEdges={initialEdges}
+                initialNodes={demoNodes}
+                initialEdges={demoEdges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={handleEdgesChange}
             />

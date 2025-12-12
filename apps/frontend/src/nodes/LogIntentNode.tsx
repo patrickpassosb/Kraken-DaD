@@ -4,7 +4,7 @@ export interface LogIntentNodeData {
     action?: string;
 }
 
-export function LogIntentNode({ id, data }: NodeProps<{ data: LogIntentNodeData }>) {
+export function LogIntentNode(_props: NodeProps) {
     return (
         <div className="node-wrapper">
             <div className="node-header action">Log Intent</div>
@@ -21,14 +21,14 @@ export function LogIntentNode({ id, data }: NodeProps<{ data: LogIntentNodeData 
             <Handle
                 type="target"
                 position={Position.Left}
-                id="in"
+                id="control:in"
                 className="control"
                 style={{ top: '45%' }}
             />
             <Handle
                 type="target"
                 position={Position.Left}
-                id="price"
+                id="data:price"
                 className="data"
                 style={{ top: '70%' }}
             />
