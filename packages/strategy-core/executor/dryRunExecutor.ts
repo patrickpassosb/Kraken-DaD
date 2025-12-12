@@ -157,6 +157,38 @@ blockHandlers.set('action.logIntent', (node, _inputs, _ctx) => {
     return { outputs: {}, actionIntent };
 });
 
+/**
+ * data.kraken.ticker - Fetches ticker price from Kraken (mock in dry-run)
+ */
+blockDefinitions.set('data.kraken.ticker', {
+    type: 'data.kraken.ticker',
+    category: 'data',
+    name: 'Kraken Ticker',
+    description: 'Fetches latest ticker price from Kraken (dry-run uses mock)',
+    inputs: [],
+    outputs: [
+        { id: 'price', label: 'Price', dataType: 'number', required: true },
+        { id: 'pair', label: 'Pair', dataType: 'string', required: true },
+    ],
+});
+
+blockHandlers.set('data.kraken.ticker', (node, _inputs, _ctx) => {
+    const pair = node.config.pair as string;
+    if (!pair) {
+        throw new Error('Missing pair in config');
+    }
+
+    // DRY-RUN behavior: deterministic mock value, no API calls
+    const mockPrice = 42000;
+
+    return {
+        outputs: {
+            price: mockPrice,
+            pair,
+        },
+    };
+});
+
 // =============================================================================
 // GRAPH UTILITIES
 // =============================================================================
@@ -271,32 +303,35 @@ function validateStrategy(
             });
         }
 
-        // Validate port existence
-        if (sourceNode) {
-            const sourceBlockDef = blockDefinitions.get(sourceNode.type);
-            if (sourceBlockDef) {
-                const hasSourcePort = sourceBlockDef.outputs.some((p: Port) => p.id === edge.sourcePort);
-                if (!hasSourcePort) {
-                    errors.push({
-                        code: 'PORT_NOT_FOUND',
-                        message: `Source port '${edge.sourcePort}' not found on node '${edge.source}' (type: ${sourceNode.type})`,
-                        edgeId: edge.id,
-                        nodeId: edge.source,
-                    });
+        // Validate port existence (only for data edges)
+        // Control edges define execution order only, they don't transfer data via ports
+        if (edge.type === 'data') {
+            if (sourceNode) {
+                const sourceBlockDef = blockDefinitions.get(sourceNode.type);
+                if (sourceBlockDef) {
+                    const hasSourcePort = sourceBlockDef.outputs.some((p: Port) => p.id === edge.sourcePort);
+                    if (!hasSourcePort) {
+                        errors.push({
+                            code: 'PORT_NOT_FOUND',
+                            message: `Source port '${edge.sourcePort}' not found on node '${edge.source}' (type: ${sourceNode.type})`,
+                            edgeId: edge.id,
+                            nodeId: edge.source,
+                        });
+                    }
                 }
             }
-        }
-        if (targetNode) {
-            const targetBlockDef = blockDefinitions.get(targetNode.type);
-            if (targetBlockDef) {
-                const hasTargetPort = targetBlockDef.inputs.some((p: Port) => p.id === edge.targetPort);
-                if (!hasTargetPort) {
-                    errors.push({
-                        code: 'PORT_NOT_FOUND',
-                        message: `Target port '${edge.targetPort}' not found on node '${edge.target}' (type: ${targetNode.type})`,
-                        edgeId: edge.id,
-                        nodeId: edge.target,
-                    });
+            if (targetNode) {
+                const targetBlockDef = blockDefinitions.get(targetNode.type);
+                if (targetBlockDef) {
+                    const hasTargetPort = targetBlockDef.inputs.some((p: Port) => p.id === edge.targetPort);
+                    if (!hasTargetPort) {
+                        errors.push({
+                            code: 'PORT_NOT_FOUND',
+                            message: `Target port '${edge.targetPort}' not found on node '${edge.target}' (type: ${targetNode.type})`,
+                            edgeId: edge.id,
+                            nodeId: edge.target,
+                        });
+                    }
                 }
             }
         }
