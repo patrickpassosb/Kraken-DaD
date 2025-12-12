@@ -88,6 +88,24 @@ const blockDefinitions: Map<string, BlockDefinition> = new Map();
 const blockHandlers: Map<string, BlockHandler> = new Map();
 
 /**
+ * control.start - Entry point for control flow
+ */
+blockDefinitions.set('control.start', {
+    type: 'control.start',
+    category: 'control',
+    name: 'Start',
+    description: 'Entry point for control flow execution',
+    inputs: [],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+    ],
+});
+
+blockHandlers.set('control.start', (_node, _inputs, _ctx) => {
+    return { outputs: {} };
+});
+
+/**
  * data.constant - Returns a static value from config
  */
 blockDefinitions.set('data.constant', {

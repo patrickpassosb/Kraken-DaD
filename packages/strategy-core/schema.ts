@@ -30,7 +30,7 @@ export const SCHEMA_VERSION = 1 as const;
  * - `logic`: Decision nodes (conditions, comparisons, transforms)
  * - `action`: Execution nodes (place order, cancel, notify)
  */
-export type BlockCategory = 'data' | 'logic' | 'action';
+export type BlockCategory = 'data' | 'logic' | 'action' | 'control';
 
 // =============================================================================
 // PORT DEFINITIONS

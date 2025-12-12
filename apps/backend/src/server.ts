@@ -20,6 +20,17 @@ async function main() {
         },
     });
 
+    // CORS middleware for frontend access
+    fastify.addHook('onRequest', async (request, reply) => {
+        reply.header('Access-Control-Allow-Origin', '*');
+        reply.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        reply.header('Access-Control-Allow-Headers', 'Content-Type');
+
+        if (request.method === 'OPTIONS') {
+            reply.status(204).send();
+        }
+    });
+
     // Health check
     fastify.get('/health', async () => {
         return { status: 'ok', timestamp: new Date().toISOString() };
