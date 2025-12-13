@@ -87,6 +87,10 @@ type BlockHandler = (
 const blockDefinitions: Map<string, BlockDefinition> = new Map();
 const blockHandlers: Map<string, BlockHandler> = new Map();
 
+function pairKey(pair: string): string {
+    return pair.trim().toUpperCase();
+}
+
 /**
  * control.start - Entry point for control flow
  */
@@ -187,22 +191,24 @@ blockDefinitions.set('data.kraken.ticker', {
     outputs: [
         { id: 'price', label: 'Price', dataType: 'number', required: true },
         { id: 'pair', label: 'Pair', dataType: 'string', required: true },
+        { id: 'ask', label: 'Ask', dataType: 'number', required: false },
+        { id: 'bid', label: 'Bid', dataType: 'number', required: false },
+        { id: 'spread', label: 'Spread', dataType: 'number', required: false },
     ],
 });
 
-blockHandlers.set('data.kraken.ticker', (node, _inputs, _ctx) => {
-    const pair = node.config.pair as string;
-    if (!pair) {
-        throw new Error('Missing pair in config');
-    }
-
-    // DRY-RUN behavior: deterministic mock value, no API calls
-    const mockPrice = 42000;
-
+blockHandlers.set('data.kraken.ticker', (node, _inputs, ctx) => {
+    const pair = (node.config.pair as string) || 'BTC/USD';
+    const key = pairKey(pair);
+    const market = ctx.marketData?.[key];
+    const price = market?.last ?? 42000;
     return {
         outputs: {
-            price: mockPrice,
-            pair,
+            price,
+            pair: market?.pair ?? pair,
+            ask: market?.ask,
+            bid: market?.bid,
+            spread: market?.spread,
         },
     };
 });

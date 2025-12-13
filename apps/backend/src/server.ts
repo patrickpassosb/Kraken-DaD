@@ -9,6 +9,7 @@
 
 import Fastify from 'fastify';
 import { executeRoute } from './routes/execute.js';
+import { marketRoute } from './routes/market.js';
 
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
@@ -38,6 +39,7 @@ async function main() {
 
     // Register execute routes
     await fastify.register(executeRoute);
+    await fastify.register(marketRoute);
 
     // Start server
     try {

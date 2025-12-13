@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { FlowCanvas } from './canvas/FlowCanvas';
 import { executeDryRun, ExecutionResult } from './api/executeDryRun';
+import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
@@ -17,6 +18,8 @@ interface MarketContext {
     spread: number;
     change: number;
     status: MarketStatus;
+    ask?: number | null;
+    bid?: number | null;
 }
 
 // Demo strategy: Strategy Start -> Market Data -> Condition -> Risk -> Execution
@@ -236,6 +239,8 @@ function App() {
     const [result, setResult] = useState<ExecutionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
+    const [marketError, setMarketError] = useState<string | null>(null);
 
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
@@ -280,12 +285,47 @@ function App() {
     };
 
     const activePair = useMemo(() => derivePair(nodes), [nodes]);
-    const marketContext = useMemo(() => mockMarketContext(activePair), [activePair]);
-    const orderPreview = useMemo(() => deriveOrderPreview(nodes, marketContext), [nodes, marketContext]);
+    const orderPreview = useMemo(
+        () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
+        [nodes, marketContext, activePair]
+    );
     const timelineItems = useMemo(
         () => timelineFromResult(result, error, nodes),
         [result, error, nodes]
     );
+
+    useEffect(() => {
+        let isMounted = true;
+        setMarketError(null);
+        fetchMarketContext(activePair)
+            .then((ctx: MarketContextResponse) => {
+                if (!isMounted) return;
+                if (ctx.error) {
+                    setMarketError(ctx.error);
+                    setMarketContext(mockMarketContext(activePair));
+                    return;
+                }
+                setMarketContext({
+                    pair: ctx.pair,
+                    lastPrice: ctx.lastPrice,
+                    spread: ctx.spread ?? 0,
+                    change: ctx.change24h,
+                    status: 'Open',
+                    ask: ctx.ask,
+                    bid: ctx.bid,
+                });
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setMarketError('Using cached mock data (Kraken API unavailable)');
+                setMarketContext(mockMarketContext(activePair));
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [activePair]);
+
+    const displayMarketContext = marketContext ?? mockMarketContext(activePair);
 
     return (
         <div className="app-shell">
@@ -312,7 +352,7 @@ function App() {
             </header>
 
             <div className="dry-run-banner">
-                <strong>Safety-first:</strong> Dry-Run mode only. Kraken private endpoints are stubbed; public ticker is mocked. Connect lanes from Strategy Start → Market Data → Condition → Risk → Execution.
+                <strong>Safety-first:</strong> Dry-Run mode only. Public market data fetched from Kraken; private endpoints remain stubbed or validate-only. Connect lanes from Strategy Start → Market Data → Condition → Risk → Execution.
             </div>
 
             <div className="workspace">
@@ -331,12 +371,17 @@ function App() {
                     </div>
                     <div className="panel">
                         <div className="panel-title">Market Context</div>
+                        {marketError && (
+                            <div className="chip" style={{ marginBottom: '8px', color: 'var(--kraken-amber)' }}>
+                                {marketError}
+                            </div>
+                        )}
                         <MarketContextDock
-                            pair={marketContext.pair}
-                            lastPrice={marketContext.lastPrice}
-                            spread={marketContext.spread}
-                            change={marketContext.change}
-                            status={marketContext.status}
+                            pair={displayMarketContext.pair}
+                            lastPrice={displayMarketContext.lastPrice}
+                            spread={displayMarketContext.spread}
+                            change={displayMarketContext.change}
+                            status={displayMarketContext.status}
                         />
                     </div>
                     <div className="panel">

@@ -206,6 +206,20 @@ export interface ExecutionContext {
     readonly startTime?: string;
     /** Optional end time for backtesting (ISO 8601) */
     readonly endTime?: string;
+    /** Optional pre-fetched market data (populated by backend) */
+    readonly marketData?: Record<string, MarketDataSnapshot>;
+}
+
+/**
+ * Lightweight market snapshot injected at runtime from Kraken public APIs.
+ */
+export interface MarketDataSnapshot {
+    readonly pair: string;
+    readonly last: number;
+    readonly ask?: number;
+    readonly bid?: number;
+    readonly spread?: number;
+    readonly timestamp?: number;
 }
 
 // =============================================================================

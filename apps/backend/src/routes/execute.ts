@@ -15,6 +15,10 @@ import {
     executeDryRun,
     ExecutionResult,
 } from '../../../../packages/strategy-core/executor/dryRunExecutor.ts';
+import {
+    fetchTicker,
+    fetchDepth,
+} from '../../../../packages/kraken-client/index.ts';
 
 // =============================================================================
 // REQUEST/RESPONSE TYPES
@@ -87,9 +91,12 @@ export async function executeRoute(fastify: FastifyInstance) {
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
             const { strategy } = request.body;
 
+            const marketData = await buildMarketData(strategy, fastify);
+
             // Create execution context for dry-run mode
             const ctx: ExecutionContext = {
                 mode: 'dry-run',
+                marketData,
             };
 
             // Execute strategy
@@ -98,4 +105,53 @@ export async function executeRoute(fastify: FastifyInstance) {
             return reply.status(200).send(result);
         }
     );
+}
+
+function pairKey(pair: string): string {
+    return pair.trim().toUpperCase();
+}
+
+async function buildMarketData(
+    strategy: Strategy,
+    fastify: FastifyInstance
+): Promise<Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number }>> {
+    const pairs = new Set<string>();
+    for (const node of strategy.nodes) {
+        if (node.type === 'data.kraken.ticker' || node.type === 'action.placeOrder') {
+            const pair = (node.config as { pair?: string }).pair;
+            if (pair) {
+                pairs.add(pair);
+            }
+        }
+    }
+    if (pairs.size === 0) {
+        pairs.add('BTC/USD');
+    }
+
+    const marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number }> = {};
+
+    for (const pair of pairs) {
+        try {
+            const [ticker, depth] = await Promise.allSettled([fetchTicker(pair), fetchDepth(pair, 10)]);
+            if (ticker.status === 'fulfilled') {
+                marketData[pairKey(pair)] = {
+                    pair: ticker.value.pair,
+                    last: ticker.value.last,
+                    ask:
+                        ticker.value.ask ??
+                        (depth.status === 'fulfilled' ? depth.value.bestAsk : undefined),
+                    bid:
+                        ticker.value.bid ??
+                        (depth.status === 'fulfilled' ? depth.value.bestBid : undefined),
+                    spread:
+                        ticker.value.spread ??
+                        (depth.status === 'fulfilled' ? depth.value.spread : undefined),
+                };
+            }
+        } catch (err) {
+            fastify.log.warn({ err, pair }, 'Failed to fetch Kraken market data');
+        }
+    }
+
+    return marketData;
 }
