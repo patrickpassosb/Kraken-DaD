@@ -155,7 +155,7 @@ body {
 
 .workspace {
     display: grid;
-    grid-template-columns: 280px 1fr 380px;
+    grid-template-columns: 1fr 380px;
     grid-template-rows: 1fr;
     gap: var(--space-4);
     padding: var(--space-5);

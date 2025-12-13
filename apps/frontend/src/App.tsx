@@ -316,19 +316,6 @@ function App() {
             </div>
 
             <div className="workspace">
-                <div className="left-rail">
-                    <div className="panel">
-                        <div className="panel-title">Strategy Canvas</div>
-                        <div className="chip">Market Data → Logic → Risk → Execution</div>
-                        <div className="chip" style={{ marginTop: '8px' }}>
-                            Pair in focus: {formatPair(activePair)}
-                        </div>
-                        <p style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                            Kraken-native terminology, subtle highlights, and audit-friendly feedback. Drag nodes left-to-right to mirror execution lanes.
-                        </p>
-                    </div>
-                </div>
-
                 <FlowCanvas
                     initialNodes={demoNodes}
                     initialEdges={demoEdges}
