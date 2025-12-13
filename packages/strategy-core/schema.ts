@@ -190,11 +190,10 @@ export interface Strategy {
 /**
  * Execution mode for strategy runs.
  *
- * - `dry-run`: Simulate without any API calls
- * - `paper`: Use real market data but simulate orders
- * - `live`: Execute real orders (requires explicit opt-in)
+ * - `dry-run`: Simulate without any trading side effects (default for demo)
+ * - `live`: Execute real orders (requires explicit opt-in; disabled in this project)
  */
-export type ExecutionMode = 'dry-run' | 'paper' | 'live';
+export type ExecutionMode = 'dry-run' | 'live';
 
 /**
  * Runtime context passed to the execution engine.

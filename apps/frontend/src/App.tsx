@@ -122,6 +122,9 @@ function App() {
         <div className="app-container">
             <header className="header">
                 <h1>Kraken DaD</h1>
+                <div className="mode-badge" title="Uses Kraken public /0/public/Ticker for price data. Private trading endpoints (/0/private/AddOrder, /0/private/CancelOrder) are stubbed; live trading is disabled.">
+                    Dry-run mode (safe, no real orders)
+                </div>
                 <div className="header-actions">
                     <button className="btn btn-secondary" onClick={handleExportJSON}>
                         Export JSON
@@ -135,6 +138,9 @@ function App() {
                     </button>
                 </div>
             </header>
+            <div className="warning-banner">
+                This demo does NOT execute real trades. Kraken private endpoints are stubbed.
+            </div>
 
             <FlowCanvas
                 initialNodes={demoNodes}

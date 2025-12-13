@@ -16,7 +16,7 @@
  * @module strategy-core/kraken/krakenRestAdapter
  */
 
-import { KrakenAdapter, KrakenTicker } from './krakenAdapter.js';
+import { KrakenPublicAdapter, KrakenTicker } from './krakenAdapter.js';
 
 // =============================================================================
 // CONSTANTS
@@ -67,7 +67,7 @@ interface KrakenTickerResponse {
  * Kraken REST API adapter.
  * Fetches public market data from Kraken's REST API.
  */
-export class KrakenRestAdapter implements KrakenAdapter {
+export class KrakenPublicRestAdapter implements KrakenPublicAdapter {
     private readonly baseUrl: string;
 
     constructor(baseUrl: string = KRAKEN_API_BASE) {
@@ -125,3 +125,6 @@ export class KrakenRestAdapter implements KrakenAdapter {
         };
     }
 }
+
+// Backward-compatible alias
+export const KrakenRestAdapter = KrakenPublicRestAdapter;

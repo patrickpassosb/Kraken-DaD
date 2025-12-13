@@ -1,8 +1,8 @@
 /**
  * Kraken DaD - Kraken API Adapter Interface
  *
- * Defines the contract for Kraken API adapters.
- * This interface is injected into ExecutionContext for data blocks.
+ * Defines the contracts for Kraken API adapters.
+ * Public adapter is used for market data; private adapter is stubbed (no live trading).
  *
  * @module strategy-core/kraken/krakenAdapter
  */
@@ -28,10 +28,10 @@ export interface KrakenTicker {
 // =============================================================================
 
 /**
- * Kraken API adapter interface.
+ * Kraken public API adapter interface.
  * Implementations may use REST, WebSocket, or mock data.
  */
-export interface KrakenAdapter {
+export interface KrakenPublicAdapter {
     /**
      * Get ticker information for a trading pair.
      * @param pair - Trading pair (e.g., "XBTUSD", "ETHUSD")
@@ -40,7 +40,37 @@ export interface KrakenAdapter {
      */
     getTicker(pair: string): Promise<KrakenTicker>;
 
-    // Future methods (not implemented):
-    // getOrderbook(pair: string): Promise<KrakenOrderbook>;
-    // getBalance(): Promise<KrakenBalance>;
 }
+
+/**
+ * Kraken private API adapter interface (orders).
+ * This project ships a stub only; live trading is not enabled.
+ */
+export interface KrakenPrivateAdapter {
+    /**
+     * action.placeOrder -> Kraken /0/private/AddOrder
+     */
+    placeOrder(params: Record<string, unknown>): Promise<never>;
+
+    /**
+     * action.cancelOrder -> Kraken /0/private/CancelOrder
+     */
+    cancelOrder(params: Record<string, unknown>): Promise<never>;
+}
+
+/**
+ * Stub implementation of KrakenPrivateAdapter.
+ * Always throws to keep live trading disabled in this demo.
+ */
+export class KrakenPrivateStubAdapter implements KrakenPrivateAdapter {
+    async placeOrder(_params: Record<string, unknown>): Promise<never> {
+        throw new Error('Live trading not enabled');
+    }
+
+    async cancelOrder(_params: Record<string, unknown>): Promise<never> {
+        throw new Error('Live trading not enabled');
+    }
+}
+
+// Legacy alias to avoid breaking older imports
+export type KrakenAdapter = KrakenPublicAdapter;

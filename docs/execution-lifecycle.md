@@ -2,7 +2,7 @@
 
 > **Status:** Design Document (No Code)  
 > **Schema Version:** 1  
-> **Execution Mode:** `dry-run` only
+> **Execution Mode:** `dry-run` (default), `live` (disabled in this project)
 
 ---
 
