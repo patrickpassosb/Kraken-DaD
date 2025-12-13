@@ -1,0 +1,53 @@
+:root {
+    /* Core palette */
+    --kraken-ink: #0b0a12;
+    --kraken-surface: #10111a;
+    --kraken-panel: #151724;
+    --kraken-deep: #0f1020;
+    --kraken-purple: #7950f2;
+    --kraken-purple-strong: #8f6bff;
+    --kraken-green: #2bd27f;
+    --kraken-red: #ff5f6d;
+    --kraken-amber: #f6c344;
+    --kraken-cyan: #3bc9db;
+
+    /* Text */
+    --text-primary: #f5f6fb;
+    --text-secondary: #c6c8d5;
+    --text-muted: #8b8fa3;
+
+    /* Borders & Surfaces */
+    --border-subtle: #202233;
+    --border-strong: #2b2f42;
+    --surface-muted: rgba(255, 255, 255, 0.04);
+    --surface-green: rgba(43, 210, 127, 0.12);
+    --surface-red: rgba(255, 95, 109, 0.14);
+    --surface-amber: rgba(246, 195, 68, 0.14);
+
+    /* Spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    /* Typography */
+    --font-family: 'Inter', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+    --text-xs: 11px;
+    --text-sm: 13px;
+    --text-md: 15px;
+    --text-lg: 18px;
+    --text-xl: 22px;
+
+    /* Shadows */
+    --glow-green: 0 0 0 2px rgba(43, 210, 127, 0.25);
+    --glow-amber: 0 0 0 2px rgba(246, 195, 68, 0.25);
+    --glow-red: 0 0 0 2px rgba(255, 95, 109, 0.25);
+}

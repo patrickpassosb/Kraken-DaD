@@ -1,13 +1,17 @@
 import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { StatusPill } from '../components/StatusPill';
+import { formatPair } from '../utils/format';
+import { NodeStatus } from '../utils/status';
 
 export interface KrakenTickerNodeData {
     pair?: string;
+    status?: NodeStatus;
 }
 
 export function KrakenTickerNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
-    const [pair, setPair] = useState((data as KrakenTickerNodeData)?.pair || 'XBT/USD');
+    const [pair, setPair] = useState((data as KrakenTickerNodeData)?.pair || 'BTC/USD');
 
     const handlePairChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,26 +29,41 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
     );
 
     return (
-        <div className="node-wrapper">
-            <div className="node-header data">Kraken Ticker</div>
+        <div className="node-card">
+            <div className="node-head">
+                <div className="node-title">
+                    <span>Market Data</span>
+                    <span>Kraken public ticker</span>
+                </div>
+                <div
+                    className="node-icon"
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #4dd9ff)' }}
+                >
+                    $
+                </div>
+            </div>
             <div className="node-body">
-                <div className="node-field">
+                <div className="field">
                     <label>Pair</label>
                     <input
                         type="text"
                         value={pair}
                         onChange={handlePairChange}
-                        placeholder="XBT/USD"
+                        placeholder="BTC/USD"
                     />
                 </div>
-                <div className="port-row">
-                    <span></span>
-                    <span className="port-label right">price</span>
+                <div className="field">
+                    <label>Outputs</label>
+                    <div className="chip">Price • Pair</div>
                 </div>
-                <div className="port-row">
-                    <span className="port-label left">in</span>
-                    <span className="port-label right">out</span>
+                <div className="field">
+                    <label>Formatted</label>
+                    <div className="chip">{formatPair(pair)}</div>
                 </div>
+            </div>
+            <div className="node-footer">
+                <StatusPill status={(data as KrakenTickerNodeData)?.status} />
+                <span>Waiting for market tick</span>
             </div>
             <Handle
                 type="target"

@@ -1,16 +1,37 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
+import { StatusPill } from '../components/StatusPill';
+import { NodeStatus } from '../utils/status';
 
-export type StartNodeData = Record<string, never>;
+export interface StartNodeData {
+    status?: NodeStatus;
+}
 
-export function StartNode(_props: NodeProps) {
+export function StartNode({ data }: NodeProps) {
+    const nodeData = (data as StartNodeData) || {};
+
     return (
-        <div className="node-wrapper">
-            <div className="node-header control">Start</div>
-            <div className="node-body">
-                <div className="port-row">
-                    <span></span>
-                    <span className="port-label right">out</span>
+        <div className="node-card">
+            <div className="node-head">
+                <div className="node-title">
+                    <span>Strategy Start</span>
+                    <span>Entry control signal</span>
                 </div>
+                <div
+                    className="node-icon"
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong))' }}
+                >
+                    ▶
+                </div>
+            </div>
+            <div className="node-body">
+                <div className="field">
+                    <label>Execution lane</label>
+                    <div className="chip">Control • Start</div>
+                </div>
+            </div>
+            <div className="node-footer">
+                <StatusPill status={nodeData.status} />
+                <span>Waiting to trigger</span>
             </div>
             <Handle
                 type="source"

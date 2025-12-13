@@ -16,12 +16,28 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from '../nodes/nodeTypes';
+import { NodeStatus } from '../utils/status';
 
 interface FlowCanvasProps {
     onNodesChange: (nodes: Node[]) => void;
     onEdgesChange: (edges: Edge[]) => void;
     initialNodes: Node[];
     initialEdges: Edge[];
+    nodeStatuses?: Record<string, NodeStatus>;
+}
+
+const lanes = [
+    { id: 'market', label: 'Market Data' },
+    { id: 'logic', label: 'Logic' },
+    { id: 'risk', label: 'Risk' },
+    { id: 'execution', label: 'Execution' },
+];
+
+function nodeHighlight(status?: NodeStatus): string {
+    if (status === 'executed') return 'node-highlight-executed';
+    if (status === 'running') return 'node-highlight-running';
+    if (status === 'error') return 'node-highlight-error';
+    return '';
 }
 
 export function FlowCanvas({
@@ -29,6 +45,7 @@ export function FlowCanvas({
     onEdgesChange,
     initialNodes,
     initialEdges,
+    nodeStatuses,
 }: FlowCanvasProps) {
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
@@ -40,16 +57,6 @@ export function FlowCanvas({
         }),
         []
     );
-
-    const isControlEdge = useCallback((edge: Edge) => {
-        const sourceHandle = edge.sourceHandle || '';
-        const targetHandle = edge.targetHandle || '';
-        return (
-            sourceHandle.startsWith('control') ||
-            targetHandle.startsWith('control') ||
-            edge.type === 'control'
-        );
-    }, []);
 
     const isValidConnection = useCallback(
         (connection: Connection | Edge) => {
@@ -85,8 +92,8 @@ export function FlowCanvas({
                             ? 'control'
                             : 'data',
                         style: connection.sourceHandle?.startsWith('control')
-                            ? { stroke: '#ff9100', strokeWidth: 2 }
-                            : { stroke: '#00e676', strokeWidth: 2 },
+                            ? { stroke: '#8f6bff', strokeWidth: 2 }
+                            : { stroke: '#3bc9db', strokeWidth: 2 },
                     },
                     eds
                 )
@@ -95,7 +102,6 @@ export function FlowCanvas({
         [isValidConnection, setEdges]
     );
 
-    // Sync state changes to parent
     useEffect(() => {
         onNodesChange(nodes);
     }, [nodes, onNodesChange]);
@@ -109,7 +115,7 @@ export function FlowCanvas({
             if (type === 'control.start') {
                 const hasStart = nodes.some((n) => n.type === 'control.start');
                 if (hasStart) {
-                    alert('Only one Start node is allowed.');
+                    alert('Only one Strategy Start is allowed.');
                     return;
                 }
             }
@@ -119,14 +125,19 @@ export function FlowCanvas({
 
             switch (type) {
                 case 'data.kraken.ticker':
-                    data = { pair: 'XBT/USD' };
+                    data = { pair: 'BTC/USD' };
                     break;
                 case 'action.placeOrder':
-                    data = { pair: 'XBT/USD', side: 'buy', type: 'market', amount: 0.1 };
+                    data = { pair: 'BTC/USD', side: 'buy', type: 'market', amount: 0.1 };
                     break;
                 case 'action.cancelOrder':
                     data = { orderId: '' };
                     break;
+                case 'risk.guard':
+                    data = { maxOrderSize: 5, maxTrades: 10, priceDeviation: 1.5 };
+                    break;
+                default:
+                    data = {};
             }
 
             const newNode: Node = { id, type, position, data };
@@ -136,29 +147,18 @@ export function FlowCanvas({
     );
 
     useEffect(() => {
+        if (!nodeStatuses) return;
         setNodes((nds) =>
             nds.map((node) => {
-                const hasControlEdge = edges.some(
-                    (e) =>
-                        isControlEdge(e) &&
-                        (e.source === node.id || e.target === node.id)
-                );
-                const isOrphan = !hasControlEdge && nds.length > 1;
-                const nextStyle = isOrphan
-                    ? {
-                          ...node.style,
-                          border: '1px solid #ff5252',
-                          boxShadow: '0 0 0 2px rgba(255,82,82,0.4)',
-                      }
-                    : { ...node.style };
-
-                if (JSON.stringify(nextStyle) === JSON.stringify(node.style ?? {})) {
-                    return node;
-                }
-                return { ...node, style: nextStyle };
+                const status = nodeStatuses[node.id] || 'idle';
+                return {
+                    ...node,
+                    data: { ...node.data, status },
+                    className: nodeHighlight(status),
+                };
             })
         );
-    }, [edges, isControlEdge, setNodes]);
+    }, [nodeStatuses, setNodes]);
 
     const onNodesDelete = useCallback(
         (deleted: Node[]) => {
@@ -180,69 +180,92 @@ export function FlowCanvas({
     );
 
     return (
-        <div className="canvas-container">
-            <div className="node-palette">
-                <h4>Add Nodes</h4>
-                <div
-                    className="palette-item control"
-                    onClick={() => handleAddNode('control.start', { x: 50, y: 100 })}
-                >
-                    Start
+        <div className="canvas-panel">
+            <div className="canvas-shell">
+                <div className="lane-backdrop">
+                    {lanes.map((lane) => (
+                        <div key={lane.id} className="lane">
+                            <div className="lane-label">{lane.label}</div>
+                        </div>
+                    ))}
                 </div>
-                <div
-                    className="palette-item data"
-                    onClick={() => handleAddNode('data.kraken.ticker', { x: 50, y: 200 })}
-                >
-                    Kraken Ticker
+                <div className="palette-floating panel">
+                    <div className="panel-title">Strategy Blocks</div>
+                    <div className="node-palette">
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('control.start', { x: 80, y: 200 })}
+                        >
+                            <div className="palette-label">Strategy Start</div>
+                            <span className="palette-chip">Control</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('data.kraken.ticker', { x: 260, y: 200 })}
+                        >
+                            <div className="palette-label">Market Data</div>
+                            <span className="palette-chip">Data</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('logic.if', { x: 520, y: 220 })}
+                        >
+                            <div className="palette-label">Condition</div>
+                            <span className="palette-chip">Logic</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('risk.guard', { x: 720, y: 200 })}
+                        >
+                            <div className="palette-label">Risk Guard</div>
+                            <span className="palette-chip">Risk</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('action.placeOrder', { x: 940, y: 200 })}
+                        >
+                            <div className="palette-label">Execution</div>
+                            <span className="palette-chip">Action</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('action.cancelOrder', { x: 940, y: 320 })}
+                        >
+                            <div className="palette-label">Order Control</div>
+                            <span className="palette-chip">Action</span>
+                        </div>
+                        <div
+                            className="palette-item"
+                            onClick={() => handleAddNode('action.logIntent', { x: 940, y: 420 })}
+                        >
+                            <div className="palette-label">Audit Log</div>
+                            <span className="palette-chip">Audit</span>
+                        </div>
+                    </div>
                 </div>
-                <div
-                    className="palette-item"
-                    style={{ borderLeft: '3px solid #ffd700' }}
-                    onClick={() => handleAddNode('logic.if', { x: 50, y: 300 })}
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={handleNodesChange}
+                    onEdgesChange={handleEdgesChange}
+                    onConnect={onConnect}
+                    isValidConnection={isValidConnection}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
+                    onNodesDelete={onNodesDelete}
+                    onEdgesDelete={onEdgesDelete}
+                    deleteKeyCode={['Backspace', 'Delete']}
+                    nodesDraggable
+                    nodesConnectable
+                    elementsSelectable
+                    fitView
+                    snapToGrid
+                    snapGrid={[20, 20]}
                 >
-                    If
-                </div>
-                <div
-                    className="palette-item action"
-                    onClick={() => handleAddNode('action.placeOrder', { x: 50, y: 400 })}
-                >
-                    Place Order
-                </div>
-                <div
-                    className="palette-item action"
-                    onClick={() => handleAddNode('action.cancelOrder', { x: 50, y: 500 })}
-                >
-                    Cancel Order
-                </div>
-                <div
-                    className="palette-item action"
-                    onClick={() => handleAddNode('action.logIntent', { x: 50, y: 600 })}
-                >
-                    Log Intent
-                </div>
+                    <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#20263a" />
+                    <Controls />
+                </ReactFlow>
             </div>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={handleNodesChange}
-                onEdgesChange={handleEdgesChange}
-                onConnect={onConnect}
-                isValidConnection={isValidConnection}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onNodesDelete={onNodesDelete}
-                onEdgesDelete={onEdgesDelete}
-                deleteKeyCode={['Backspace', 'Delete']}
-                nodesDraggable
-                nodesConnectable
-                elementsSelectable
-                fitView
-                snapToGrid
-                snapGrid={[20, 20]}
-            >
-                <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#333" />
-                <Controls />
-            </ReactFlow>
         </div>
     );
 }

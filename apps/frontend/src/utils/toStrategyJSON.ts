@@ -19,12 +19,19 @@ export function getPortId(handleId: string): string {
     return handleId;
 }
 
+function normalizeNodeType(type?: string): string {
+    if (type === 'risk.guard') {
+        return 'action.logIntent';
+    }
+    return type || 'unknown';
+}
+
 export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     const now = new Date().toISOString();
 
     const strategyNodes = nodes.map((node) => ({
         id: node.id,
-        type: node.type || 'unknown',
+        type: normalizeNodeType(node.type),
         config: (node.data as Record<string, unknown>) || {},
         position: { x: node.position.x, y: node.position.y },
     }));
@@ -46,7 +53,7 @@ export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     return {
         version: 1,
         metadata: {
-            name: 'Strategy',
+            name: 'Kraken Strategy Definition',
             description: 'Built with Kraken DaD',
             createdAt: now,
             updatedAt: now,

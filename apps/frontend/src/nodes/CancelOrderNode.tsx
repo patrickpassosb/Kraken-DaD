@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { StatusPill } from '../components/StatusPill';
+import { NodeStatus } from '../utils/status';
 
 export interface CancelOrderNodeData {
     orderId?: string;
+    status?: NodeStatus;
 }
 
 export function CancelOrderNode({ id, data }: NodeProps) {
@@ -25,10 +28,21 @@ export function CancelOrderNode({ id, data }: NodeProps) {
     );
 
     return (
-        <div className="node-wrapper">
-            <div className="node-header action">Cancel Order</div>
+        <div className="node-card">
+            <div className="node-head">
+                <div className="node-title">
+                    <span>Order Control</span>
+                    <span>Cancel prepared order</span>
+                </div>
+                <div
+                    className="node-icon"
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-red), #ff8897)' }}
+                >
+                    ✕
+                </div>
+            </div>
             <div className="node-body">
-                <div className="node-field">
+                <div className="field">
                     <label>Order ID</label>
                     <input
                         type="text"
@@ -40,14 +54,14 @@ export function CancelOrderNode({ id, data }: NodeProps) {
                         placeholder="From input or manual"
                     />
                 </div>
-                <div className="port-row">
-                    <span className="port-label left">trigger</span>
-                    <span></span>
+                <div className="field">
+                    <label>Behavior</label>
+                    <div className="chip">Stops intent from executing</div>
                 </div>
-                <div className="port-row">
-                    <span className="port-label left">orderId</span>
-                    <span></span>
-                </div>
+            </div>
+            <div className="node-footer">
+                <StatusPill status={nodeData.status} />
+                <span>Requires trigger</span>
             </div>
             <Handle
                 type="target"

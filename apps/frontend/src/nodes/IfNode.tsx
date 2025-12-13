@@ -1,20 +1,85 @@
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { useCallback, useState } from 'react';
+import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { StatusPill } from '../components/StatusPill';
+import { formatPrice } from '../utils/format';
+import { NodeStatus } from '../utils/status';
 
-export function IfNode(_props: NodeProps) {
+export interface ConditionNodeData {
+    status?: NodeStatus;
+    comparator?: string;
+    threshold?: number;
+}
+
+export function IfNode({ id, data }: NodeProps) {
+    const { setNodes } = useReactFlow();
+    const nodeData = (data as ConditionNodeData) || {};
+
+    const [comparator, setComparator] = useState(nodeData.comparator || '>');
+    const [threshold, setThreshold] = useState<number>(nodeData.threshold ?? 90135.6);
+
+    const updateData = useCallback(
+        (updates: Partial<ConditionNodeData>) => {
+            setNodes((nodes) =>
+                nodes.map((node) =>
+                    node.id === id
+                        ? { ...node, data: { ...node.data, ...updates } }
+                        : node
+                )
+            );
+        },
+        [id, setNodes]
+    );
+
     return (
-        <div className="node-wrapper">
-            <div className="node-header" style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)', color: '#0f0f14' }}>
-                If
+        <div className="node-card">
+            <div className="node-head">
+                <div className="node-title">
+                    <span>Condition</span>
+                    <span>Human-readable logic</span>
+                </div>
+                <div
+                    className="node-icon"
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), #ffd166)' }}
+                >
+                    ?
+                </div>
             </div>
             <div className="node-body">
-                <div className="port-row">
-                    <span className="port-label left">trigger</span>
-                    <span className="port-label right">true</span>
+                <div className="field">
+                    <label>Condition</label>
+                    <div className="chip">IF Price {comparator} {formatPrice(threshold)}</div>
                 </div>
-                <div className="port-row">
-                    <span className="port-label left">condition</span>
-                    <span className="port-label right">false</span>
+                <div className="field">
+                    <label>Comparator</label>
+                    <select
+                        value={comparator}
+                        onChange={(e) => {
+                            setComparator(e.target.value);
+                            updateData({ comparator: e.target.value });
+                        }}
+                    >
+                        <option value=">">Greater than</option>
+                        <option value="<">Less than</option>
+                        <option value=">=">Greater or equal</option>
+                        <option value="<=">Less or equal</option>
+                    </select>
                 </div>
+                <div className="field">
+                    <label>Threshold (USD)</label>
+                    <input
+                        type="number"
+                        value={threshold}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setThreshold(val);
+                            updateData({ threshold: val });
+                        }}
+                    />
+                </div>
+            </div>
+            <div className="node-footer">
+                <StatusPill status={nodeData.status} />
+                <span>Routes true/false</span>
             </div>
             <Handle
                 type="target"
