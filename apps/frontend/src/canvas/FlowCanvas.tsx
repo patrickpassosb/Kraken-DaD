@@ -162,14 +162,19 @@ export function FlowCanvas({
 
     const onNodesDelete = useCallback(
         (deleted: Node[]) => {
-            setNodes((nds) => nds.filter((n) => !deleted.includes(n)));
+            const deletedIds = new Set(deleted.map((n) => n.id));
+            setNodes((nds) => nds.filter((n) => !deletedIds.has(n.id)));
+            setEdges((eds) =>
+                eds.filter((e) => !deletedIds.has(e.source) && !deletedIds.has(e.target))
+            );
         },
-        [setNodes]
+        [setNodes, setEdges]
     );
 
     const onEdgesDelete = useCallback(
         (deleted: Edge[]) => {
-            setEdges((eds) => eds.filter((e) => !deleted.includes(e)));
+            const deletedIds = new Set(deleted.map((e) => e.id));
+            setEdges((eds) => eds.filter((e) => !deletedIds.has(e.id)));
         },
         [setEdges]
     );
@@ -228,6 +233,9 @@ export function FlowCanvas({
                 onNodesDelete={onNodesDelete}
                 onEdgesDelete={onEdgesDelete}
                 deleteKeyCode={['Backspace', 'Delete']}
+                nodesDraggable
+                nodesConnectable
+                elementsSelectable
                 fitView
                 snapToGrid
                 snapGrid={[20, 20]}
