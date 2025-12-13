@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 
 export interface CancelOrderNodeData {
-    orderId: string;
+    orderId?: string;
 }
 
 export function CancelOrderNode({ id, data }: NodeProps) {

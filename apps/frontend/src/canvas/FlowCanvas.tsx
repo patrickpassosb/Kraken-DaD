@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
     ReactFlow,
     useNodesState,
@@ -10,11 +10,12 @@ import {
     Background,
     Controls,
     BackgroundVariant,
+    StepEdge,
+    SimpleBezierEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from '../nodes/nodeTypes';
-import { getPortType } from '../utils/toStrategyJSON';
 
 interface FlowCanvasProps {
     onNodesChange: (nodes: Node[]) => void;
@@ -32,31 +33,39 @@ export function FlowCanvas({
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
 
+    const edgeTypes = useMemo(
+        () => ({
+            control: StepEdge,
+            data: SimpleBezierEdge,
+        }),
+        []
+    );
+
+    const isControlEdge = useCallback((edge: Edge) => {
+        const sourceHandle = edge.sourceHandle || '';
+        const targetHandle = edge.targetHandle || '';
+        return (
+            sourceHandle.startsWith('control') ||
+            targetHandle.startsWith('control') ||
+            edge.type === 'control'
+        );
+    }, []);
+
     const isValidConnection = useCallback(
-        (connection: Connection) => {
-            const sourceHandle = connection.sourceHandle || '';
-            const targetHandle = connection.targetHandle || '';
+        (connection: Connection | Edge) => {
+            if (!connection.sourceHandle || !connection.targetHandle) return false;
 
-            // Get port types from handle IDs
-            const sourcePortType = getPortType(sourceHandle);
-            const targetPortType = getPortType(targetHandle);
+            const sourceType = connection.sourceHandle.split(':')[0];
+            const targetType = connection.targetHandle.split(':')[0];
 
-            // Only allow connections between same port types
-            if (sourcePortType !== targetPortType) {
-                console.log(`Blocked: ${sourcePortType} → ${targetPortType}`);
-                return false;
-            }
+            if (sourceType !== targetType) return false;
 
-            // Check if target port already has a connection
-            const hasExistingConnection = edges.some(
-                (e) =>
-                    e.target === connection.target &&
-                    e.targetHandle === connection.targetHandle
-            );
-
-            if (hasExistingConnection) {
-                console.log('Blocked: target port already connected');
-                return false;
+            if (sourceType === 'data') {
+                return !edges.some(
+                    (e) =>
+                        e.target === connection.target &&
+                        e.targetHandle === connection.targetHandle
+                );
             }
 
             return true;
@@ -66,43 +75,48 @@ export function FlowCanvas({
 
     const onConnect = useCallback(
         (connection: Connection) => {
-            if (!isValidConnection(connection)) {
-                return;
-            }
+            if (!isValidConnection(connection)) return;
 
-            const sourceHandle = connection.sourceHandle || '';
-            const portType = getPortType(sourceHandle);
-
-            const edge: Edge = {
-                ...connection,
-                id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-                type: portType === 'control' ? 'step' : 'default',
-                style: {
-                    stroke: portType === 'control' ? '#ff9100' : '#00e676',
-                    strokeWidth: 2,
-                },
-            } as Edge;
-
-            setEdges((eds) => addEdge(edge, eds));
+            setEdges((eds) =>
+                addEdge(
+                    {
+                        ...connection,
+                        type: connection.sourceHandle?.startsWith('control')
+                            ? 'control'
+                            : 'data',
+                        style: connection.sourceHandle?.startsWith('control')
+                            ? { stroke: '#ff9100', strokeWidth: 2 }
+                            : { stroke: '#00e676', strokeWidth: 2 },
+                    },
+                    eds
+                )
+            );
         },
-        [setEdges, isValidConnection]
+        [isValidConnection, setEdges]
     );
 
     // Sync state changes to parent
-    useMemo(() => {
+    useEffect(() => {
         onNodesChange(nodes);
     }, [nodes, onNodesChange]);
 
-    useMemo(() => {
+    useEffect(() => {
         onEdgesChange(edges);
     }, [edges, onEdgesChange]);
 
-    const addNode = useCallback(
+    const handleAddNode = useCallback(
         (type: string, position: { x: number; y: number }) => {
+            if (type === 'control.start') {
+                const hasStart = nodes.some((n) => n.type === 'control.start');
+                if (hasStart) {
+                    alert('Only one Start node is allowed.');
+                    return;
+                }
+            }
+
             const id = `${type}-${Date.now()}`;
             let data: Record<string, unknown> = {};
 
-            // Set default data based on node type
             switch (type) {
                 case 'data.kraken.ticker':
                     data = { pair: 'XBT/USD' };
@@ -115,15 +129,49 @@ export function FlowCanvas({
                     break;
             }
 
-            const newNode: Node = {
-                id,
-                type,
-                position,
-                data,
-            };
+            const newNode: Node = { id, type, position, data };
             setNodes((nds) => [...nds, newNode]);
         },
+        [nodes, setNodes]
+    );
+
+    useEffect(() => {
+        setNodes((nds) =>
+            nds.map((node) => {
+                const hasControlEdge = edges.some(
+                    (e) =>
+                        isControlEdge(e) &&
+                        (e.source === node.id || e.target === node.id)
+                );
+                const isOrphan = !hasControlEdge && nds.length > 1;
+                const nextStyle = isOrphan
+                    ? {
+                          ...node.style,
+                          border: '1px solid #ff5252',
+                          boxShadow: '0 0 0 2px rgba(255,82,82,0.4)',
+                      }
+                    : { ...node.style };
+
+                if (JSON.stringify(nextStyle) === JSON.stringify(node.style ?? {})) {
+                    return node;
+                }
+                return { ...node, style: nextStyle };
+            })
+        );
+    }, [edges, isControlEdge, setNodes]);
+
+    const onNodesDelete = useCallback(
+        (deleted: Node[]) => {
+            setNodes((nds) => nds.filter((n) => !deleted.includes(n)));
+        },
         [setNodes]
+    );
+
+    const onEdgesDelete = useCallback(
+        (deleted: Edge[]) => {
+            setEdges((eds) => eds.filter((e) => !deleted.includes(e)));
+        },
+        [setEdges]
     );
 
     return (
@@ -132,38 +180,38 @@ export function FlowCanvas({
                 <h4>Add Nodes</h4>
                 <div
                     className="palette-item control"
-                    onClick={() => addNode('control.start', { x: 50, y: 100 })}
+                    onClick={() => handleAddNode('control.start', { x: 50, y: 100 })}
                 >
                     Start
                 </div>
                 <div
                     className="palette-item data"
-                    onClick={() => addNode('data.kraken.ticker', { x: 50, y: 200 })}
+                    onClick={() => handleAddNode('data.kraken.ticker', { x: 50, y: 200 })}
                 >
                     Kraken Ticker
                 </div>
                 <div
                     className="palette-item"
                     style={{ borderLeft: '3px solid #ffd700' }}
-                    onClick={() => addNode('logic.if', { x: 50, y: 300 })}
+                    onClick={() => handleAddNode('logic.if', { x: 50, y: 300 })}
                 >
                     If
                 </div>
                 <div
                     className="palette-item action"
-                    onClick={() => addNode('action.placeOrder', { x: 50, y: 400 })}
+                    onClick={() => handleAddNode('action.placeOrder', { x: 50, y: 400 })}
                 >
                     Place Order
                 </div>
                 <div
                     className="palette-item action"
-                    onClick={() => addNode('action.cancelOrder', { x: 50, y: 500 })}
+                    onClick={() => handleAddNode('action.cancelOrder', { x: 50, y: 500 })}
                 >
                     Cancel Order
                 </div>
                 <div
                     className="palette-item action"
-                    onClick={() => addNode('action.logIntent', { x: 50, y: 600 })}
+                    onClick={() => handleAddNode('action.logIntent', { x: 50, y: 600 })}
                 >
                     Log Intent
                 </div>
@@ -176,6 +224,10 @@ export function FlowCanvas({
                 onConnect={onConnect}
                 isValidConnection={isValidConnection}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesDelete={onNodesDelete}
+                onEdgesDelete={onEdgesDelete}
+                deleteKeyCode={['Backspace', 'Delete']}
                 fitView
                 snapToGrid
                 snapGrid={[20, 20]}

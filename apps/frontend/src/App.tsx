@@ -4,7 +4,7 @@ import { FlowCanvas } from './canvas/FlowCanvas';
 import { executeDryRun, ExecutionResult } from './api/executeDryRun';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 
-// Demo strategy: Start → Kraken Ticker → If → Place Order
+// Demo strategy: Start -> Kraken Ticker -> If -> Place Order
 const demoNodes: Node[] = [
     {
         id: 'start-1',
@@ -27,7 +27,7 @@ const demoNodes: Node[] = [
     {
         id: 'order-1',
         type: 'action.placeOrder',
-        position: { x: 750, y: 150 },
+        position: { x: 750, y: 180 },
         data: { pair: 'XBT/USD', side: 'buy', type: 'market', amount: 0.1 },
     },
 ];
@@ -38,18 +38,16 @@ const demoEdges: Edge[] = [
         source: 'start-1',
         sourceHandle: 'control:out',
         target: 'ticker-1',
-        targetHandle: 'control:out',
-        type: 'step',
-        style: { stroke: '#ff9100', strokeWidth: 2 },
+        targetHandle: 'control:in',
+        type: 'control',
     },
     {
         id: 'e-ticker-if-control',
         source: 'ticker-1',
         sourceHandle: 'control:out',
         target: 'if-1',
-        targetHandle: 'control:trigger',
-        type: 'step',
-        style: { stroke: '#ff9100', strokeWidth: 2 },
+        targetHandle: 'control:in',
+        type: 'control',
     },
     {
         id: 'e-if-order',
@@ -57,8 +55,15 @@ const demoEdges: Edge[] = [
         sourceHandle: 'control:true',
         target: 'order-1',
         targetHandle: 'control:trigger',
-        type: 'step',
-        style: { stroke: '#ff9100', strokeWidth: 2 },
+        type: 'control',
+    },
+    {
+        id: 'e-ticker-if-condition',
+        source: 'ticker-1',
+        sourceHandle: 'data:price',
+        target: 'if-1',
+        targetHandle: 'data:condition',
+        type: 'data',
     },
     {
         id: 'e-ticker-order-price',
@@ -66,8 +71,7 @@ const demoEdges: Edge[] = [
         sourceHandle: 'data:price',
         target: 'order-1',
         targetHandle: 'data:price',
-        type: 'default',
-        style: { stroke: '#00e676', strokeWidth: 2 },
+        type: 'data',
     },
 ];
 
@@ -93,7 +97,6 @@ function App() {
 
         try {
             const strategy = toStrategyJSON(nodes, edges);
-            console.log('Strategy JSON:', JSON.stringify(strategy, null, 2));
             const executionResult = await executeDryRun(strategy);
             setResult(executionResult);
         } catch (err) {
@@ -118,7 +121,7 @@ function App() {
     return (
         <div className="app-container">
             <header className="header">
-                <h1>🐙 Kraken DaD</h1>
+                <h1>Kraken DaD</h1>
                 <div className="header-actions">
                     <button className="btn btn-secondary" onClick={handleExportJSON}>
                         Export JSON
@@ -149,7 +152,7 @@ function App() {
                             <div className="result-item">
                                 <h4>Status</h4>
                                 <p className={result.success ? 'result-success' : 'result-error'}>
-                                    {result.success ? '✓ Success' : '✗ Failed'}
+                                    {result.success ? 'Success' : 'Failed'}
                                 </p>
                             </div>
                             <div className="result-item">

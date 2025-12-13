@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 
 export interface KrakenTickerNodeData {
-    pair: string;
+    pair?: string;
 }
 
 export function KrakenTickerNode({ id, data }: NodeProps) {
@@ -42,10 +42,17 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
                     <span className="port-label right">price</span>
                 </div>
                 <div className="port-row">
-                    <span></span>
+                    <span className="port-label left">in</span>
                     <span className="port-label right">out</span>
                 </div>
             </div>
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="control:in"
+                className="control"
+                style={{ top: '80%' }}
+            />
             <Handle
                 type="source"
                 position={Position.Right}

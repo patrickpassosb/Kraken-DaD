@@ -40,4 +40,4 @@
 
 ## 4. Task Status
 
-✅ Complete
+Complete

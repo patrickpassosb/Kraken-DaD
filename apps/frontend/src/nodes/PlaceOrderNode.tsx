@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 
 export interface PlaceOrderNodeData {
-    pair: string;
-    side: 'buy' | 'sell';
-    type: 'market' | 'limit';
-    amount: number;
+    pair?: string;
+    side?: 'buy' | 'sell';
+    type?: 'market' | 'limit';
+    amount?: number;
     price?: number;
 }
 

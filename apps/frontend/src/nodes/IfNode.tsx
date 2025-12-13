@@ -1,6 +1,6 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
 
-export function IfNode({ id }: NodeProps) {
+export function IfNode(_props: NodeProps) {
     return (
         <div className="node-wrapper">
             <div className="node-header" style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)', color: '#0f0f14' }}>
@@ -19,7 +19,7 @@ export function IfNode({ id }: NodeProps) {
             <Handle
                 type="target"
                 position={Position.Left}
-                id="control:trigger"
+                id="control:in"
                 className="control"
                 style={{ top: '45%' }}
             />
