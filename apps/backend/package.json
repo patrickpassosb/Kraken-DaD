@@ -12,7 +12,8 @@
     "dependencies": {
         "dotenv": "^16.4.5",
         "fastify": "^5.0.0",
-        "ws": "^8.16.0"
+        "ws": "^8.16.0",
+        "@kraken-dad/kraken-client": "file:../../packages/kraken-client"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
