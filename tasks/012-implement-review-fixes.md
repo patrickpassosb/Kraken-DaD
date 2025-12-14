@@ -25,7 +25,7 @@
 - **Key Architectural Patterns:** Monorepo with shared `strategy-core` executor; Fastify routes; React Flow nodes
 
 ### Current State
-Condition node UI captures comparator/threshold but executor expects boolean input, bypassing logic. `risk.guard` nodes are remapped to `action.logIntent` on export. Market data builder suppresses failures and drops pairs. Frontend API clients hardcode localhost.
+Condition node UI captures comparator/threshold but executor expects boolean input, bypassing logic. `risk.guard` nodes are remapped to `action.logIntent` on export. Market data builder suppresses failures and drops pairs. Frontend API clients hardcode localhost. Latest change added `import.meta.env` usage without Vite types, breaking the frontend TypeScript build.
 
 ## 3. Context & Problem Definition
 
@@ -37,6 +37,7 @@ Strategy execution should reflect user-defined numeric conditions and risk check
 - [ ] `risk.guard` nodes export with native type/config instead of remapping, retaining defaults for pair/spread.
 - [ ] Backend market data builder records per-pair failures with deterministic fallback data instead of silent drops.
 - [ ] Frontend API base URL is configurable (env with localhost default) and applied across API clients/docs.
+- [x] Frontend TypeScript build passes with Vite environment typings available for `import.meta.env`.
 
 ---
 
