@@ -14,6 +14,7 @@ import {
 import {
     executeDryRun,
     ExecutionResult,
+    ExecutionWarning,
 } from '../../../../packages/strategy-core/executor/dryRunExecutor.ts';
 import {
     fetchTicker,
@@ -97,7 +98,7 @@ export async function executeRoute(fastify: FastifyInstance) {
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
             const { strategy, validate } = request.body;
 
-            const marketData = await buildMarketData(strategy, fastify);
+            const { marketData, warnings: marketWarnings } = await buildMarketData(strategy, fastify);
 
             // Create execution context for dry-run mode
             const ctx: ExecutionContext = {
@@ -107,6 +108,7 @@ export async function executeRoute(fastify: FastifyInstance) {
 
             // Execute strategy
             const result: ExecutionResult = executeDryRun(strategy, ctx);
+            result.warnings.push(...marketWarnings);
 
             if (validate) {
                 await applyKrakenValidation(result, fastify);
@@ -121,10 +123,18 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: number; spread?: number }> = {
+    'BTC/USD': { last: 90135.6, ask: 90136.4, bid: 90134.8, spread: 1.6 },
+    'ETH/USD': { last: 3450.12, ask: 3450.6, bid: 3449.5, spread: 1.1 },
+};
+
 async function buildMarketData(
     strategy: Strategy,
     fastify: FastifyInstance
-): Promise<Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number }>> {
+): Promise<{
+    marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number; timestamp?: number }>;
+    warnings: ExecutionWarning[];
+}> {
     const pairs = new Set<string>();
     for (const node of strategy.nodes) {
         if (node.type === 'data.kraken.ticker' || node.type === 'action.placeOrder') {
@@ -138,7 +148,8 @@ async function buildMarketData(
         pairs.add('BTC/USD');
     }
 
-    const marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number }> = {};
+    const marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number; timestamp?: number }> = {};
+    const warnings: ExecutionWarning[] = [];
 
     for (const pair of pairs) {
         try {
@@ -150,14 +161,12 @@ async function buildMarketData(
             const ticker =
                 wsTicker.status === 'fulfilled'
                     ? wsTicker.value
-                    : restResults.status === 'fulfilled' &&
-                      restResults.value[0].status === 'fulfilled'
+                    : restResults.status === 'fulfilled' && restResults.value[0].status === 'fulfilled'
                     ? restResults.value[0].value
                     : null;
 
             const depth =
-                restResults.status === 'fulfilled' &&
-                restResults.value[1].status === 'fulfilled'
+                restResults.status === 'fulfilled' && restResults.value[1].status === 'fulfilled'
                     ? restResults.value[1].value
                     : null;
 
@@ -168,14 +177,36 @@ async function buildMarketData(
                     ask: ticker.ask ?? depth?.bestAsk,
                     bid: ticker.bid ?? depth?.bestBid,
                     spread: ticker.spread ?? depth?.spread,
+                    timestamp: Date.now(),
                 };
+            } else {
+                const fallback = MARKET_FALLBACKS[pairKey(pair)] ?? { last: 42000, spread: 2.5 };
+                marketData[pairKey(pair)] = {
+                    pair: pairKey(pair),
+                    ...fallback,
+                    timestamp: Date.now(),
+                };
+                warnings.push({
+                    code: 'MARKET_DATA_FALLBACK',
+                    message: `Using fallback market data for ${pairKey(pair)}; live fetch failed.`,
+                });
             }
         } catch (err) {
             fastify.log.warn({ err, pair }, 'Failed to fetch Kraken market data');
+            const fallback = MARKET_FALLBACKS[pairKey(pair)] ?? { last: 42000, spread: 2.5 };
+            marketData[pairKey(pair)] = {
+                pair: pairKey(pair),
+                ...fallback,
+                timestamp: Date.now(),
+            };
+            warnings.push({
+                code: 'MARKET_DATA_FALLBACK',
+                message: `Error fetching ${pairKey(pair)} market data; using fallback snapshot.`,
+            });
         }
     }
 
-    return marketData;
+    return { marketData, warnings };
 }
 
 async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyInstance) {

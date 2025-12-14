@@ -133,8 +133,11 @@ export function FlowCanvas({
                 case 'action.cancelOrder':
                     data = { orderId: '' };
                     break;
+                case 'logic.if':
+                    data = { comparator: '>', threshold: 90135.6 };
+                    break;
                 case 'risk.guard':
-                    data = { maxOrderSize: 5, maxTrades: 10, priceDeviation: 1.5 };
+                    data = { pair: 'BTC/USD', maxSpread: 5 };
                     break;
                 default:
                     data = {};

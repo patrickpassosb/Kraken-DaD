@@ -41,6 +41,12 @@ npm install
 npm run dev  # http://127.0.0.1:3000
 ```
 
+Frontend API base URL
+```bash
+# defaults to http://127.0.0.1:3001 when unset
+export VITE_API_BASE="http://localhost:3001"
+```
+
 Use the UI
 - Drag nodes (Strategy Start → Market Data → Condition → Risk → Execution), connect handles, and click **Run Dry-Run**.
 - Market Context + Order Preview use live Kraken data from the backend. If the API is unreachable, the UI falls back to a mock and shows a warning chip.

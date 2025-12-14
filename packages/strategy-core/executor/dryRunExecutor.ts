@@ -336,16 +336,16 @@ blockHandlers.set('risk.guard', (node, _inputs, ctx) => {
 });
 
 /**
- * logic.if - Conditional routing based on boolean input
+ * logic.if - Conditional routing based on numeric comparison
  */
 blockDefinitions.set('logic.if', {
     type: 'logic.if',
     category: 'logic',
     name: 'If',
-    description: 'Routes control flow based on a boolean condition',
+    description: 'Routes control flow based on a numeric comparison',
     inputs: [
         { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
-        { id: 'condition', label: 'Condition', dataType: 'boolean', required: true },
+        { id: 'condition', label: 'Value', dataType: 'number', required: true },
     ],
     outputs: [
         { id: 'true', label: 'True', dataType: 'trigger', required: true },
@@ -354,14 +354,45 @@ blockDefinitions.set('logic.if', {
 });
 
 blockHandlers.set('logic.if', (node, inputs, _ctx) => {
-    const condition = inputs.condition as boolean;
+    const comparator = (node.config.comparator as string) ?? '>';
+    const thresholdRaw = node.config.threshold;
+    const value = (inputs.condition ?? inputs.value) as unknown;
 
-    // Route control flow based on condition
-    // In dry-run, we just pass through - actual routing would be in control flow
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+        throw new Error('Condition node requires a numeric input value');
+    }
+
+    if (typeof thresholdRaw !== 'number' || Number.isNaN(thresholdRaw)) {
+        throw new Error('Condition node requires a numeric threshold');
+    }
+
+    let condition = false;
+    switch (comparator) {
+        case '>':
+            condition = value > thresholdRaw;
+            break;
+        case '<':
+            condition = value < thresholdRaw;
+            break;
+        case '>=':
+        case '=>':
+            condition = value >= thresholdRaw;
+            break;
+        case '<=':
+            condition = value <= thresholdRaw;
+            break;
+        case '==':
+        case '=':
+            condition = value === thresholdRaw;
+            break;
+        default:
+            throw new Error(`Unsupported comparator: ${comparator}`);
+    }
+
     return {
         outputs: {
-            true: condition === true,
-            false: condition === false,
+            true: condition,
+            false: !condition,
         },
     };
 });

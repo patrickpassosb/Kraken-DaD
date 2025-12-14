@@ -127,7 +127,7 @@ function friendlyError(err: unknown): string {
         return 'Strategy definition looks out of date. Refresh and retry the dry-run.';
     }
     if (raw.toLowerCase().includes('condition')) {
-        return 'Condition requires a true/false rule. Price comparison detected.';
+        return 'Condition requires a numeric price input and comparator/threshold. Please check the Condition node.';
     }
     return 'Strategy needs valid connections and a start trigger. Please review the canvas.';
 }
