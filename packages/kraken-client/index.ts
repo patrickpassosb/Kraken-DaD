@@ -1,4 +1,5 @@
 import { createHash, createHmac } from 'crypto';
+import WebSocket from 'ws';
 
 const API_BASE = 'https://api.kraken.com';
 
@@ -225,4 +226,58 @@ function signRequest(path: string, body: URLSearchParams, secret: string): strin
     hmac.update(path);
     hmac.update(digest);
     return hmac.digest('base64');
+}
+
+export async function fetchTickerWsOnce(pair: string, timeoutMs = 3000): Promise<KrakenTickerSnapshot> {
+    const { krakenPair, display } = normalizePair(pair);
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket('wss://ws.kraken.com');
+        const timer = setTimeout(() => {
+            ws.close();
+            reject(new Error('Kraken WS ticker timeout'));
+        }, timeoutMs);
+
+        ws.on('open', () => {
+            ws.send(
+                JSON.stringify({
+                    event: 'subscribe',
+                    pair: [krakenPair],
+                    subscription: { name: 'ticker' },
+                })
+            );
+        });
+
+        ws.on('message', (data) => {
+            try {
+                const parsed = JSON.parse(data.toString());
+                if (!Array.isArray(parsed)) return;
+                const payload = parsed[1];
+                if (!payload?.c) return;
+                const last = toNumber(payload.c[0]) ?? 0;
+                const ask = toNumber(payload.a?.[0]);
+                const bid = toNumber(payload.b?.[0]);
+                const spread = ask !== undefined && bid !== undefined ? ask - bid : undefined;
+                clearTimeout(timer);
+                ws.close();
+                resolve({
+                    pair: display,
+                    last,
+                    ask: ask ?? 0,
+                    bid: bid ?? 0,
+                    spread: spread ?? 0,
+                    volume24h: 0,
+                    change24h: 0,
+                    timestamp: Date.now(),
+                });
+            } catch (err) {
+                // ignore parse errors
+            }
+        });
+
+        ws.on('error', (err) => {
+            clearTimeout(timer);
+            ws.close();
+            reject(err);
+        });
+    });
 }

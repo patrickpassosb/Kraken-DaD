@@ -7,6 +7,7 @@
  * @module backend/server
  */
 
+import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import { executeRoute } from './routes/execute.js';
 import { marketRoute } from './routes/market.js';
@@ -15,6 +16,8 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
 async function main() {
+    dotenv.config();
+
     const fastify = Fastify({
         logger: {
             level: 'info',

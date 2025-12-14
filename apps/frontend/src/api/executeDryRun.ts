@@ -33,6 +33,13 @@ export interface ExecutionResult {
         };
         executed: false;
     }>;
+    krakenValidations?: Array<{
+        nodeId: string;
+        action: string;
+        status: 'ok' | 'error';
+        detail?: string;
+        response?: Record<string, unknown>;
+    }>;
 }
 
 export interface Strategy {
@@ -59,13 +66,13 @@ export interface Strategy {
     }>;
 }
 
-export async function executeDryRun(strategy: Strategy): Promise<ExecutionResult> {
+export async function executeDryRun(strategy: Strategy, validate?: boolean): Promise<ExecutionResult> {
     const response = await fetch(`${API_BASE}/execute/dry-run`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ strategy }),
+        body: JSON.stringify({ strategy, validate }),
     });
 
     if (!response.ok) {

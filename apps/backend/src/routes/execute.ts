@@ -18,6 +18,10 @@ import {
 import {
     fetchTicker,
     fetchDepth,
+    fetchTickerWsOnce,
+    hasPrivateCreds,
+    validateAddOrder,
+    validateCancelOrder,
 } from '../../../../packages/kraken-client/index.ts';
 
 // =============================================================================
@@ -26,6 +30,7 @@ import {
 
 interface ExecuteRequestBody {
     strategy: Strategy;
+    validate?: boolean;
 }
 
 // =============================================================================
@@ -68,6 +73,7 @@ export async function executeRoute(fastify: FastifyInstance) {
                                 edges: { type: 'array' },
                             },
                         },
+                        validate: { type: 'boolean' },
                     },
                 },
                 response: {
@@ -89,7 +95,7 @@ export async function executeRoute(fastify: FastifyInstance) {
             },
         },
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
-            const { strategy } = request.body;
+            const { strategy, validate } = request.body;
 
             const marketData = await buildMarketData(strategy, fastify);
 
@@ -101,6 +107,10 @@ export async function executeRoute(fastify: FastifyInstance) {
 
             // Execute strategy
             const result: ExecutionResult = executeDryRun(strategy, ctx);
+
+            if (validate) {
+                await applyKrakenValidation(result, fastify);
+            }
 
             return reply.status(200).send(result);
         }
@@ -132,20 +142,32 @@ async function buildMarketData(
 
     for (const pair of pairs) {
         try {
-            const [ticker, depth] = await Promise.allSettled([fetchTicker(pair), fetchDepth(pair, 10)]);
-            if (ticker.status === 'fulfilled') {
+            const [wsTicker, restResults] = await Promise.allSettled([
+                fetchTickerWsOnce(pair, 2500),
+                Promise.allSettled([fetchTicker(pair), fetchDepth(pair, 10)]),
+            ]);
+
+            const ticker =
+                wsTicker.status === 'fulfilled'
+                    ? wsTicker.value
+                    : restResults.status === 'fulfilled' &&
+                      restResults.value[0].status === 'fulfilled'
+                    ? restResults.value[0].value
+                    : null;
+
+            const depth =
+                restResults.status === 'fulfilled' &&
+                restResults.value[1].status === 'fulfilled'
+                    ? restResults.value[1].value
+                    : null;
+
+            if (ticker) {
                 marketData[pairKey(pair)] = {
-                    pair: ticker.value.pair,
-                    last: ticker.value.last,
-                    ask:
-                        ticker.value.ask ??
-                        (depth.status === 'fulfilled' ? depth.value.bestAsk : undefined),
-                    bid:
-                        ticker.value.bid ??
-                        (depth.status === 'fulfilled' ? depth.value.bestBid : undefined),
-                    spread:
-                        ticker.value.spread ??
-                        (depth.status === 'fulfilled' ? depth.value.spread : undefined),
+                    pair: ticker.pair,
+                    last: ticker.last,
+                    ask: ticker.ask ?? depth?.bestAsk,
+                    bid: ticker.bid ?? depth?.bestBid,
+                    spread: ticker.spread ?? depth?.spread,
                 };
             }
         } catch (err) {
@@ -154,4 +176,65 @@ async function buildMarketData(
     }
 
     return marketData;
+}
+
+async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyInstance) {
+    const creds = hasPrivateCreds();
+    if (!creds) {
+        result.warnings.push({
+            code: 'VALIDATE_SKIPPED',
+            message: 'Kraken API keys not configured; validation skipped.',
+        });
+        return;
+    }
+
+    const validations: ExecutionResult['krakenValidations'] = [];
+
+    for (const intent of result.actionIntents) {
+        try {
+            if (intent.intent.action === 'PLACE_ORDER') {
+                const params = intent.intent.params;
+                const pair = (params.pair as string) ?? 'BTC/USD';
+                const side = (params.side as 'buy' | 'sell') ?? 'buy';
+                const type = (params.type as 'market' | 'limit') ?? 'market';
+                const volume = String(params.amount ?? 0.1);
+                const price = params.price !== undefined ? String(params.price) : undefined;
+                const validateResp = await validateAddOrder({
+                    pair,
+                    type: side,
+                    ordertype: type,
+                    volume,
+                    price,
+                    validate: true,
+                });
+                validations.push({
+                    nodeId: intent.nodeId,
+                    action: intent.intent.action,
+                    status: 'ok',
+                    detail: 'Kraken validate=true accepted',
+                    response: validateResp,
+                });
+            } else if (intent.intent.action === 'CANCEL_ORDER') {
+                const txid = (intent.intent.params.orderId as string) ?? '';
+                const validateResp = await validateCancelOrder(txid);
+                validations.push({
+                    nodeId: intent.nodeId,
+                    action: intent.intent.action,
+                    status: 'ok',
+                    detail: 'Kraken validate=true accepted',
+                    response: validateResp,
+                });
+            }
+        } catch (err) {
+            validations.push({
+                nodeId: intent.nodeId,
+                action: intent.intent.action,
+                status: 'error',
+                detail: err instanceof Error ? err.message : 'Unknown validation error',
+            });
+            fastify.log.warn({ err, intent }, 'Kraken validation failed');
+        }
+    }
+
+    result.krakenValidations = validations;
 }

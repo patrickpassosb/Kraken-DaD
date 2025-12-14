@@ -46,7 +46,7 @@ const demoNodes: Node[] = [
         id: 'risk-1',
         type: 'risk.guard',
         position: { x: 720, y: 200 },
-        data: { maxOrderSize: 5, maxTrades: 10, priceDeviation: 1.5 },
+        data: { pair: 'BTC/USD', maxSpread: 5 },
     },
     {
         id: 'order-1',
@@ -220,7 +220,7 @@ function timelineFromResult(
         ];
     }
 
-    return result.log.map((entry) => {
+    const timeline: TimelineItem[] = result.log.map((entry) => {
         const nodeType = nodes.find((n) => n.id === entry.nodeId)?.type ?? entry.nodeType;
         return {
             id: entry.nodeId,
@@ -230,6 +230,20 @@ function timelineFromResult(
             status: mapLogToStatus(entry.status),
         };
     });
+
+    if (result.krakenValidations && result.krakenValidations.length > 0) {
+        result.krakenValidations.forEach((validation, idx) => {
+            timeline.push({
+                id: `kraken-validate-${idx}`,
+                title: 'Kraken validate-only',
+                detail: `${validation.action} → ${validation.status}`,
+                meta: validation.detail,
+                status: validation.status === 'ok' ? 'executed' : 'error',
+            });
+        });
+    }
+
+    return timeline;
 }
 
 function App() {
@@ -241,6 +255,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
+    const [validateWithKraken, setValidateWithKraken] = useState(false);
 
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
@@ -258,7 +273,7 @@ function App() {
 
         try {
             const strategy = toStrategyJSON(nodes, edges);
-            const executionResult = await executeDryRun(strategy);
+            const executionResult = await executeDryRun(strategy, validateWithKraken);
             const statusMap: Record<string, NodeStatus> = {};
             executionResult.log.forEach((entry) => {
                 statusMap[entry.nodeId] = mapLogToStatus(entry.status);
@@ -342,6 +357,15 @@ function App() {
                     Dry-Run enforced — no real orders executed
                 </div>
                 <div className="header-actions">
+                    <label className="chip" style={{ cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={validateWithKraken}
+                            onChange={(e) => setValidateWithKraken(e.target.checked)}
+                            style={{ marginRight: '8px' }}
+                        />
+                        Validate orders on Kraken (no execution)
+                    </label>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Kraken Strategy Definition
                     </button>

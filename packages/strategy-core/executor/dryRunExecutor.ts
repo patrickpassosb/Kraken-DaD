@@ -64,10 +64,19 @@ export interface ExecutionResult {
     readonly startedAt: string;
     readonly completedAt: string;
     readonly nodesExecuted: number;
-    readonly log: readonly NodeExecutionLog[];
-    readonly errors: readonly ExecutionError[];
-    readonly warnings: readonly ExecutionWarning[];
-    readonly actionIntents: readonly ActionIntent[];
+    log: NodeExecutionLog[];
+    errors: ExecutionError[];
+    warnings: ExecutionWarning[];
+    actionIntents: ActionIntent[];
+    krakenValidations?: KrakenValidation[];
+}
+
+export interface KrakenValidation {
+    readonly nodeId: string;
+    readonly action: string;
+    readonly status: 'ok' | 'error';
+    readonly detail?: string;
+    readonly response?: Record<string, unknown>;
 }
 
 // =============================================================================
@@ -291,6 +300,39 @@ blockHandlers.set('action.cancelOrder', (node, inputs, _ctx) => {
     };
 
     return { outputs: {}, actionIntent };
+});
+
+/**
+ * risk.guard - Checks spread against a configured threshold
+ */
+blockDefinitions.set('risk.guard', {
+    type: 'risk.guard',
+    category: 'logic',
+    name: 'Orderbook Guard',
+    description: 'Blocks execution if spread exceeds threshold',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Pass', dataType: 'trigger', required: true },
+        { id: 'allowed', label: 'Allowed', dataType: 'boolean', required: true },
+        { id: 'spread', label: 'Spread', dataType: 'number', required: false },
+    ],
+});
+
+blockHandlers.set('risk.guard', (node, _inputs, ctx) => {
+    const pair = (node.config.pair as string) || 'BTC/USD';
+    const maxSpread = (node.config.maxSpread as number) ?? 5;
+    const market = ctx.marketData?.[pairKey(pair)];
+    const spread = market?.spread ?? 0;
+    const allowed = spread <= maxSpread;
+    return {
+        outputs: {
+            out: allowed,
+            allowed,
+            spread,
+        },
+    };
 });
 
 /**
