@@ -1,11 +1,11 @@
 :root {
     /* Core palette */
-    --kraken-ink: #0b0a12;
-    --kraken-surface: #10111a;
-    --kraken-panel: #151724;
-    --kraken-deep: #0f1020;
-    --kraken-purple: #7950f2;
-    --kraken-purple-strong: #8f6bff;
+    --kraken-ink: #0b0610;
+    --kraken-surface: #0f0a18;
+    --kraken-panel: #161225;
+    --kraken-deep: #0e0916;
+    --kraken-purple: #5b3cc4;
+    --kraken-purple-strong: #7c6df2;
     --kraken-green: #2bd27f;
     --kraken-red: #ff5f6d;
     --kraken-amber: #f6c344;

@@ -6,7 +6,6 @@ import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
-import { ExecutionTimeline, TimelineItem } from './components/ExecutionTimeline';
 import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 
@@ -177,75 +176,6 @@ function mapLogToStatus(logStatus: string): NodeStatus {
     return 'executed';
 }
 
-function timelineFromResult(
-    result: ExecutionResult | null,
-    error: string | null,
-    nodes: Node[]
-): TimelineItem[] {
-    if (error) {
-        return [
-            {
-                id: 'error',
-                title: 'Strategy halted',
-                detail: error,
-                status: 'error',
-            },
-        ];
-    }
-    if (!result) {
-        return [
-            { id: 'ready', title: 'Strategy ready', detail: 'Dry-run only, no live orders.', status: 'idle' },
-            { id: 'lanes', title: 'Market Data → Logic → Risk → Execution', status: 'idle' },
-        ];
-    }
-
-    const labels: Record<string, string> = {
-        'data.kraken.ticker': 'Market data fetched',
-        'logic.if': 'Condition evaluated',
-        'risk.guard': 'Risk guard reviewed',
-        'action.placeOrder': 'Order prepared',
-        'action.cancelOrder': 'Order cancellation queued',
-        'action.logIntent': 'Audit log recorded',
-        'control.start': 'Strategy triggered',
-    };
-
-    if (result.log.length === 0) {
-        return [
-            {
-                id: 'complete',
-                title: result.success ? 'Dry-run completed' : 'Dry-run halted',
-                detail: result.success ? 'Strategy executed without errors.' : 'Please review the canvas connections.',
-                status: result.success ? 'executed' : 'error',
-            },
-        ];
-    }
-
-    const timeline: TimelineItem[] = result.log.map((entry) => {
-        const nodeType = nodes.find((n) => n.id === entry.nodeId)?.type ?? entry.nodeType;
-        return {
-            id: entry.nodeId,
-            title: labels[nodeType] ?? entry.nodeType,
-            detail: `Status: ${entry.status} • Duration: ${entry.durationMs}ms`,
-            meta: nodeType === 'logic.if' ? 'Condition requires true/false input' : undefined,
-            status: mapLogToStatus(entry.status),
-        };
-    });
-
-    if (result.krakenValidations && result.krakenValidations.length > 0) {
-        result.krakenValidations.forEach((validation, idx) => {
-            timeline.push({
-                id: `kraken-validate-${idx}`,
-                title: 'Kraken validate-only',
-                detail: `${validation.action} → ${validation.status}`,
-                meta: validation.detail,
-                status: validation.status === 'ok' ? 'executed' : 'error',
-            });
-        });
-    }
-
-    return timeline;
-}
-
 function App() {
     const [nodes, setNodes] = useState<Node[]>(demoNodes);
     const [edges, setEdges] = useState<Edge[]>(demoEdges);
@@ -304,10 +234,6 @@ function App() {
         () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
         [nodes, marketContext, activePair]
     );
-    const timelineItems = useMemo(
-        () => timelineFromResult(result, error, nodes),
-        [result, error, nodes]
-    );
 
     useEffect(() => {
         let isMounted = true;
@@ -348,32 +274,25 @@ function App() {
         ? 'Preview uses mock price'
         : 'Preview uses Kraken price snapshot';
 
-    const dataStatus = useMemo(() => {
-        if (marketError) {
-            return { label: 'Mocked Kraken data', tone: 'pill-warn', detail: marketError };
-        }
-        if (marketContext) {
-            return {
-                label: 'Live Kraken data',
-                tone: 'pill-success',
-                detail: 'Ticker + Depth sourced from Kraken',
-            };
-        }
-        return {
-            label: 'Syncing Kraken data',
-            tone: 'pill-ghost',
-            detail: 'Waiting on Ticker/Depth snapshot',
-        };
-    }, [marketContext, marketError]);
-
     return (
         <div className="app-shell">
             <header className="kraken-header">
                 <div className="header-left">
                     <div className="brand-stack">
-                        <div className="brand-mark">KP</div>
+                        <div className="brand-mark">
+                            <svg
+                                aria-hidden
+                                focusable="false"
+                                role="img"
+                                viewBox="0 0 24 24"
+                                className="brand-icon"
+                            >
+                                <path d="M12 3c-4.97 0-9 4.03-9 9v6a2 2 0 0 0 4 0v-4a1 1 0 1 1 2 0v4a2 2 0 0 0 4 0v-4a1 1 0 1 1 2 0v4a2 2 0 0 0 4 0v-6c0-4.97-4.03-9-9-9z" />
+                            </svg>
+                        </div>
                         <div className="brand-text">
-                            <span>Kraken DaD</span>
+                            <span>Kraken Pro</span>
+                            <span>Strategy Builder</span>
                         </div>
                     </div>
                 </div>
@@ -406,10 +325,6 @@ function App() {
                 />
 
                 <div className="right-rail">
-                    <div className="panel">
-                        <div className="panel-title">Execution Feedback</div>
-                        <ExecutionTimeline items={timelineItems} />
-                    </div>
                     <div className="panel">
                         <div className="panel-title">Market Context</div>
                         {marketError && (
