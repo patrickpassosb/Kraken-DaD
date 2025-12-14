@@ -280,19 +280,7 @@ function App() {
                 <div className="header-left">
                     <div className="brand-stack">
                         <div className="brand-mark">
-                            <svg
-                                aria-hidden
-                                focusable="false"
-                                role="img"
-                                viewBox="0 0 24 24"
-                                className="brand-icon"
-                            >
-                                <path d="M12 3c-4.97 0-9 4.03-9 9v6a2 2 0 0 0 4 0v-4a1 1 0 1 1 2 0v4a2 2 0 0 0 4 0v-4a1 1 0 1 1 2 0v4a2 2 0 0 0 4 0v-6c0-4.97-4.03-9-9-9z" />
-                            </svg>
-                        </div>
-                        <div className="brand-text">
-                            <span>Kraken Pro</span>
-                            <span>Strategy Builder</span>
+                            <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
                         </div>
                     </div>
                 </div>
