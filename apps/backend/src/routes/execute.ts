@@ -137,8 +137,8 @@ async function buildMarketData(
 }> {
     const pairs = new Set<string>();
     for (const node of strategy.nodes) {
-        if (node.type === 'data.kraken.ticker' || node.type === 'action.placeOrder') {
-            const pair = (node.config as { pair?: string }).pair;
+        if (node.type === 'data.kraken.ticker' || node.type === 'action.placeOrder' || node.type === 'risk.guard') {
+            const pair = (node.config as { pair?: string }).pair ?? 'BTC/USD';
             if (pair) {
                 pairs.add(pair);
             }
