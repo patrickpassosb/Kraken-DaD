@@ -34,6 +34,7 @@ Strategy execution should reflect user-defined numeric conditions and risk check
 
 ### Success Criteria
 - [ ] Condition node evaluates numeric comparisons using comparator + threshold config and rejects missing/invalid values.
+- [ ] Condition control handle IDs remain aligned between UI and executor (no `UNKNOWN_PORT` errors for the trigger input).
 - [ ] `risk.guard` nodes export with native type/config instead of remapping, retaining defaults for pair/spread.
 - [ ] Backend market data builder records per-pair failures with deterministic fallback data instead of silent drops.
 - [ ] Frontend API base URL is configurable (env with localhost default) and applied across API clients/docs.

@@ -344,7 +344,7 @@ blockDefinitions.set('logic.if', {
     name: 'If',
     description: 'Routes control flow based on a numeric comparison',
     inputs: [
-        { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
         { id: 'condition', label: 'Value', dataType: 'number', required: true },
     ],
     outputs: [
