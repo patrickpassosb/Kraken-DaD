@@ -341,6 +341,12 @@ function App() {
     }, [activePair]);
 
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
+    const marketSourceLabel = marketError
+        ? 'Mock snapshot (Kraken API unavailable)'
+        : 'Kraken Ticker + Depth (REST/WS blend)';
+    const orderSourceLabel = marketError
+        ? 'Preview uses mock price'
+        : 'Preview uses Kraken price snapshot';
 
     const dataStatus = useMemo(() => {
         if (marketError) {
@@ -368,23 +374,7 @@ function App() {
                         <div className="brand-mark">KP</div>
                         <div className="brand-text">
                             <span>Kraken DaD</span>
-                            <span>Strategy Canvas</span>
                         </div>
-                    </div>
-                    <div className="tagline">Track #3 · Kraken Pro-inspired drag-and-drop builder</div>
-                    <div className="status-row">
-                        <span className="pill pill-success">
-                            <span className="pill-dot" />
-                            Dry-Run enforced
-                        </span>
-                        <span className={`pill ${dataStatus.tone}`} title={dataStatus.detail}>
-                            <span className="pill-dot" />
-                            {dataStatus.label}
-                        </span>
-                        <span className="pill pill-ghost">
-                            <span className="pill-dot" />
-                            Validate-only private APIs
-                        </span>
                     </div>
                 </div>
                 <div className="header-actions">
@@ -405,13 +395,6 @@ function App() {
                     </button>
                 </div>
             </header>
-
-            <div className="dry-run-banner">
-                <div className="banner-dot" />
-                <div>
-                    <strong>Safety-first:</strong> Dry-Run only. Kraken public data fuels Market Context and Order Preview; private endpoints stay validate-only. Wire lanes: Strategy Start → Market Data → Condition → Risk → Execution.
-                </div>
-            </div>
 
             <div className="workspace">
                 <FlowCanvas
@@ -440,6 +423,7 @@ function App() {
                             spread={displayMarketContext.spread}
                             change={displayMarketContext.change}
                             status={displayMarketContext.status}
+                            source={marketSourceLabel}
                         />
                     </div>
                     <div className="panel">
@@ -451,6 +435,7 @@ function App() {
                             type={orderPreview.type}
                             estimatedPrice={orderPreview.estimatedPrice}
                             feeRate={0.0026}
+                            sourceLabel={orderSourceLabel}
                         />
                         {result && (
                             <div className="result-summary" style={{ marginTop: '12px' }}>

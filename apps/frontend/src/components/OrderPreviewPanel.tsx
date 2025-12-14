@@ -7,6 +7,7 @@ interface OrderPreviewProps {
     type: 'market' | 'limit';
     estimatedPrice?: number;
     feeRate: number;
+    sourceLabel?: string;
 }
 
 export function OrderPreviewPanel({
@@ -16,6 +17,7 @@ export function OrderPreviewPanel({
     type,
     estimatedPrice,
     feeRate,
+    sourceLabel,
 }: OrderPreviewProps) {
     const notional = estimatedPrice ? estimatedPrice * amount : undefined;
     const fees = notional ? notional * feeRate : undefined;
@@ -26,6 +28,7 @@ export function OrderPreviewPanel({
                 <div className="market-pair">Order Preview</div>
                 <span className="chip">Dry-run</span>
             </div>
+            {sourceLabel && <div className="market-subtitle">{sourceLabel}</div>}
             <div className="kv">
                 <span>Pair</span>
                 <strong>{formatPair(pair)}</strong>

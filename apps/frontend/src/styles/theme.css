@@ -631,6 +631,12 @@ body {
     font-weight: 700;
 }
 
+.market-subtitle {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+}
+
 .market-badge {
     padding: 4px 10px;
     border-radius: var(--radius-sm);
