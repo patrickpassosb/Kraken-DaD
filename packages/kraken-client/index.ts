@@ -247,7 +247,7 @@ export async function fetchTickerWsOnce(pair: string, timeoutMs = 3000): Promise
             );
         });
 
-        ws.on('message', (data) => {
+        ws.on('message', (data: WebSocket.RawData) => {
             try {
                 const parsed = JSON.parse(data.toString());
                 if (!Array.isArray(parsed)) return;
@@ -274,7 +274,7 @@ export async function fetchTickerWsOnce(pair: string, timeoutMs = 3000): Promise
             }
         });
 
-        ws.on('error', (err) => {
+        ws.on('error', (err: Error) => {
             clearTimeout(timer);
             ws.close();
             reject(err);
