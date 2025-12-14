@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { fetchTicker, fetchDepth } from '../../../../packages/kraken-client/index.ts';
+import { fetchTicker, fetchDepth } from '@kraken-dad/kraken-client';
 
 interface MarketQuery {
     pair?: string;

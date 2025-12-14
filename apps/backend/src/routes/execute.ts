@@ -22,7 +22,7 @@ import {
     hasPrivateCreds,
     validateAddOrder,
     validateCancelOrder,
-} from '../../../../packages/kraken-client/index.ts';
+} from '@kraken-dad/kraken-client';
 
 // =============================================================================
 // REQUEST/RESPONSE TYPES
