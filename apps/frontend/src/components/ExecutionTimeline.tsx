@@ -1,3 +1,4 @@
+import { StatusPill } from './StatusPill';
 import { NodeStatus } from '../utils/status';
 
 export interface TimelineItem {
@@ -37,7 +38,10 @@ export function ExecutionTimeline({ items }: ExecutionTimelineProps) {
                         style={{ background: markerColor(item.status) }}
                     />
                     <div className="timeline-body">
-                        <div className="timeline-title">{item.title}</div>
+                        <div className="timeline-title-row">
+                            <div className="timeline-title">{item.title}</div>
+                            <StatusPill status={item.status} />
+                        </div>
                         {item.detail && <div className="timeline-meta">{item.detail}</div>}
                         {item.meta && <div className="muted">{item.meta}</div>}
                     </div>

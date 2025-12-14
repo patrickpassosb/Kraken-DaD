@@ -342,19 +342,50 @@ function App() {
 
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
 
+    const dataStatus = useMemo(() => {
+        if (marketError) {
+            return { label: 'Mocked Kraken data', tone: 'pill-warn', detail: marketError };
+        }
+        if (marketContext) {
+            return {
+                label: 'Live Kraken data',
+                tone: 'pill-success',
+                detail: 'Ticker + Depth sourced from Kraken',
+            };
+        }
+        return {
+            label: 'Syncing Kraken data',
+            tone: 'pill-ghost',
+            detail: 'Waiting on Ticker/Depth snapshot',
+        };
+    }, [marketContext, marketError]);
+
     return (
         <div className="app-shell">
             <header className="kraken-header">
-                <div className="brand-stack">
-                    <div className="brand-mark">KP</div>
-                    <div className="brand-text">
-                        <span>Kraken DaD</span>
-                        <span>Strategy Canvas</span>
+                <div className="header-left">
+                    <div className="brand-stack">
+                        <div className="brand-mark">KP</div>
+                        <div className="brand-text">
+                            <span>Kraken DaD</span>
+                            <span>Strategy Canvas</span>
+                        </div>
                     </div>
-                </div>
-                <div className="badge">
-                    <span className="badge-dot" />
-                    Dry-Run enforced — no real orders executed
+                    <div className="tagline">Track #3 · Kraken Pro-inspired drag-and-drop builder</div>
+                    <div className="status-row">
+                        <span className="pill pill-success">
+                            <span className="pill-dot" />
+                            Dry-Run enforced
+                        </span>
+                        <span className={`pill ${dataStatus.tone}`} title={dataStatus.detail}>
+                            <span className="pill-dot" />
+                            {dataStatus.label}
+                        </span>
+                        <span className="pill pill-ghost">
+                            <span className="pill-dot" />
+                            Validate-only private APIs
+                        </span>
+                    </div>
                 </div>
                 <div className="header-actions">
                     <label className="chip" style={{ cursor: 'pointer' }}>
@@ -367,7 +398,7 @@ function App() {
                         Validate orders on Kraken (no execution)
                     </label>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
-                        Export Kraken Strategy Definition
+                        Export Strategy Definition
                     </button>
                     <button className="btn btn-primary" onClick={handleExecute} disabled={loading}>
                         {loading ? 'Running Dry-Run...' : 'Run Dry-Run'}
@@ -376,7 +407,10 @@ function App() {
             </header>
 
             <div className="dry-run-banner">
-                <strong>Safety-first:</strong> Dry-Run mode only. Public market data fetched from Kraken; private endpoints remain stubbed or validate-only. Connect lanes from Strategy Start → Market Data → Condition → Risk → Execution.
+                <div className="banner-dot" />
+                <div>
+                    <strong>Safety-first:</strong> Dry-Run only. Kraken public data fuels Market Context and Order Preview; private endpoints stay validate-only. Wire lanes: Strategy Start → Market Data → Condition → Risk → Execution.
+                </div>
             </div>
 
             <div className="workspace">
