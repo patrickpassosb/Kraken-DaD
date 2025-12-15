@@ -1,4 +1,4 @@
-const API_BASE = 'http://127.0.0.1:3001';
+import { API_BASE } from './config';
 
 export interface ExecutionResult {
     success: boolean;
