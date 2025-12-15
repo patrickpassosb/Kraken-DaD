@@ -71,10 +71,21 @@ export interface ExecutionResult {
     krakenValidations?: KrakenValidation[];
 }
 
+export interface KrakenValidationRequest {
+    readonly pair?: string;
+    readonly side?: string;
+    readonly type?: string;
+    readonly amount?: number;
+    readonly price?: number;
+    readonly orderId?: string;
+    readonly validate: true;
+}
+
 export interface KrakenValidation {
     readonly nodeId: string;
     readonly action: string;
     readonly status: 'ok' | 'error';
+    readonly request: KrakenValidationRequest;
     readonly detail?: string;
     readonly response?: Record<string, unknown>;
 }

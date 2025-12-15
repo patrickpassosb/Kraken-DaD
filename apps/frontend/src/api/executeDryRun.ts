@@ -37,6 +37,15 @@ export interface ExecutionResult {
         nodeId: string;
         action: string;
         status: 'ok' | 'error';
+        request: {
+            pair?: string;
+            side?: string;
+            type?: string;
+            amount?: number;
+            price?: number;
+            orderId?: string;
+            validate: true;
+        };
         detail?: string;
         response?: Record<string, unknown>;
     }>;

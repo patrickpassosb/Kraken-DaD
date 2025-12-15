@@ -176,6 +176,19 @@ function mapLogToStatus(logStatus: string): NodeStatus {
     return 'executed';
 }
 
+function describeValidation(entry: NonNullable<ExecutionResult['krakenValidations']>[number]) {
+    const { request } = entry;
+    if (entry.action === 'CANCEL_ORDER') {
+        return `Cancel order ${request.orderId ?? 'unknown'} (validate-only)`;
+    }
+    const pair = request.pair ?? 'BTC/USD';
+    const side = (request.side ?? 'buy').toUpperCase();
+    const amount = request.amount ?? '?';
+    const type = request.type ?? 'market';
+    const priceText = type === 'limit' && request.price ? ` @ ${request.price}` : '';
+    return `${side} ${amount} ${pair} (${type}${priceText ? priceText : ''}, validate-only)`;
+}
+
 function App() {
     const [nodes, setNodes] = useState<Node[]>(demoNodes);
     const [edges, setEdges] = useState<Edge[]>(demoEdges);
@@ -273,6 +286,7 @@ function App() {
     const orderSourceLabel = marketError
         ? 'Preview uses mock price'
         : 'Preview uses Kraken price snapshot';
+    const validationEntries = result?.krakenValidations ?? [];
 
     return (
         <div className="app-shell">
@@ -349,6 +363,74 @@ function App() {
                                         {result.warnings.length}
                                     </div>
                                 </div>
+                            </div>
+                        )}
+                        {result && (
+                            <div className="panel" style={{ marginTop: '12px' }}>
+                                <div className="panel-title">Kraken Validate-Only Checks</div>
+                                <div
+                                    className="chip"
+                                    style={{
+                                        marginBottom: '8px',
+                                        color: 'var(--kraken-amber)',
+                                        background: 'rgba(255, 192, 105, 0.1)',
+                                        borderColor: 'rgba(255, 192, 105, 0.35)',
+                                    }}
+                                >
+                                    Dry-run safety: requests use validate=true and never place live trades.
+                                </div>
+                                {validationEntries.length === 0 ? (
+                                    <div className="summary-card" style={{ marginTop: 0 }}>
+                                        <div className="value">No Kraken order intents to validate.</div>
+                                    </div>
+                                ) : (
+                                    <div className="kraken-validation-list">
+                                        {validationEntries.map((entry) => (
+                                            <div
+                                                key={`${entry.nodeId}-${entry.action}-${entry.request.orderId ?? entry.request.price ?? entry.request.pair ?? ''}`}
+                                                className="summary-card"
+                                                style={{
+                                                    marginTop: 0,
+                                                    borderColor:
+                                                        entry.status === 'ok'
+                                                            ? 'rgba(43, 217, 157, 0.5)'
+                                                            : 'rgba(255, 107, 107, 0.6)',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                    }}
+                                                >
+                                                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{describeValidation(entry)}</div>
+                                                    <div
+                                                        className="chip"
+                                                        style={{
+                                                            color: entry.status === 'ok' ? 'var(--kraken-green)' : 'var(--kraken-red)',
+                                                            background:
+                                                                entry.status === 'ok'
+                                                                    ? 'rgba(43, 217, 157, 0.12)'
+                                                                    : 'rgba(255, 107, 107, 0.1)',
+                                                        }}
+                                                    >
+                                                        {entry.status === 'ok' ? 'Validated' : 'Error'}
+                                                    </div>
+                                                </div>
+                                                {entry.detail && (
+                                                    <div className="value" style={{ fontSize: '13px', marginTop: '6px' }}>
+                                                        {entry.detail}
+                                                    </div>
+                                                )}
+                                                <div className="value" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    Node: {entry.nodeId}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {error && (

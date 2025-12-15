@@ -90,6 +90,7 @@ export async function executeRoute(fastify: FastifyInstance) {
                             errors: { type: 'array' },
                             warnings: { type: 'array' },
                             actionIntents: { type: 'array' },
+                            krakenValidations: { type: 'array' },
                         },
                     },
                 },
@@ -228,8 +229,18 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
                 const pair = (params.pair as string) ?? 'BTC/USD';
                 const side = (params.side as 'buy' | 'sell') ?? 'buy';
                 const type = (params.type as 'market' | 'limit') ?? 'market';
-                const volume = String(params.amount ?? 0.1);
-                const price = params.price !== undefined ? String(params.price) : undefined;
+                const amount = (params.amount as number) ?? 0.1;
+                const priceValue = params.price as number | undefined;
+                const volume = String(amount);
+                const price = priceValue !== undefined ? String(priceValue) : undefined;
+                const request = {
+                    pair,
+                    side,
+                    type,
+                    amount,
+                    price: priceValue,
+                    validate: true as const,
+                };
                 const validateResp = await validateAddOrder({
                     pair,
                     type: side,
@@ -242,18 +253,21 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
                     nodeId: intent.nodeId,
                     action: intent.intent.action,
                     status: 'ok',
-                    detail: 'Kraken validate=true accepted',
+                    detail: extractValidationDetail(validateResp) ?? 'Kraken validate=true accepted',
                     response: validateResp,
+                    request,
                 });
             } else if (intent.intent.action === 'CANCEL_ORDER') {
                 const txid = (intent.intent.params.orderId as string) ?? '';
+                const request = { orderId: txid, validate: true as const };
                 const validateResp = await validateCancelOrder(txid);
                 validations.push({
                     nodeId: intent.nodeId,
                     action: intent.intent.action,
                     status: 'ok',
-                    detail: 'Kraken validate=true accepted',
+                    detail: extractValidationDetail(validateResp) ?? 'Kraken validate=true accepted',
                     response: validateResp,
+                    request,
                 });
             }
         } catch (err) {
@@ -262,10 +276,35 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
                 action: intent.intent.action,
                 status: 'error',
                 detail: err instanceof Error ? err.message : 'Unknown validation error',
+                request: intent.intent.action === 'CANCEL_ORDER'
+                    ? { orderId: (intent.intent.params.orderId as string) ?? '', validate: true as const }
+                    : {
+                          pair: (intent.intent.params.pair as string) ?? 'BTC/USD',
+                          side: (intent.intent.params.side as 'buy' | 'sell') ?? 'buy',
+                          type: (intent.intent.params.type as 'market' | 'limit') ?? 'market',
+                          amount: (intent.intent.params.amount as number) ?? 0.1,
+                          price: (intent.intent.params.price as number | undefined),
+                          validate: true as const,
+                      },
             });
             fastify.log.warn({ err, intent }, 'Kraken validation failed');
         }
     }
 
     result.krakenValidations = validations;
+}
+
+function extractValidationDetail(resp: unknown): string | undefined {
+    if (!resp || typeof resp !== 'object') return undefined;
+    const result = (resp as { result?: unknown }).result;
+    if (result && typeof result === 'object' && 'descr' in result) {
+        const descr = (result as { descr?: unknown }).descr;
+        if (descr && typeof descr === 'object' && 'order' in descr) {
+            const order = (descr as { order?: unknown }).order;
+            if (typeof order === 'string') {
+                return order;
+            }
+        }
+    }
+    return undefined;
 }
