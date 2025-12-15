@@ -185,7 +185,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
-    const [validateWithKraken, setValidateWithKraken] = useState(false);
+    const validateWithKraken = true;
 
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
@@ -285,15 +285,6 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
-                    <label className="chip" style={{ cursor: 'pointer' }}>
-                        <input
-                            type="checkbox"
-                            checked={validateWithKraken}
-                            onChange={(e) => setValidateWithKraken(e.target.checked)}
-                            style={{ marginRight: '8px' }}
-                        />
-                        Validate orders on Kraken (no execution)
-                    </label>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
