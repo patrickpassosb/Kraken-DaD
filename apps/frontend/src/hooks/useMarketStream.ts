@@ -25,25 +25,32 @@ export function useMarketStream(pair: string) {
         setWarning(null);
         lastTsRef.current = 0;
 
-        es.onmessage = (event) => {
+        es.onopen = () => {
+            setWarning(null);
+        };
+
+        const handler = (event: MessageEvent) => {
             try {
                 const payload = JSON.parse(event.data) as StreamPayload;
                 if (!payload?.timestamp) return;
-                // Throttle by timestamp progression
                 if (payload.timestamp <= lastTsRef.current) return;
                 lastTsRef.current = payload.timestamp;
                 setData(payload);
                 setWarning(null);
-            } catch (err) {
+            } catch {
                 // ignore parse errors
             }
         };
+
+        es.addEventListener('ticker', handler);
+        es.onmessage = handler; // fallback if event field missing
 
         es.onerror = () => {
             setWarning('Live stream unavailable; using snapshot.');
         };
 
         return () => {
+            es.removeEventListener('ticker', handler);
             es.close();
         };
     }, [pair]);

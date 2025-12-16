@@ -168,11 +168,15 @@ export async function marketStreamRoute(fastify: FastifyInstance) {
             await seedFromRest(pair, fastify.log);
             startWs(pair, fastify.log);
 
+            // Ensure CORS even when using raw writeHead for SSE
             reply.raw.writeHead(200, {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
                 Connection: 'keep-alive',
                 'X-Accel-Buffering': 'no',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
             });
             reply.raw.write(`retry: ${retryMs}\n\n`);
 
