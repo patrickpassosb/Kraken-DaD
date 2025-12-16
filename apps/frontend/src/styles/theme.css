@@ -176,7 +176,7 @@ body {
 .btn-primary {
     background: linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong));
     border-color: var(--kraken-purple);
-    color: #0b0a12;
+    color: #f7f8ff;
 }
 
 .btn-primary:hover {
