@@ -44,6 +44,7 @@ const paletteGroups = [
                 label: 'Strategy Start',
                 role: 'Control',
                 description: 'Entry control signal',
+                icon: '▶',
                 position: { x: 360, y: 260 },
             },
         ],
@@ -57,6 +58,7 @@ const paletteGroups = [
                 label: 'Market Data',
                 role: 'Data',
                 description: 'Kraken ticker snapshot',
+                icon: '$',
                 position: { x: 560, y: 240 },
             },
         ],
@@ -70,6 +72,7 @@ const paletteGroups = [
                 label: 'Condition',
                 role: 'Logic',
                 description: 'Branch on price rule',
+                icon: '?',
                 position: { x: 800, y: 260 },
             },
             {
@@ -77,6 +80,7 @@ const paletteGroups = [
                 label: 'Orderbook Guard',
                 role: 'Risk',
                 description: 'Block on wide spreads',
+                icon: '⚑',
                 position: { x: 1040, y: 240 },
             },
         ],
@@ -90,6 +94,7 @@ const paletteGroups = [
                 label: 'Execution',
                 role: 'Action',
                 description: 'Prepare Kraken order intent',
+                icon: '✓',
                 position: { x: 1260, y: 240 },
             },
             {
@@ -97,6 +102,7 @@ const paletteGroups = [
                 label: 'Order Control',
                 role: 'Action',
                 description: 'Cancel by ID',
+                icon: '⤺',
                 position: { x: 1260, y: 360 },
             },
             {
@@ -104,6 +110,7 @@ const paletteGroups = [
                 label: 'Audit Log',
                 role: 'Audit',
                 description: 'Record decision',
+                icon: '✎',
                 position: { x: 1280, y: 500 },
             },
         ],
@@ -298,15 +305,16 @@ export function FlowCanvas({
                                     <div className="palette-group-title">{group.label}</div>
                                     {group.items.map((item) => (
                                         <div
-                                            key={item.type + item.label}
-                                            className="palette-item"
-                                            onClick={() => handleAddNode(item.type, item.position)}
-                                        >
-                                            <div className="palette-text">
-                                                <div className="palette-label">{item.label}</div>
-                                                <div className="palette-subtext">{item.description}</div>
-                                            </div>
-                                            <span className={`palette-role role-${item.role.toLowerCase()}`}>
+                                        key={item.type + item.label}
+                                        className="palette-item"
+                                        onClick={() => handleAddNode(item.type, item.position)}
+                                    >
+                                        <div className="palette-icon">{item.icon}</div>
+                                        <div className="palette-text">
+                                            <div className="palette-label">{item.label}</div>
+                                            <div className="palette-subtext">{item.description}</div>
+                                        </div>
+                                        <span className={`palette-role role-${item.role.toLowerCase()}`}>
                                                 {item.role}
                                             </span>
                                         </div>

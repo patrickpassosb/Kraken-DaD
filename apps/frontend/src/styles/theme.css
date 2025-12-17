@@ -375,6 +375,8 @@ body {
     top: var(--space-11, 60px);
     left: var(--space-4);
     width: 280px;
+    max-height: calc(100% - 120px);
+    overflow-y: auto;
     z-index: 4;
     background: linear-gradient(180deg, rgba(18, 18, 30, 0.95), rgba(10, 8, 18, 0.98));
     border: 1px solid var(--border-strong);
@@ -442,6 +444,19 @@ body {
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.palette-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, rgba(121, 80, 242, 0.22), rgba(61, 44, 105, 0.5));
+    color: #f7f8ff;
+    font-weight: 700;
+    font-size: 16px;
+    border: 1px solid rgba(121, 80, 242, 0.4);
 }
 
 .palette-label {
