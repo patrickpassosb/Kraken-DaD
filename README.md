@@ -39,24 +39,24 @@ Data flow: UI builds graph → serialize to strategy JSON → backend dry-run in
 ```mermaid
 flowchart LR
     subgraph Frontend["apps/frontend - React + React Flow"]
-        Canvas[Strategy Canvas\nBlocks/Edges -> Strategy JSON]
-        ContextDock[Market Context]
-        Preview[Order Preview]
+        Canvas["Strategy Canvas\nBlocks/Edges -> Strategy JSON"]
+        ContextDock["Market Context"]
+        Preview["Order Preview"]
     end
 
     subgraph Backend["apps/backend - Fastify"]
-        DryRun[/POST \/execute\/dry-run/]
-        Market[/GET \/market\/context/]
+        DryRun["POST /execute/dry-run"]
+        Market["GET /market/context"]
     end
 
     subgraph Core["packages/strategy-core"]
-        Schema[Strategy Schema & Validation]
-        Exec[Dry-run Executor]
+        Schema["Strategy Schema & Validation"]
+        Exec["Dry-run Executor"]
     end
 
     subgraph KrakenAPI["Kraken API"]
-        Public[Public REST (Ticker/Depth)]
-        Private[Private REST (validate=true scaffold)]
+        Public["Public REST (Ticker/Depth)"]
+        Private["Private REST (validate=true scaffold)"]
     end
 
     Canvas -->|serialize| DryRun
