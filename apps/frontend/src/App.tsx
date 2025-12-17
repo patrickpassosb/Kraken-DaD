@@ -321,7 +321,7 @@ function App() {
                     <div className="panel">
                         <div className="panel-title">Market Context</div>
                         {warningMessage && (
-                            <div className="chip" style={{ marginBottom: '8px', color: 'var(--kraken-amber)' }}>
+                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
                                 {warningMessage}
                             </div>
                         )}
