@@ -132,6 +132,7 @@ export function FlowCanvas({
     nodeStatuses,
 }: FlowCanvasProps) {
     const [paletteOpen, setPaletteOpen] = useState(false);
+    const [paletteSearch, setPaletteSearch] = useState('');
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
     const { fitView } = useReactFlow();
@@ -195,6 +196,26 @@ export function FlowCanvas({
     useEffect(() => {
         onEdgesChange(edges);
     }, [edges, onEdgesChange]);
+
+    const handleLoadTemplate = useCallback(() => {
+        const templateNodes: Node[] = [
+            { id: 'start-template', type: 'control.start', position: { x: 360, y: 260 }, data: {} },
+            { id: 'ticker-template', type: 'data.kraken.ticker', position: { x: 560, y: 240 }, data: { pair: 'BTC/USD' } },
+            { id: 'if-template', type: 'logic.if', position: { x: 780, y: 260 }, data: { comparator: '>', threshold: 90000 } },
+            { id: 'order-template', type: 'action.placeOrder', position: { x: 1000, y: 260 }, data: { pair: 'BTC/USD', side: 'buy', type: 'market', amount: 0.1 } },
+        ];
+        const templateEdges: Edge[] = [
+            { id: 'e-start-ticker-template', source: 'start-template', sourceHandle: 'control:out', target: 'ticker-template', targetHandle: 'control:in', type: 'control' },
+            { id: 'e-ticker-if-control-template', source: 'ticker-template', sourceHandle: 'control:out', target: 'if-template', targetHandle: 'control:in', type: 'control' },
+            { id: 'e-if-order-template', source: 'if-template', sourceHandle: 'control:true', target: 'order-template', targetHandle: 'control:trigger', type: 'control' },
+            { id: 'e-ticker-if-data-template', source: 'ticker-template', sourceHandle: 'data:price', target: 'if-template', targetHandle: 'data:condition', type: 'data' },
+            { id: 'e-ticker-order-data-template', source: 'ticker-template', sourceHandle: 'data:price', target: 'order-template', targetHandle: 'data:price', type: 'data' },
+        ];
+        setNodes(templateNodes);
+        setEdges(templateEdges);
+        setPaletteOpen(false);
+        fitView({ padding: 0.2, duration: 300 });
+    }, [fitView, setEdges, setNodes]);
 
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
@@ -280,6 +301,35 @@ export function FlowCanvas({
         }
     }, [fitView, nodes.length]);
 
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === 'r') {
+                const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+                e.preventDefault();
+                handleFitView();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [handleFitView]);
+
+    const filteredGroups = useMemo(() => {
+        const term = paletteSearch.trim().toLowerCase();
+        if (!term) return paletteGroups;
+        return paletteGroups
+            .map((group) => ({
+                ...group,
+                items: group.items.filter(
+                    (item) =>
+                        item.label.toLowerCase().includes(term) ||
+                        item.role.toLowerCase().includes(term) ||
+                        item.description.toLowerCase().includes(term)
+                ),
+            }))
+            .filter((g) => g.items.length > 0);
+    }, [paletteSearch]);
+
     return (
         <div className="canvas-panel">
             <div className="canvas-shell">
@@ -299,8 +349,14 @@ export function FlowCanvas({
                 {paletteOpen && (
                     <div className="palette-floating panel">
                         <div className="panel-title">Strategy Blocks</div>
+                        <input
+                            className="palette-search"
+                            placeholder="Search blocks..."
+                            value={paletteSearch}
+                            onChange={(e) => setPaletteSearch(e.target.value)}
+                        />
                         <div className="node-palette">
-                            {paletteGroups.map((group) => (
+                            {filteredGroups.map((group) => (
                                 <div key={group.id} className={`palette-group palette-${group.id}`}>
                                     <div className="palette-group-title">{group.label}</div>
                                     {group.items.map((item) => (
@@ -308,6 +364,7 @@ export function FlowCanvas({
                                         key={item.type + item.label}
                                         className="palette-item"
                                         onClick={() => handleAddNode(item.type, item.position)}
+                                        title={`${item.label} — ${item.description}`}
                                     >
                                         <div className="palette-icon">{item.icon}</div>
                                         <div className="palette-text">
@@ -334,6 +391,9 @@ export function FlowCanvas({
                                     onClick={() => handleAddNode('control.start', { x: 520, y: 320 })}
                                 >
                                     Add Strategy Start
+                                </button>
+                                <button className="btn btn-ghost" onClick={handleLoadTemplate}>
+                                    Start with template
                                 </button>
                                 <button className="btn btn-ghost" onClick={() => setPaletteOpen(true)}>
                                     Open Strategy Blocks

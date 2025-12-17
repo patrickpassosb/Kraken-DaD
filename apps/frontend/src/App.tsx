@@ -218,6 +218,7 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    <span className="mode-pill">Mode: Dry-run (no live orders)</span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setRightRailOpen((v) => !v)}

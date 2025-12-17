@@ -207,6 +207,15 @@ body {
     border-color: rgba(255, 255, 255, 0.08);
 }
 
+.mode-pill {
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+}
+
 .dry-run-banner {
     display: flex;
     align-items: center;
@@ -424,6 +433,17 @@ body {
     color: var(--text-muted);
     letter-spacing: 1px;
     margin-bottom: var(--space-2);
+}
+
+.palette-search {
+    width: 100%;
+    margin-bottom: var(--space-2);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--kraken-deep);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
 }
 
 .palette-item {
