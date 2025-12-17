@@ -311,6 +311,12 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => setRightRailOpen((v) => !v)}
+                    >
+                        {rightRailOpen ? 'Hide Context & Preview' : 'Show Context & Preview'}
+                    </button>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
@@ -322,17 +328,11 @@ function App() {
 
             <div
                 className="workspace"
-                style={{ gridTemplateColumns: rightRailOpen ? 'minmax(0, 1fr) 380px' : '1fr' }}
+                style={{
+                    gridTemplateColumns: rightRailOpen ? 'minmax(0, 1fr) 380px' : '1fr',
+                    gap: rightRailOpen ? 'var(--space-4)' : '0px',
+                }}
             >
-                {!rightRailOpen && (
-                    <button
-                        className="btn btn-ghost rail-toggle-floating"
-                        onClick={() => setRightRailOpen(true)}
-                    >
-                        Show Context & Preview
-                    </button>
-                )}
-
                 <FlowCanvas
                     initialNodes={demoNodes}
                     initialEdges={demoEdges}
@@ -344,14 +344,6 @@ function App() {
                 {rightRailOpen && (
                     <div className="right-rail-shell">
                         <div className="right-rail">
-                            <div className="rail-toggle-row">
-                                <button
-                                    className="btn btn-ghost"
-                                    onClick={() => setRightRailOpen(false)}
-                                >
-                                    Hide Context & Preview
-                                </button>
-                            </div>
                             <div className="panel">
                                 <div className="panel-title">Market Context</div>
                                 {warningMessage && (
