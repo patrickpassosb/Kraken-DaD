@@ -1,0 +1,21 @@
+{
+    "extends": "./apps/backend/tsconfig.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022", "DOM"],
+        "types": ["node", "ws"],
+        "typeRoots": [
+            "./apps/backend/node_modules/@types",
+            "./packages/kraken-client/node_modules/@types"
+        ],
+        "allowImportingTsExtensions": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true
+    },
+    "include": [
+        "packages/strategy-core/**/*.ts",
+        "packages/kraken-client/**/*.ts"
+    ]
+}
