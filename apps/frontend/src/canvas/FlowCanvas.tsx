@@ -336,8 +336,9 @@ export function FlowCanvas({
                 <button className="palette-toggle btn btn-ghost" onClick={() => setPaletteOpen((v) => !v)}>
                     {paletteOpen ? 'Hide Strategy Blocks' : 'Show Strategy Blocks'}
                 </button>
-                <button className="recenter-control btn btn-ghost" onClick={handleFitView}>
-                    Recenter
+                <button className="recenter-control btn btn-ghost" onClick={handleFitView} title="Recenter (R)">
+                    <span>Recenter</span>
+                    <span className="key-hint">R</span>
                 </button>
                 <div className="lane-backdrop">
                     {lanes.map((lane) => (
