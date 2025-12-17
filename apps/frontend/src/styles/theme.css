@@ -168,15 +168,17 @@ body {
     font-weight: 600;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
-    background: var(--surface-muted);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
 }
 
 .btn:hover {
-    border-color: var(--kraken-purple);
-    background: rgba(121, 80, 242, 0.1);
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.07);
+    color: #f7f8ff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 10px 20px rgba(0, 0, 0, 0.35);
 }
 
 .btn:active {
@@ -191,10 +193,18 @@ body {
 
 .btn-primary:hover {
     border-color: var(--kraken-purple-strong);
+    box-shadow: 0 0 0 1px rgba(121, 80, 242, 0.25), 0 14px 28px rgba(0, 0, 0, 0.4);
 }
 
 .btn-ghost {
     background: transparent;
+    color: var(--text-muted);
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #f7f8ff;
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .dry-run-banner {
