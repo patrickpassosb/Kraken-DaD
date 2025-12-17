@@ -38,30 +38,37 @@ Data flow: UI builds graph → serialize to strategy JSON → backend dry-run in
 
 ```mermaid
 flowchart LR
-    subgraph Frontend["apps/frontend\nReact + React Flow"]
-        Canvas["Strategy Canvas\nBlocks/Edges -> Strategy JSON"]
-        ContextDock["Market Context"]
-        Preview["Order Preview"]
-    end
+    Frontend[apps/frontend\nReact + React Flow]
+    Backend[apps/backend\nFastify]
+    Core[packages/strategy-core]
+    KrakenAPI[Kraken API]
 
-    subgraph Backend["apps/backend\nFastify"]
-        DryRun["POST /execute/dry-run"]
-        Market["GET /market/context"]
-    end
+    Canvas["Strategy Canvas\nBlocks/Edges -> Strategy JSON"]
+    ContextDock["Market Context"]
+    Preview["Order Preview"]
+    DryRun["POST /execute/dry-run"]
+    Market["GET /market/context"]
+    Schema["Strategy Schema & Validation"]
+    Exec["Dry-run Executor"]
+    Public["Public REST (Ticker/Depth)"]
+    Private["Private REST (validate=true scaffold)"]
 
-    subgraph Core["packages/strategy-core"]
-        Schema["Strategy Schema & Validation"]
-        Exec["Dry-run Executor"]
-    end
+    Frontend --> Canvas
+    Frontend --> ContextDock
+    Frontend --> Preview
 
-    subgraph KrakenAPI["Kraken API"]
-        Public["Public REST (Ticker/Depth)"]
-        Private["Private REST (validate=true scaffold)"]
-    end
+    Backend --> DryRun
+    Backend --> Market
+
+    Core --> Schema
+    Core --> Exec
+
+    KrakenAPI --> Public
+    KrakenAPI --> Private
 
     Canvas -->|serialize| DryRun
     DryRun -->|inject market data| Exec
-    Exec -->|ExecutionResult| Canvas
+    Exec -->|ExecutionResult| Preview
     ContextDock -->|fetch| Market
     Market --> Public
     Exec --> Public
