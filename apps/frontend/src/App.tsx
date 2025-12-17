@@ -9,6 +9,7 @@ import { OrderPreviewPanel } from './components/OrderPreviewPanel';
 import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
+import { ExecutionTimeline } from './components/ExecutionTimeline';
 
 type MarketStatus = 'Open' | 'Halted';
 
@@ -172,6 +173,26 @@ function deriveOrderPreview(nodes: Node[], context: MarketContext) {
     };
 }
 
+function deriveRiskSettings(nodes: Node[]) {
+    const riskNode = nodes.find((n) => n.type === 'risk.guard');
+    const data = (riskNode?.data as Record<string, unknown>) || {};
+    return {
+        pair: formatPair((data.pair as string) || derivePair(nodes)),
+        maxSpread: (data.maxSpread as number) ?? (data.priceDeviation as number) ?? 0,
+        maxOrderSize: (data.maxOrderSize as number) ?? undefined,
+    };
+}
+
+function formatRunDuration(result: ExecutionResult | null): string {
+    if (!result) return '—';
+    const started = new Date(result.startedAt).getTime();
+    const completed = new Date(result.completedAt).getTime();
+    if (Number.isNaN(started) || Number.isNaN(completed)) return '—';
+    const durationMs = Math.max(0, completed - started);
+    if (durationMs < 1000) return `${durationMs} ms`;
+    return `${(durationMs / 1000).toFixed(2)} s`;
+}
+
 function mapLogToStatus(logStatus: string): NodeStatus {
     if (logStatus === 'error') return 'error';
     if (logStatus === 'skipped') return 'skipped';
@@ -236,6 +257,7 @@ function App() {
         () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
         [nodes, marketContext, activePair]
     );
+    const riskSettings = useMemo(() => deriveRiskSettings(nodes), [nodes]);
     const { data: streamData, warning: streamWarning } = useMarketStream(activePair);
 
     useEffect(() => {
@@ -287,6 +309,7 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const runDuration = formatRunDuration(result);
 
     return (
         <div className="app-shell">
@@ -296,6 +319,18 @@ function App() {
                         <div className="brand-mark">
                             <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
                         </div>
+                        <div className="brand-text">
+                            <span>Kraken DAD</span>
+                            <span>Strategy canvas · Kraken-native</span>
+                        </div>
+                    </div>
+                    <div className="header-meta">
+                        <span className="pill pill-ghost">
+                            <span className="pill-dot" aria-hidden />
+                            Dry-run only
+                        </span>
+                        <span className="pill pill-success">{formatPair(activePair)} tracked</span>
+                        <span className="pill pill-ghost">Snap to grid • Control/Data handles enforced</span>
                     </div>
                 </div>
                 <div className="header-actions">
@@ -308,20 +343,55 @@ function App() {
                 </div>
             </header>
 
+            <div className="dry-run-banner">
+                <span className="banner-dot" />
+                <div>
+                    <strong>Kraken-native dry-run:</strong> No keys requested. Control lanes drive execution; data lanes stay read-only.
+                </div>
+                <div style={{ marginLeft: 'auto', color: warningMessage ? 'var(--kraken-amber)' : 'var(--text-secondary)' }}>
+                    {warningMessage ? warningMessage : 'Streaming market data'}
+                </div>
+            </div>
+
             <div className="workspace">
-                <FlowCanvas
-                    initialNodes={demoNodes}
-                    initialEdges={demoEdges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={handleEdgesChange}
-                    nodeStatuses={nodeStatuses}
-                />
+                <div className="left-rail">
+                    <div className="panel inline-panel">
+                        <div className="panel-title">Strategy Snapshot</div>
+                        <div className="stat-grid">
+                            <div className="stat-card">
+                                <div className="label">Active Pair</div>
+                                <div className="value">{formatPair(activePair)}</div>
+                                <div className="muted">Source: {marketSourceLabel}</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="label">Blocks / Edges</div>
+                                <div className="value">
+                                    {nodes.length} nodes · {edges.length} links
+                                </div>
+                                <div className="muted">Control {edges.filter((e) => e.type === 'control').length} · Data {edges.filter((e) => e.type === 'data').length}</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="label">Last Dry-run</div>
+                                <div className="value">{result ? (result.success ? 'Success' : 'Check flow') : 'Not run'}</div>
+                                <div className="muted">Duration: {runDuration}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <FlowCanvas
+                        initialNodes={demoNodes}
+                        initialEdges={demoEdges}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={handleEdgesChange}
+                        nodeStatuses={nodeStatuses}
+                    />
+                </div>
 
                 <div className="right-rail">
                     <div className="panel">
                         <div className="panel-title">Market Context</div>
                         {warningMessage && (
-                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
+                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff', borderColor: 'var(--kraken-amber)' }}>
                                 {warningMessage}
                             </div>
                         )}
@@ -345,32 +415,32 @@ function App() {
                             feeRate={0.0026}
                             sourceLabel={orderSourceLabel}
                         />
-                        {result && (
-                            <div className="result-summary" style={{ marginTop: '12px' }}>
+                        <div className="result-summary" style={{ marginTop: '12px' }}>
+                            <div className="summary-card">
+                                <h4>Risk Guard</h4>
+                                <div className="value">Spread &lt; {riskSettings.maxSpread || '—'} USD</div>
+                                <div className="muted">Pair: {riskSettings.pair}</div>
+                            </div>
+                            {result && (
                                 <div className="summary-card">
                                     <h4>Status</h4>
                                     <div className="value" style={{ color: result.success ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>
                                         {result.success ? 'Success' : 'Check strategy'}
                                     </div>
+                                    <div className="muted">Nodes: {result.nodesExecuted}</div>
                                 </div>
-                                <div className="summary-card">
-                                    <h4>Nodes Executed</h4>
-                                    <div className="value">{result.nodesExecuted}</div>
+                            )}
+                            {error && (
+                                <div className="summary-card" style={{ borderColor: 'var(--kraken-red)' }}>
+                                    <h4>Alert</h4>
+                                    <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
                                 </div>
-                                <div className="summary-card">
-                                    <h4>Warnings</h4>
-                                    <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                        {result.warnings.length}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {error && (
-                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                <h4>Alert</h4>
-                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
-                            </div>
-                        )}
+                            )}
+                        </div>
+                    </div>
+                    <div className="panel">
+                        <div className="panel-title">Execution Timeline</div>
+                        <ExecutionTimeline result={result} />
                     </div>
                 </div>
             </div>

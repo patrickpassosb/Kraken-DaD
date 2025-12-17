@@ -27,10 +27,90 @@ interface FlowCanvasProps {
 }
 
 const lanes = [
-    { id: 'market', label: 'Market Data' },
-    { id: 'logic', label: 'Logic' },
-    { id: 'risk', label: 'Risk' },
-    { id: 'execution', label: 'Execution' },
+    { id: 'market', label: 'Market Data', accent: 'var(--kraken-cyan)' },
+    { id: 'logic', label: 'Logic', accent: 'var(--kraken-amber)' },
+    { id: 'risk', label: 'Risk', accent: 'var(--kraken-purple)' },
+    { id: 'execution', label: 'Execution', accent: 'var(--kraken-green)' },
+];
+
+const paletteGroups: Array<{
+    title: string;
+    dot: string;
+    items: Array<{ type: string; label: string; helper: string; position: { x: number; y: number }; chip: string }>;
+}> = [
+    {
+        title: 'Control',
+        dot: 'var(--kraken-purple)',
+        items: [
+            {
+                type: 'control.start',
+                label: 'Strategy Start',
+                helper: 'Entry control signal',
+                position: { x: 80, y: 200 },
+                chip: 'Control',
+            },
+        ],
+    },
+    {
+        title: 'Market',
+        dot: 'var(--kraken-cyan)',
+        items: [
+            {
+                type: 'data.kraken.ticker',
+                label: 'Market Data',
+                helper: 'Kraken ticker snapshot',
+                position: { x: 260, y: 200 },
+                chip: 'Data',
+            },
+        ],
+    },
+    {
+        title: 'Logic & Risk',
+        dot: 'var(--kraken-amber)',
+        items: [
+            {
+                type: 'logic.if',
+                label: 'Condition',
+                helper: 'Branch on price rule',
+                position: { x: 520, y: 220 },
+                chip: 'Logic',
+            },
+            {
+                type: 'risk.guard',
+                label: 'Orderbook Guard',
+                helper: 'Block on wide spreads',
+                position: { x: 720, y: 200 },
+                chip: 'Risk',
+            },
+        ],
+    },
+    {
+        title: 'Execution',
+        dot: 'var(--kraken-green)',
+        items: [
+            {
+                type: 'action.placeOrder',
+                label: 'Execution',
+                helper: 'Place Kraken order',
+                position: { x: 940, y: 200 },
+                chip: 'Action',
+            },
+            {
+                type: 'action.cancelOrder',
+                label: 'Order Control',
+                helper: 'Cancel by ID',
+                position: { x: 940, y: 320 },
+                chip: 'Action',
+            },
+            {
+                type: 'action.logIntent',
+                label: 'Audit Log',
+                helper: 'Record decision',
+                position: { x: 980, y: 420 },
+                chip: 'Audit',
+            },
+        ],
+    },
 ];
 
 function nodeHighlight(status?: NodeStatus): string {
@@ -92,8 +172,8 @@ export function FlowCanvas({
                             ? 'control'
                             : 'data',
                         style: connection.sourceHandle?.startsWith('control')
-                            ? { stroke: '#8f6bff', strokeWidth: 2 }
-                            : { stroke: '#3bc9db', strokeWidth: 2 },
+                            ? { stroke: '#8a6aff', strokeWidth: 2 }
+                            : { stroke: '#3bd7ff', strokeWidth: 2 },
                     },
                     eds
                 )
@@ -183,64 +263,51 @@ export function FlowCanvas({
         <div className="canvas-panel">
             <div className="canvas-shell">
                 <div className="lane-backdrop">
-                    {lanes.map((lane) => (
+                    {lanes.map((lane, index) => (
                         <div key={lane.id} className="lane">
-                            <div className="lane-label">{lane.label}</div>
+                            <div className="lane-label">
+                                <span style={{ width: 10, height: 10, borderRadius: 6, background: lane.accent }} />
+                                {index + 1}. {lane.label}
+                            </div>
                         </div>
                     ))}
                 </div>
                 <div className="palette-floating panel">
                     <div className="panel-title">Strategy Blocks</div>
-                    <div className="node-palette">
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('control.start', { x: 80, y: 200 })}
-                        >
-                            <div className="palette-label">Strategy Start</div>
-                            <span className="palette-chip">Control</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('data.kraken.ticker', { x: 260, y: 200 })}
-                        >
-                            <div className="palette-label">Market Data</div>
-                            <span className="palette-chip">Data</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('logic.if', { x: 520, y: 220 })}
-                        >
-                            <div className="palette-label">Condition</div>
-                            <span className="palette-chip">Logic</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('risk.guard', { x: 720, y: 200 })}
-                        >
-                            <div className="palette-label">Risk Guard</div>
-                            <span className="palette-chip">Risk</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.placeOrder', { x: 940, y: 200 })}
-                        >
-                            <div className="palette-label">Execution</div>
-                            <span className="palette-chip">Action</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.cancelOrder', { x: 940, y: 320 })}
-                        >
-                            <div className="palette-label">Order Control</div>
-                            <span className="palette-chip">Action</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.logIntent', { x: 940, y: 420 })}
-                        >
-                            <div className="palette-label">Audit Log</div>
-                            <span className="palette-chip">Audit</span>
-                        </div>
+                    <div className="palette-groups">
+                        {paletteGroups.map((group) => (
+                            <div key={group.title} className="palette-group">
+                                <div className="palette-heading">
+                                    <span className="dot" style={{ background: group.dot }} />
+                                    {group.title}
+                                </div>
+                                <div className="node-palette">
+                                    {group.items.map((item) => (
+                                        <button
+                                            key={item.type}
+                                            className="palette-item"
+                                            onClick={() => handleAddNode(item.type, item.position)}
+                                        >
+                                            <div className="palette-label">
+                                                <span>{item.label}</span>
+                                                <span className="palette-subtitle">{item.helper}</span>
+                                            </div>
+                                            <span className="chip">{item.chip}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="canvas-toolbar">
+                    <div className="toolbar-meta">
+                        <span>Strategy Canvas</span>
+                        <span>Market → Logic → Risk → Execution lanes</span>
+                    </div>
+                    <div className="toolbar-actions">
+                        <span className="pill pill-ghost">Snap to grid</span>
+                        <span className="pill pill-ghost">Delete: Backspace/Del</span>
                     </div>
                 </div>
                 <ReactFlow

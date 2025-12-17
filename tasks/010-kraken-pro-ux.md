@@ -28,14 +28,13 @@
 The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: terminology is developer-centric, nodes lack standardized headers/status, no Kraken-style market dock or order preview, and dry-run safety messaging is not prominent.
 
 ### Success Criteria
-- [ ] Centralized Kraken Pro token file (colors, spacing, radii, typography scale) applied across canvas, nodes, panels.
-- [ ] Strategy Canvas framing: renamed nodes (Strategy Start, Market Data, Condition, Execution, Order Control, Audit Log) and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
-- [ ] Node redesign: header with icon/title/status, labeled inputs, human-readable condition text, Kraken-format numbers, footer state text.
-- [ ] Execution feedback: timeline steps, soft node highlights during run, order preview panel (pair/side/size/est. price/fees) fed by node data.
-- [ ] Market context dock on right updates with selected pair (last price, spread, 24h change, status badge).
-- [ ] Safety UX: persistent dry-run banner, default dry-run mode, optional Risk node (limits/guards) supported in UI.
-- [ ] Trader-friendly error copy replaces developer errors without breaking existing logic.
-- [ ] Strategy export labeled “Kraken Strategy Definition,” no live trading or credential changes.
+- [ ] Centralized Kraken Pro token file (colors/spacing/radii/type) applied across canvas, nodes, and right-rail panels with visible hierarchy improvements.
+- [ ] Strategy Canvas framing with lane cues (Market Data → Logic → Risk → Execution), stronger palette contrast, and clear palette grouping for draggable blocks.
+- [ ] Node redesign with icon/title/status header, labeled inputs, human-readable condition text, and status-aware footers that remain readable under dry-run highlights.
+- [ ] Execution feedback surface with run timeline or summary, node highlights, and refreshed order preview fed by node data/market context.
+- [ ] Market context dock reflecting selected pair (last, spread, change, status) with clarity on real vs backup data sources.
+- [ ] Safety UX remains prominent (dry-run emphasis, calm error copy) without breaking existing execution path or schema.
+- [ ] Strategy export labeled “Kraken Strategy Definition,” no credential inputs or live-trade affordances added.
 
 ---
 
