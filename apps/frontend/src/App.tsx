@@ -8,6 +8,7 @@ import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
 import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
+import { useMarketStream } from './hooks/useMarketStream';
 
 type MarketStatus = 'Open' | 'Halted';
 
@@ -19,6 +20,7 @@ interface MarketContext {
     status: MarketStatus;
     ask?: number | null;
     bid?: number | null;
+    source?: string;
 }
 
 // Demo strategy: Strategy Start -> Market Data -> Condition -> Risk -> Execution
@@ -234,6 +236,7 @@ function App() {
         () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
         [nodes, marketContext, activePair]
     );
+    const { data: streamData, warning: streamWarning } = useMarketStream(activePair);
 
     useEffect(() => {
         let isMounted = true;
@@ -266,13 +269,24 @@ function App() {
         };
     }, [activePair]);
 
+    useEffect(() => {
+        if (!streamData) return;
+        setMarketContext((prev) => ({
+            pair: streamData.pair,
+            lastPrice: streamData.last ?? prev?.lastPrice ?? 0,
+            ask: streamData.ask ?? prev?.ask ?? null,
+            bid: streamData.bid ?? prev?.bid ?? null,
+            spread: streamData.spread ?? prev?.spread ?? 0,
+            change: prev?.change ?? 0,
+            status: prev?.status ?? 'Open',
+            source: streamData.source,
+        }));
+    }, [streamData]);
+
+    const warningMessage = streamWarning ?? marketError;
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
-    const marketSourceLabel = marketError
-        ? 'Mock snapshot (Kraken API unavailable)'
-        : 'Kraken Ticker + Depth (REST/WS blend)';
-    const orderSourceLabel = marketError
-        ? 'Preview uses mock price'
-        : 'Preview uses Kraken price snapshot';
+    const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
+    const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
 
     return (
         <div className="app-shell">
@@ -306,9 +320,9 @@ function App() {
                 <div className="right-rail">
                     <div className="panel">
                         <div className="panel-title">Market Context</div>
-                        {marketError && (
-                            <div className="chip" style={{ marginBottom: '8px', color: 'var(--kraken-amber)' }}>
-                                {marketError}
+                        {warningMessage && (
+                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                {warningMessage}
                             </div>
                         )}
                         <MarketContextDock

@@ -4,11 +4,11 @@
     --kraken-surface: #0f0a18;
     --kraken-panel: #161225;
     --kraken-deep: #0e0916;
-    --kraken-purple: #5b3cc4;
-    --kraken-purple-strong: #7c6df2;
+    --kraken-purple: #3d2c69;
+    --kraken-purple-strong: #56408f;
     --kraken-green: #2bd27f;
     --kraken-red: #ff5f6d;
-    --kraken-amber: #f6c344;
+    --kraken-amber: #3d2c69;
     --kraken-cyan: #3bc9db;
 
     /* Text */
@@ -22,7 +22,7 @@
     --surface-muted: rgba(255, 255, 255, 0.04);
     --surface-green: rgba(43, 210, 127, 0.12);
     --surface-red: rgba(255, 95, 109, 0.14);
-    --surface-amber: rgba(246, 195, 68, 0.14);
+    --surface-amber: rgba(61, 44, 105, 0.2);
 
     /* Spacing scale */
     --space-1: 4px;
@@ -48,6 +48,6 @@
 
     /* Shadows */
     --glow-green: 0 0 0 2px rgba(43, 210, 127, 0.25);
-    --glow-amber: 0 0 0 2px rgba(246, 195, 68, 0.25);
+    --glow-amber: 0 0 0 2px rgba(61, 44, 105, 0.35);
     --glow-red: 0 0 0 2px rgba(255, 95, 109, 0.25);
 }
