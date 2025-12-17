@@ -1,0 +1,77 @@
+name: backend-cd
+
+on:
+  # Manual trigger keeps deployments safe and opt-in for hackathon demos.
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment label (for tracking only)"
+        default: demo
+        required: false
+      build_image:
+        description: "Also build a Docker image (no push by default)"
+        type: boolean
+        default: false
+      image_tag:
+        description: "Docker tag to apply when build_image is true"
+        default: latest
+        required: false
+
+env:
+  NODE_VERSION: 20
+
+jobs:
+  build-and-package:
+    name: Backend build & optional image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            packages/kraken-client/package-lock.json
+
+      - name: Install Kraken client dependencies
+        working-directory: packages/kraken-client
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Build backend (tsc no-emit)
+        working-directory: apps/backend
+        env:
+          CI: true
+        run: npm run build
+
+      - name: Build Docker image (local only)
+        # Keep this opt-in so deploy targets (Cloud Run/App Runner/etc.) stay manual.
+        if: inputs.build_image == true
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          docker build -f apps/backend/Dockerfile \
+            -t kraken-dad-backend:${IMAGE_TAG} .
+
+      - name: Export image for artifact
+        if: inputs.build_image == true
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          mkdir -p artifacts
+          docker save kraken-dad-backend:${IMAGE_TAG} -o artifacts/kraken-dad-backend.tar
+
+      - name: Upload image artifact
+        if: inputs.build_image == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image-${{ inputs.image_tag }}
+          path: artifacts/kraken-dad-backend.tar
+          retention-days: 7
