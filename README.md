@@ -38,13 +38,13 @@ Data flow: UI builds graph → serialize to strategy JSON → backend dry-run in
 
 ```mermaid
 flowchart LR
-    subgraph Frontend["apps/frontend - React + React Flow"]
+    subgraph Frontend["apps/frontend\nReact + React Flow"]
         Canvas["Strategy Canvas\nBlocks/Edges -> Strategy JSON"]
         ContextDock["Market Context"]
         Preview["Order Preview"]
     end
 
-    subgraph Backend["apps/backend - Fastify"]
+    subgraph Backend["apps/backend\nFastify"]
         DryRun["POST /execute/dry-run"]
         Market["GET /market/context"]
     end
