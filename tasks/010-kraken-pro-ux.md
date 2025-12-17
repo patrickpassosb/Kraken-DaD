@@ -28,14 +28,15 @@
 The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: terminology is developer-centric, nodes lack standardized headers/status, no Kraken-style market dock or order preview, and dry-run safety messaging is not prominent.
 
 ### Success Criteria
-- [ ] Centralized Kraken Pro token file (colors, spacing, radii, typography scale) applied across canvas, nodes, panels.
-- [ ] Strategy Canvas framing: renamed nodes (Strategy Start, Market Data, Condition, Execution, Order Control, Audit Log) and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
+- [ ] Centralized Kraken Pro token file (colors/spacing/radii/type) applied across canvas, nodes, panels.
+- [ ] Strategy Canvas framing: renamed nodes/palette to Kraken terminology and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
 - [ ] Node redesign: header with icon/title/status, labeled inputs, human-readable condition text, Kraken-format numbers, footer state text.
-- [ ] Execution feedback: timeline steps, soft node highlights during run, order preview panel (pair/side/size/est. price/fees) fed by node data.
+- [ ] Execution feedback: timeline steps, soft node highlights during run, and an order preview panel (pair/side/size/est. price/fees) fed by node data.
 - [ ] Market context dock on right updates with selected pair (last price, spread, 24h change, status badge).
 - [ ] Safety UX: persistent dry-run banner, default dry-run mode, optional Risk node (limits/guards) supported in UI.
 - [ ] Trader-friendly error copy replaces developer errors without breaking existing logic.
 - [ ] Strategy export labeled “Kraken Strategy Definition,” no live trading or credential changes.
+- [ ] Visual hierarchy reflects Kraken Pro-grade polish: clearer drag affordances, lane-tinted backgrounds, and professional typography scale for complex strategies.
 
 ---
 
@@ -119,9 +120,10 @@ The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: te
 
 ## 12. AI Agent Instructions
 
-- **Implementation Workflow:** Use Context7 for library references; keep TypeScript strictness; follow 4-space indent; avoid `any`; prefer small pure helpers for formatting and status mapping.  
-- **Communication Preferences:** Keep updates concise; note impacts to schema/serialization if any.  
+- **Implementation Workflow:** Use Context7 for library references; keep TypeScript strictness; follow 4-space indent; avoid `any`; prefer small pure helpers for formatting and status mapping.
+- **Communication Preferences:** Keep updates concise; note impacts to schema/serialization if any.
 - **Code Quality Standards:** Kraken terminology, calm copy, no real trading paths; maintain handle naming and React Flow validation.
+- **Tooling Note:** Context7 MCP is not available in this environment; proceed with existing code patterns and document any assumptions made without external references.
 
 ---
 

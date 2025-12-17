@@ -147,12 +147,15 @@ function derivePair(nodes: Node[]): string {
 
 function mockMarketContext(pair: string): MarketContext {
     const defaults: Record<string, Omit<MarketContext, 'pair'>> = {
-        'BTC/USD': { lastPrice: 90135.6, spread: 0.8, change: 0.5, status: 'Open' },
-        'ETH/USD': { lastPrice: 3450.12, spread: 0.5, change: -0.3, status: 'Open' },
+        'BTC/USD': { lastPrice: 90135.6, spread: 0.8, change: 0.5, status: 'Open', bid: 90135.2, ask: 90136.4 },
+        'ETH/USD': { lastPrice: 3450.12, spread: 0.5, change: -0.3, status: 'Open', bid: 3449.8, ask: 3450.9 },
     };
     const normalized = formatPair(pair);
-    const context = defaults[normalized] ?? { lastPrice: 1250, spread: 0.6, change: 0.1, status: 'Open' as MarketStatus };
-    return { pair: normalized, ...context };
+    const context =
+        defaults[normalized] ??
+        { lastPrice: 1250, spread: 0.6, change: 0.1, status: 'Open' as MarketStatus, bid: 1249.7, ask: 1250.3 };
+    const mid = context.lastPrice;
+    return { pair: normalized, ...context, bid: context.bid ?? mid - context.spread / 2, ask: context.ask ?? mid + context.spread / 2 };
 }
 
 function deriveOrderPreview(nodes: Node[], context: MarketContext) {
@@ -287,6 +290,13 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const connectionTotal = edges.length;
+    const controlConnections = edges.filter((edge) => edge.type === 'control').length;
+    const dataConnections = connectionTotal - controlConnections;
+    const lastRunStatus = result ? (result.success ? 'Dry-run clean' : 'Needs review') : 'Ready for dry-run';
+    const lastRunTone = result ? (result.success ? 'var(--kraken-green)' : 'var(--kraken-red)') : 'var(--text-secondary)';
+    const warningsCount = result?.warnings.length ?? 0;
+    const executedCount = result?.nodesExecuted ?? 0;
 
     return (
         <div className="app-shell">
@@ -295,6 +305,22 @@ function App() {
                     <div className="brand-stack">
                         <div className="brand-mark">
                             <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
+                        </div>
+                        <div className="brand-text">
+                            <span>Kraken DAD</span>
+                            <span>Strategy Builder · Dry-run only</span>
+                        </div>
+                    </div>
+                    <div className="tagline">Node-based canvas mirroring Kraken Pro lanes with dry-run safeguards.</div>
+                    <div className="status-row">
+                        <div className="pill pill-success">
+                            <span className="pill-dot" style={{ background: 'var(--kraken-green)' }} /> Dry-run enforced
+                        </div>
+                        <div className="pill pill-warn">
+                            <span className="pill-dot" style={{ background: 'var(--kraken-amber)' }} /> Kraken validation on
+                        </div>
+                        <div className="pill pill-ghost">
+                            <span className="pill-dot" style={{ background: 'var(--kraken-cyan)' }} /> Control + data lanes required
                         </div>
                     </div>
                 </div>
@@ -308,6 +334,36 @@ function App() {
                 </div>
             </header>
 
+            <div className="dry-run-banner">
+                <div className="banner-dot" aria-hidden />
+                <div>
+                    <strong>Dry-run only.</strong> Connect control + data lanes to mirror Kraken Pro flow before simulating.
+                </div>
+                <div className="banner-actions">
+                    <span className="chip">Validation {validateWithKraken ? 'on' : 'off'}</span>
+                    <span className="chip">Control links · {controlConnections}</span>
+                    <span className="chip">Data links · {dataConnections}</span>
+                </div>
+            </div>
+
+            <div className="workspace-toolbar">
+                <div>
+                    <div className="toolbar-kicker">Strategy Canvas</div>
+                    <div className="toolbar-title">Market → Logic → Risk → Execution lanes</div>
+                </div>
+                <div className="toolbar-meta">
+                    <span className="meta-chip">
+                        Nodes <strong>{nodes.length}</strong>
+                    </span>
+                    <span className="meta-chip">
+                        Connections <strong>{connectionTotal}</strong>
+                    </span>
+                    <span className="meta-chip">
+                        Pair <strong>{formatPair(activePair)}</strong>
+                    </span>
+                </div>
+            </div>
+
             <div className="workspace">
                 <FlowCanvas
                     initialNodes={demoNodes}
@@ -319,7 +375,39 @@ function App() {
 
                 <div className="right-rail">
                     <div className="panel">
+                        <div className="panel-title">Execution State</div>
+                        <div className="panel-subtitle">Dry-run feedback and canvas readiness.</div>
+                        <div className="signal-grid">
+                            <div className="summary-card">
+                                <h4>Last run</h4>
+                                <div className="value" style={{ color: lastRunTone }}>
+                                    {loading ? 'Running...' : lastRunStatus}
+                                </div>
+                                <div className="market-subtitle">Node statuses mirror canvas highlights.</div>
+                            </div>
+                            <div className="summary-card">
+                                <h4>Nodes executed</h4>
+                                <div className="value">{executedCount}</div>
+                                <div className="market-subtitle">Out of {nodes.length} staged nodes</div>
+                            </div>
+                            <div className="summary-card">
+                                <h4>Warnings</h4>
+                                <div className="value" style={{ color: warningsCount ? 'var(--kraken-amber)' : 'var(--text-secondary)' }}>
+                                    {warningsCount}
+                                </div>
+                                <div className="market-subtitle">Kraken copy instead of raw errors</div>
+                            </div>
+                        </div>
+                        {error && (
+                            <div className="summary-card alert-card" style={{ marginTop: '12px' }}>
+                                <h4>Alert</h4>
+                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="panel">
                         <div className="panel-title">Market Context</div>
+                        <div className="panel-subtitle">Kraken live snapshot for the active trading pair.</div>
                         {warningMessage && (
                             <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
                                 {warningMessage}
@@ -332,10 +420,13 @@ function App() {
                             change={displayMarketContext.change}
                             status={displayMarketContext.status}
                             source={marketSourceLabel}
+                            ask={displayMarketContext.ask ?? undefined}
+                            bid={displayMarketContext.bid ?? undefined}
                         />
                     </div>
                     <div className="panel">
                         <div className="panel-title">Order Preview</div>
+                        <div className="panel-subtitle">Mock fill priced using the current market snapshot.</div>
                         <OrderPreviewPanel
                             pair={orderPreview.pair}
                             side={orderPreview.side}
@@ -345,32 +436,6 @@ function App() {
                             feeRate={0.0026}
                             sourceLabel={orderSourceLabel}
                         />
-                        {result && (
-                            <div className="result-summary" style={{ marginTop: '12px' }}>
-                                <div className="summary-card">
-                                    <h4>Status</h4>
-                                    <div className="value" style={{ color: result.success ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>
-                                        {result.success ? 'Success' : 'Check strategy'}
-                                    </div>
-                                </div>
-                                <div className="summary-card">
-                                    <h4>Nodes Executed</h4>
-                                    <div className="value">{result.nodesExecuted}</div>
-                                </div>
-                                <div className="summary-card">
-                                    <h4>Warnings</h4>
-                                    <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                        {result.warnings.length}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {error && (
-                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                <h4>Alert</h4>
-                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

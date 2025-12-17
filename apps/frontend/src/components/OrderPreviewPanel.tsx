@@ -52,8 +52,16 @@ export function OrderPreviewPanel({
                 <strong>{formatPrice(estimatedPrice)}</strong>
             </div>
             <div className="kv">
+                <span>Notional (est.)</span>
+                <strong>{notional ? formatPrice(notional) : '$—'}</strong>
+            </div>
+            <div className="kv">
                 <span>Fees (mock)</span>
                 <strong>{fees ? formatPrice(fees) : '$—'}</strong>
+            </div>
+            <div className="kv">
+                <span>Fee rate</span>
+                <strong className="muted">{(feeRate * 100).toFixed(2)}%</strong>
             </div>
         </div>
     );

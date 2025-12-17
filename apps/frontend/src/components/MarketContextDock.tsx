@@ -7,6 +7,8 @@ interface MarketContextProps {
     change: number;
     status: 'Open' | 'Halted';
     source?: string;
+    bid?: number;
+    ask?: number;
 }
 
 export function MarketContextDock({
@@ -16,8 +18,11 @@ export function MarketContextDock({
     change,
     status,
     source,
+    bid,
+    ask,
 }: MarketContextProps) {
     const isUp = change >= 0;
+    const bidAskReady = typeof bid === 'number' && typeof ask === 'number';
     return (
         <div className="dock-card">
             <div className="market-header">
@@ -36,8 +41,16 @@ export function MarketContextDock({
             </div>
             <div className="kv">
                 <span>Spread</span>
-                <strong>{formatSpread(spread)}</strong>
+                <strong style={{ color: 'var(--kraken-cyan)' }}>{formatSpread(spread)}</strong>
             </div>
+            {bidAskReady && (
+                <div className="kv">
+                    <span>Bid / Ask</span>
+                    <strong>
+                        {formatPrice(bid)} / {formatPrice(ask)}
+                    </strong>
+                </div>
+            )}
             <div className="kv">
                 <span>Status</span>
                 <strong style={{ color: status === 'Open' ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>

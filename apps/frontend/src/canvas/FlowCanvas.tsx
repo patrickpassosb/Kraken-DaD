@@ -196,51 +196,80 @@ export function FlowCanvas({
                             className="palette-item"
                             onClick={() => handleAddNode('control.start', { x: 80, y: 200 })}
                         >
-                            <div className="palette-label">Strategy Start</div>
-                            <span className="palette-chip">Control</span>
+                            <div>
+                                <div className="palette-label">Strategy Start</div>
+                                <div className="palette-desc">Kick off the control lane.</div>
+                            </div>
+                            <span className="palette-hotkey">Control</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('data.kraken.ticker', { x: 260, y: 200 })}
                         >
-                            <div className="palette-label">Market Data</div>
-                            <span className="palette-chip">Data</span>
+                            <div>
+                                <div className="palette-label">Market Data</div>
+                                <div className="palette-desc">Live Kraken ticker snapshot.</div>
+                            </div>
+                            <span className="palette-hotkey">Data</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('logic.if', { x: 520, y: 220 })}
                         >
-                            <div className="palette-label">Condition</div>
-                            <span className="palette-chip">Logic</span>
+                            <div>
+                                <div className="palette-label">Condition</div>
+                                <div className="palette-desc">Human-readable rule.</div>
+                            </div>
+                            <span className="palette-hotkey">Logic</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('risk.guard', { x: 720, y: 200 })}
                         >
-                            <div className="palette-label">Risk Guard</div>
-                            <span className="palette-chip">Risk</span>
+                            <div>
+                                <div className="palette-label">Risk Guard</div>
+                                <div className="palette-desc">Max spread and guardrails.</div>
+                            </div>
+                            <span className="palette-hotkey">Risk</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.placeOrder', { x: 940, y: 200 })}
                         >
-                            <div className="palette-label">Execution</div>
-                            <span className="palette-chip">Action</span>
+                            <div>
+                                <div className="palette-label">Execution</div>
+                                <div className="palette-desc">Route to Kraken order.</div>
+                            </div>
+                            <span className="palette-hotkey">Action</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.cancelOrder', { x: 940, y: 320 })}
                         >
-                            <div className="palette-label">Order Control</div>
-                            <span className="palette-chip">Action</span>
+                            <div>
+                                <div className="palette-label">Order Control</div>
+                                <div className="palette-desc">Cancel open intent.</div>
+                            </div>
+                            <span className="palette-hotkey">Action</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.logIntent', { x: 940, y: 420 })}
                         >
-                            <div className="palette-label">Audit Log</div>
-                            <span className="palette-chip">Audit</span>
+                            <div>
+                                <div className="palette-label">Audit Log</div>
+                                <div className="palette-desc">Capture decisions.</div>
+                            </div>
+                            <span className="palette-hotkey">Audit</span>
                         </div>
+                    </div>
+                </div>
+                <div className="edge-legend">
+                    <div className="legend-item">
+                        <span className="legend-swatch" style={{ background: 'var(--kraken-purple)' }} /> Control flow
+                    </div>
+                    <div className="legend-item">
+                        <span className="legend-swatch" style={{ background: 'var(--kraken-cyan)' }} /> Data link
                     </div>
                 </div>
                 <ReactFlow
