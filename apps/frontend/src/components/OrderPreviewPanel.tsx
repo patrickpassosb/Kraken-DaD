@@ -51,6 +51,12 @@ export function OrderPreviewPanel({
                 <span>Est. price</span>
                 <strong>{formatPrice(estimatedPrice)}</strong>
             </div>
+            {notional && (
+                <div className="kv">
+                    <span>Est. notional</span>
+                    <strong>{formatPrice(notional)}</strong>
+                </div>
+            )}
             <div className="kv">
                 <span>Fees (mock)</span>
                 <strong>{fees ? formatPrice(fees) : '$—'}</strong>

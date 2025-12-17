@@ -44,7 +44,7 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-green), #46ef9a)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-green), var(--kraken-cyan))' }}
                 >
                     ✓
                 </div>

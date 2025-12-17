@@ -7,6 +7,8 @@ interface MarketContextProps {
     change: number;
     status: 'Open' | 'Halted';
     source?: string;
+    ask?: number | null;
+    bid?: number | null;
 }
 
 export function MarketContextDock({
@@ -16,6 +18,8 @@ export function MarketContextDock({
     change,
     status,
     source,
+    ask,
+    bid,
 }: MarketContextProps) {
     const isUp = change >= 0;
     return (
@@ -33,6 +37,12 @@ export function MarketContextDock({
             <div className="kv">
                 <span>Last price</span>
                 <strong>{formatPrice(lastPrice)}</strong>
+            </div>
+            <div className="kv">
+                <span>Bid / Ask</span>
+                <strong>
+                    {formatPrice(bid ?? lastPrice - spread)} · {formatPrice(ask ?? lastPrice + spread)}
+                </strong>
             </div>
             <div className="kv">
                 <span>Spread</span>
