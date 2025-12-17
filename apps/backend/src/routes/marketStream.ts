@@ -178,6 +178,7 @@ export async function marketStreamRoute(fastify: FastifyInstance) {
                 'Access-Control-Allow-Methods': 'GET, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type',
             });
+            reply.hijack(); // take ownership so Fastify does not auto-end the stream
             reply.raw.write(`retry: ${retryMs}\n\n`);
 
             let lastSentTs = 0;
