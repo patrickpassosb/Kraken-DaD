@@ -228,7 +228,7 @@ function App() {
                         Export Strategy Definition
                     </button>
                     <button className="btn btn-primary" onClick={handleExecute} disabled={loading}>
-                        {loading ? 'Running Dry-Run...' : 'Run Dry-Run'}
+                        {loading ? 'Executing workflow...' : 'Execute workflow'}
                     </button>
                 </div>
             </header>
