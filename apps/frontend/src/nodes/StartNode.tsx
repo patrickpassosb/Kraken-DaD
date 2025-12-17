@@ -18,7 +18,7 @@ export function StartNode({ data }: NodeProps) {
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong))' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple), var(--kraken-cyan))' }}
                 >
                     ▶
                 </div>

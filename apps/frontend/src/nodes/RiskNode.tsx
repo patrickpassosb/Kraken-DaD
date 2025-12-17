@@ -38,7 +38,7 @@ export function RiskNode({ id, data }: NodeProps) {
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple))', color: '#0b0a12' }}
                 >
                     ⚑
                 </div>

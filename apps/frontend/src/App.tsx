@@ -6,6 +6,7 @@ import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
+import { ExecutionTimeline } from './components/ExecutionTimeline';
 import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
@@ -287,6 +288,8 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const executedCount = Object.values(nodeStatuses).filter((s) => s === 'executed').length;
+    const erroredCount = Object.values(nodeStatuses).filter((s) => s === 'error').length;
 
     return (
         <div className="app-shell">
@@ -296,9 +299,17 @@ function App() {
                         <div className="brand-mark">
                             <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
                         </div>
+                        <div className="brand-text">
+                            <span>Kraken D.A.D.</span>
+                            <span>Strategy Canvas · Dry-Run</span>
+                        </div>
                     </div>
                 </div>
                 <div className="header-actions">
+                    <div className="badge">
+                        <span className="badge-dot" />
+                        Dry-run safe — no live orders
+                    </div>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
@@ -307,6 +318,59 @@ function App() {
                     </button>
                 </div>
             </header>
+
+            <div className="dry-run-banner">
+                <div className="banner-dot" />
+                <div>
+                    <div className="banner-eyebrow">Execution Preview</div>
+                    <div className="banner-copy">
+                        {loading
+                            ? 'Simulating execution path… highlighting triggered nodes as results stream in.'
+                            : 'Connected handles light up per step. Export stays in Kraken Strategy Definition format.'}
+                    </div>
+                </div>
+                <div className="banner-meta">
+                    <span className="chip ghost">Mode: Dry-run</span>
+                    <span className="chip ghost">Active pair: {formatPair(activePair)}</span>
+                </div>
+            </div>
+
+            <div className="workspace-intro">
+                <div className="intro-copy">
+                    <div className="eyebrow">Professional canvas</div>
+                    <h1>Build Kraken-native execution flows</h1>
+                    <p>
+                        Drag structured blocks into the canvas lanes. Market data feeds conditions and risk guards before
+                        Kraken intents are prepared for execution.
+                    </p>
+                    <div className="chip-row">
+                        <span className="chip">Pair aware</span>
+                        <span className="chip">Status-highlighted</span>
+                        <span className="chip">Export-ready JSON</span>
+                    </div>
+                </div>
+                <div className="intro-metrics">
+                    <div className="summary-card compact">
+                        <h4>Nodes</h4>
+                        <div className="value">{nodes.length}</div>
+                        <div className="muted">{edges.length} connections</div>
+                    </div>
+                    <div className="summary-card compact">
+                        <h4>Execution</h4>
+                        <div className="value" style={{ color: 'var(--kraken-green)' }}>
+                            {executedCount}
+                        </div>
+                        <div className="muted">Completed</div>
+                    </div>
+                    <div className="summary-card compact">
+                        <h4>Attention</h4>
+                        <div className="value" style={{ color: erroredCount ? 'var(--kraken-red)' : 'var(--text-primary)' }}>
+                            {erroredCount}
+                        </div>
+                        <div className="muted">Errors flagged</div>
+                    </div>
+                </div>
+            </div>
 
             <div className="workspace">
                 <FlowCanvas
@@ -332,6 +396,8 @@ function App() {
                             change={displayMarketContext.change}
                             status={displayMarketContext.status}
                             source={marketSourceLabel}
+                            ask={displayMarketContext.ask ?? null}
+                            bid={displayMarketContext.bid ?? null}
                         />
                     </div>
                     <div className="panel">
@@ -345,6 +411,7 @@ function App() {
                             feeRate={0.0026}
                             sourceLabel={orderSourceLabel}
                         />
+                        <ExecutionTimeline result={result} error={error} />
                         {result && (
                             <div className="result-summary" style={{ marginTop: '12px' }}>
                                 <div className="summary-card">

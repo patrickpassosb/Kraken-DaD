@@ -39,7 +39,7 @@ export function IfNode({ id, data }: NodeProps) {
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), #ffd166)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple-strong), var(--kraken-cyan))' }}
                 >
                     ?
                 </div>

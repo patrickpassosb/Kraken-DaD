@@ -28,12 +28,12 @@
 The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: terminology is developer-centric, nodes lack standardized headers/status, no Kraken-style market dock or order preview, and dry-run safety messaging is not prominent.
 
 ### Success Criteria
-- [ ] Centralized Kraken Pro token file (colors, spacing, radii, typography scale) applied across canvas, nodes, panels.
-- [ ] Strategy Canvas framing: renamed nodes (Strategy Start, Market Data, Condition, Execution, Order Control, Audit Log) and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
-- [ ] Node redesign: header with icon/title/status, labeled inputs, human-readable condition text, Kraken-format numbers, footer state text.
-- [ ] Execution feedback: timeline steps, soft node highlights during run, order preview panel (pair/side/size/est. price/fees) fed by node data.
-- [ ] Market context dock on right updates with selected pair (last price, spread, 24h change, status badge).
-- [ ] Safety UX: persistent dry-run banner, default dry-run mode, optional Risk node (limits/guards) supported in UI.
+- [x] Centralized Kraken Pro token file (colors, spacing, radii, typography scale) applied across canvas, nodes, panels.
+- [x] Strategy Canvas framing: renamed nodes (Strategy Start, Market Data, Condition, Execution, Order Control, Audit Log) and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
+- [x] Node redesign: header with icon/title/status, labeled inputs, human-readable condition text, Kraken-format numbers, footer state text.
+- [x] Execution feedback: timeline steps, soft node highlights during run, order preview panel (pair/side/size/est. price/fees) fed by node data.
+- [x] Market context dock on right updates with selected pair (last price, spread, 24h change, status badge).
+- [x] Safety UX: persistent dry-run banner, default dry-run mode, optional Risk node (limits/guards) supported in UI.
 - [ ] Trader-friendly error copy replaces developer errors without breaking existing logic.
 - [ ] Strategy export labeled “Kraken Strategy Definition,” no live trading or credential changes.
 
