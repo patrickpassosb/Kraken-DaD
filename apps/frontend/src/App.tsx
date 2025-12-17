@@ -6,7 +6,8 @@ import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
-import { formatPair } from './utils/format';
+import { ExecutionTimeline } from './components/ExecutionTimeline';
+import { formatPair, formatSpread } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
 
@@ -178,6 +179,19 @@ function mapLogToStatus(logStatus: string): NodeStatus {
     return 'executed';
 }
 
+function mapNodeTypeToLabel(nodeType: string): string {
+    const mapping: Record<string, string> = {
+        'control.start': 'Strategy Start',
+        'data.kraken.ticker': 'Market Data',
+        'logic.if': 'Condition',
+        'risk.guard': 'Orderbook Guard',
+        'action.placeOrder': 'Execution',
+        'action.cancelOrder': 'Order Control',
+        'action.logIntent': 'Audit Log',
+    };
+    return mapping[nodeType] ?? nodeType;
+}
+
 function App() {
     const [nodes, setNodes] = useState<Node[]>(demoNodes);
     const [edges, setEdges] = useState<Edge[]>(demoEdges);
@@ -287,6 +301,18 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const timelineItems = useMemo(() => {
+        if (!result) return [];
+        return result.log.map((entry, index) => ({
+            id: entry.nodeId || `step-${index}`,
+            title: mapNodeTypeToLabel(entry.nodeType),
+            detail: `${entry.durationMs.toFixed(0)} ms • ${entry.nodeType}`,
+            status: mapLogToStatus(entry.status),
+            meta: Object.keys(entry.outputs || {}).length
+                ? `${Object.keys(entry.outputs).length} output fields`
+                : undefined,
+        }));
+    }, [result]);
 
     return (
         <div className="app-shell">
@@ -296,9 +322,25 @@ function App() {
                         <div className="brand-mark">
                             <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
                         </div>
+                        <div className="brand-text">
+                            <span>Kraken DAD • Strategy Canvas</span>
+                            <span>Institutional drag-and-drop builder</span>
+                        </div>
+                    </div>
+                    <div className="tagline">Design, simulate, and export Kraken-native strategies without leaving Pro.</div>
+                    <div className="status-row">
+                        <span className="pill pill-success">
+                            <span className="pill-dot" />
+                            Dry-run safe by default
+                        </span>
+                        <span className="pill pill-ghost">Snap grid • Pan + scroll • Drag handles to connect</span>
                     </div>
                 </div>
                 <div className="header-actions">
+                    <div className="badge">
+                        <span className="badge-dot" />
+                        {validateWithKraken ? 'Validates with Kraken endpoints' : 'Local schema only'}
+                    </div>
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
@@ -308,6 +350,17 @@ function App() {
                 </div>
             </header>
 
+            <div className="dry-run-banner">
+                <div className="banner-dot" />
+                <div>
+                    <strong>Dry-run only.</strong> Uses Kraken market data for preview — no credentials, no live trades.
+                    <div className="banner-subtext">
+                        Active Pair: {formatPair(activePair)} • Spread guard: {formatSpread(displayMarketContext.spread)} • Nodes: {nodes.length}
+                    </div>
+                </div>
+                {warningMessage && <span className="pill pill-warn">{warningMessage}</span>}
+            </div>
+
             <div className="workspace">
                 <FlowCanvas
                     initialNodes={demoNodes}
@@ -315,16 +368,55 @@ function App() {
                     onNodesChange={handleNodesChange}
                     onEdgesChange={handleEdgesChange}
                     nodeStatuses={nodeStatuses}
+                    activePair={activePair}
+                    running={loading}
+                    nodesCount={nodes.length}
                 />
 
                 <div className="right-rail">
                     <div className="panel">
-                        <div className="panel-title">Market Context</div>
-                        {warningMessage && (
-                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
-                                {warningMessage}
+                        <div className="panel-title">Execution Surface</div>
+                        <div className="result-summary">
+                            <div className="summary-card">
+                                <h4>Mode</h4>
+                                <div className="value">Dry-run</div>
+                            </div>
+                            <div className="summary-card">
+                                <h4>Nodes</h4>
+                                <div className="value">{nodes.length}</div>
+                            </div>
+                            <div className="summary-card">
+                                <h4>Status</h4>
+                                <div className="value" style={{ color: result?.success ? 'var(--kraken-green)' : 'var(--text-muted)' }}>
+                                    {result ? (result.success ? 'Success' : 'Review warnings') : 'Awaiting dry-run'}
+                                </div>
+                            </div>
+                        </div>
+                        {result ? (
+                            <div style={{ marginTop: '14px' }}>
+                                <ExecutionTimeline items={timelineItems} />
+                            </div>
+                        ) : (
+                            <div className="empty-state">Run a dry-run to view per-node execution and outputs.</div>
+                        )}
+                        {result && result.warnings.length > 0 && (
+                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-amber)' }}>
+                                <h4>Warnings</h4>
+                                <div className="value" style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                                    {result.warnings.map((w) => w.message).join(' • ')}
+                                </div>
                             </div>
                         )}
+                        {error && (
+                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
+                                <h4>Alert</h4>
+                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="panel">
+                        <div className="panel-title">Market Context</div>
                         <MarketContextDock
                             pair={displayMarketContext.pair}
                             lastPrice={displayMarketContext.lastPrice}
@@ -332,6 +424,8 @@ function App() {
                             change={displayMarketContext.change}
                             status={displayMarketContext.status}
                             source={marketSourceLabel}
+                            bid={displayMarketContext.bid ?? undefined}
+                            ask={displayMarketContext.ask ?? undefined}
                         />
                     </div>
                     <div className="panel">
@@ -344,33 +438,10 @@ function App() {
                             estimatedPrice={orderPreview.estimatedPrice}
                             feeRate={0.0026}
                             sourceLabel={orderSourceLabel}
+                            bid={displayMarketContext.bid ?? undefined}
+                            ask={displayMarketContext.ask ?? undefined}
+                            spread={displayMarketContext.spread}
                         />
-                        {result && (
-                            <div className="result-summary" style={{ marginTop: '12px' }}>
-                                <div className="summary-card">
-                                    <h4>Status</h4>
-                                    <div className="value" style={{ color: result.success ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>
-                                        {result.success ? 'Success' : 'Check strategy'}
-                                    </div>
-                                </div>
-                                <div className="summary-card">
-                                    <h4>Nodes Executed</h4>
-                                    <div className="value">{result.nodesExecuted}</div>
-                                </div>
-                                <div className="summary-card">
-                                    <h4>Warnings</h4>
-                                    <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                        {result.warnings.length}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {error && (
-                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                <h4>Alert</h4>
-                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

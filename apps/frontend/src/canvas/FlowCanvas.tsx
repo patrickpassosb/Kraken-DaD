@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from '../nodes/nodeTypes';
 import { NodeStatus } from '../utils/status';
+import { formatPair } from '../utils/format';
 
 interface FlowCanvasProps {
     onNodesChange: (nodes: Node[]) => void;
@@ -24,6 +25,9 @@ interface FlowCanvasProps {
     initialNodes: Node[];
     initialEdges: Edge[];
     nodeStatuses?: Record<string, NodeStatus>;
+    activePair?: string;
+    running?: boolean;
+    nodesCount?: number;
 }
 
 const lanes = [
@@ -46,6 +50,9 @@ export function FlowCanvas({
     initialNodes,
     initialEdges,
     nodeStatuses,
+    activePair,
+    running,
+    nodesCount,
 }: FlowCanvasProps) {
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
@@ -189,6 +196,34 @@ export function FlowCanvas({
                         </div>
                     ))}
                 </div>
+                <div className="canvas-topbar">
+                    <div>
+                        <div className="eyebrow">Strategy canvas</div>
+                        <div className="canvas-title">{activePair ? formatPair(activePair) : 'Pair agnostic'}</div>
+                        <div className="muted">Design from market intake through guardrails to execution.</div>
+                    </div>
+                    <div className="canvas-top-meta">
+                        <div className="meta-tile">
+                            <span className="muted">Nodes</span>
+                            <strong>{nodesCount ?? nodes.length}</strong>
+                        </div>
+                        <div className="meta-tile">
+                            <span className="muted">Mode</span>
+                            <span className={`pill ${running ? 'pill-warn' : 'pill-ghost'}`}>
+                                {running ? 'Running dry-run' : 'Ready'}
+                            </span>
+                        </div>
+                        <div className="handle-legend">
+                            <span className="legend-chip">
+                                <span className="legend-dot control" /> Control
+                            </span>
+                            <span className="legend-chip">
+                                <span className="legend-dot data" /> Data
+                            </span>
+                            <span className="legend-chip muted">Grid 20px</span>
+                        </div>
+                    </div>
+                </div>
                 <div className="palette-floating panel">
                     <div className="panel-title">Strategy Blocks</div>
                     <div className="node-palette">
@@ -196,49 +231,91 @@ export function FlowCanvas({
                             className="palette-item"
                             onClick={() => handleAddNode('control.start', { x: 80, y: 200 })}
                         >
-                            <div className="palette-label">Strategy Start</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">▶</div>
+                                <div>
+                                    <div className="palette-title">Strategy Start</div>
+                                    <div className="palette-subtitle">Single entry control</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Control</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('data.kraken.ticker', { x: 260, y: 200 })}
                         >
-                            <div className="palette-label">Market Data</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">$</div>
+                                <div>
+                                    <div className="palette-title">Market Data</div>
+                                    <div className="palette-subtitle">Kraken ticker stream</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Data</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('logic.if', { x: 520, y: 220 })}
                         >
-                            <div className="palette-label">Condition</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">?</div>
+                                <div>
+                                    <div className="palette-title">Condition</div>
+                                    <div className="palette-subtitle">True/false routing</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Logic</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('risk.guard', { x: 720, y: 200 })}
                         >
-                            <div className="palette-label">Risk Guard</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">⚑</div>
+                                <div>
+                                    <div className="palette-title">Risk Guard</div>
+                                    <div className="palette-subtitle">Spread protection</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Risk</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.placeOrder', { x: 940, y: 200 })}
                         >
-                            <div className="palette-label">Execution</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">✓</div>
+                                <div>
+                                    <div className="palette-title">Execution</div>
+                                    <div className="palette-subtitle">Prepare intent</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Action</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.cancelOrder', { x: 940, y: 320 })}
                         >
-                            <div className="palette-label">Order Control</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">✕</div>
+                                <div>
+                                    <div className="palette-title">Order Control</div>
+                                    <div className="palette-subtitle">Cancel prepared order</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Action</span>
                         </div>
                         <div
                             className="palette-item"
                             onClick={() => handleAddNode('action.logIntent', { x: 940, y: 420 })}
                         >
-                            <div className="palette-label">Audit Log</div>
+                            <div className="palette-label">
+                                <div className="palette-icon">ℹ</div>
+                                <div>
+                                    <div className="palette-title">Audit Log</div>
+                                    <div className="palette-subtitle">Record intent</div>
+                                </div>
+                            </div>
                             <span className="palette-chip">Audit</span>
                         </div>
                     </div>

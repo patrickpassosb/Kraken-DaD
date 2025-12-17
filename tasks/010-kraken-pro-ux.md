@@ -37,6 +37,12 @@ The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: te
 - [ ] Trader-friendly error copy replaces developer errors without breaking existing logic.
 - [ ] Strategy export labeled “Kraken Strategy Definition,” no live trading or credential changes.
 
+### Current Iteration Focus
+- [x] Refresh canvas chrome to feel Kraken Pro-grade (header/dry-run banner, lane labeling, palette density) without altering backend APIs.
+- [x] Improve node readability with clearer handle affordances, status styling, and compact field spacing to handle larger strategies.
+- [x] Enrich right-rail context with more professional market/preview formatting plus execution timeline mapped from dry-run logs.
+- [x] Keep drag/drop clarity high (handle legend, snap grid) while maintaining existing node/edge schemas.
+
 ---
 
 ## 4. Development Mode Context
