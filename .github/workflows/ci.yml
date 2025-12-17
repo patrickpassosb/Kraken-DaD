@@ -1,36 +1,103 @@
 name: ci
 
 on:
-  push:
-    branches: [ main, master, new-ui ]
   pull_request:
+    # Skip CI for docs/assets-only edits to keep feedback fast.
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.gif'
+  # Protect demo branches with the same validation that PRs get.
+  push:
+    branches: [main, master, new-ui]
+  # Allow ad-hoc runs (e.g., pre-demo smoke tests).
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20
 
 jobs:
-  build:
+  shared-packages:
+    name: Shared package type checks
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            packages/kraken-client/package-lock.json
 
-      - name: Backend install
-        working-directory: apps/backend
-        run: npm install
+      - name: Install Kraken client dependencies
+        working-directory: packages/kraken-client
+        run: npm ci
 
-      - name: Backend build
+      - name: Install backend toolchain (for TypeScript)
         working-directory: apps/backend
+        run: npm ci
+
+      - name: Type-check shared packages
+        # Use backend's TypeScript toolchain to verify shared code without duplicating configs.
+        run: npm exec --prefix apps/backend -- tsc -p tsconfig.shared.json
+
+  backend:
+    name: Backend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            packages/kraken-client/package-lock.json
+
+      - name: Install Kraken client dependencies
+        working-directory: packages/kraken-client
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Build backend (tsc no-emit)
+        # Keep build fast and deterministic for PRs.
+        working-directory: apps/backend
+        env:
+          CI: true
         run: npm run build
 
-      - name: Frontend install
-        working-directory: apps/frontend
-        run: npm install
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Frontend build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install frontend dependencies
         working-directory: apps/frontend
+        run: npm ci
+
+      - name: Build frontend (typecheck + Vite)
+        working-directory: apps/frontend
+        env:
+          CI: true
         run: npm run build
