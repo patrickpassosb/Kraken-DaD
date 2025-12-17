@@ -1,4 +1,4 @@
-import { formatAmount, formatPair, formatPrice } from '../utils/format';
+import { formatAmount, formatPair, formatPrice, formatRate } from '../utils/format';
 
 interface OrderPreviewProps {
     pair: string;
@@ -8,6 +8,8 @@ interface OrderPreviewProps {
     estimatedPrice?: number;
     feeRate: number;
     sourceLabel?: string;
+    notional?: number;
+    feeValue?: number;
 }
 
 export function OrderPreviewPanel({
@@ -18,15 +20,17 @@ export function OrderPreviewPanel({
     estimatedPrice,
     feeRate,
     sourceLabel,
+    notional: providedNotional,
+    feeValue: providedFeeValue,
 }: OrderPreviewProps) {
-    const notional = estimatedPrice ? estimatedPrice * amount : undefined;
-    const fees = notional ? notional * feeRate : undefined;
+    const notional =
+        providedNotional ?? (estimatedPrice !== undefined ? estimatedPrice * amount : undefined);
+    const fees = providedFeeValue ?? (notional !== undefined ? notional * feeRate : undefined);
 
     return (
         <div className="dock-card order-preview">
             <div className="market-header">
                 <div className="market-pair">Order Preview</div>
-                <span className="chip">Dry-run</span>
             </div>
             {sourceLabel && <div className="market-subtitle">{sourceLabel}</div>}
             <div className="kv">
@@ -52,8 +56,16 @@ export function OrderPreviewPanel({
                 <strong>{formatPrice(estimatedPrice)}</strong>
             </div>
             <div className="kv">
-                <span>Fees (mock)</span>
-                <strong>{fees ? formatPrice(fees) : '$—'}</strong>
+                <span>Est. notional</span>
+                <strong>{notional !== undefined ? formatPrice(notional) : '$—'}</strong>
+            </div>
+            <div className="kv">
+                <span>Fee rate</span>
+                <strong className="muted">{formatRate(feeRate)}</strong>
+            </div>
+            <div className="kv">
+                <span>Fees (est.)</span>
+                <strong>{fees !== undefined ? formatPrice(fees) : '$—'}</strong>
             </div>
         </div>
     );

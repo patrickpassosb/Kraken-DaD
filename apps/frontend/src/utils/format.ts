@@ -36,3 +36,10 @@ export function formatSpread(spread?: number): string {
     }
     return `$${spread.toFixed(2)}`;
 }
+
+export function formatRate(rate?: number): string {
+    if (rate === undefined || Number.isNaN(rate)) {
+        return '0.00%';
+    }
+    return `${(rate * 100).toFixed(2)}%`;
+}

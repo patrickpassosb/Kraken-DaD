@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ReactFlow,
     useNodesState,
@@ -27,10 +27,86 @@ interface FlowCanvasProps {
 }
 
 const lanes = [
-    { id: 'market', label: 'Market Data' },
+    { id: 'market', label: 'Market' },
     { id: 'logic', label: 'Logic' },
     { id: 'risk', label: 'Risk' },
     { id: 'execution', label: 'Execution' },
+];
+
+const paletteGroups = [
+    {
+        id: 'control',
+        label: 'CONTROL',
+        items: [
+            {
+                type: 'control.start',
+                label: 'Strategy Start',
+                role: 'Control',
+                description: 'Entry control signal',
+                position: { x: 360, y: 260 },
+            },
+        ],
+    },
+    {
+        id: 'market',
+        label: 'MARKET',
+        items: [
+            {
+                type: 'data.kraken.ticker',
+                label: 'Market Data',
+                role: 'Data',
+                description: 'Kraken ticker snapshot',
+                position: { x: 560, y: 240 },
+            },
+        ],
+    },
+    {
+        id: 'logic',
+        label: 'LOGIC & RISK',
+        items: [
+            {
+                type: 'logic.if',
+                label: 'Condition',
+                role: 'Logic',
+                description: 'Branch on price rule',
+                position: { x: 800, y: 260 },
+            },
+            {
+                type: 'risk.guard',
+                label: 'Orderbook Guard',
+                role: 'Risk',
+                description: 'Block on wide spreads',
+                position: { x: 1040, y: 240 },
+            },
+        ],
+    },
+    {
+        id: 'execution',
+        label: 'EXECUTION',
+        items: [
+            {
+                type: 'action.placeOrder',
+                label: 'Execution',
+                role: 'Action',
+                description: 'Prepare Kraken order intent',
+                position: { x: 1260, y: 240 },
+            },
+            {
+                type: 'action.cancelOrder',
+                label: 'Order Control',
+                role: 'Action',
+                description: 'Cancel by ID',
+                position: { x: 1260, y: 360 },
+            },
+            {
+                type: 'action.logIntent',
+                label: 'Audit Log',
+                role: 'Audit',
+                description: 'Record decision',
+                position: { x: 1280, y: 500 },
+            },
+        ],
+    },
 ];
 
 function nodeHighlight(status?: NodeStatus): string {
@@ -47,6 +123,7 @@ export function FlowCanvas({
     initialEdges,
     nodeStatuses,
 }: FlowCanvasProps) {
+    const [paletteOpen, setPaletteOpen] = useState(true);
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
 
@@ -111,7 +188,7 @@ export function FlowCanvas({
     }, [edges, onEdgesChange]);
 
     const handleAddNode = useCallback(
-        (type: string, position: { x: number; y: number }) => {
+        (type: string, position?: { x: number; y: number }) => {
             if (type === 'control.start') {
                 const hasStart = nodes.some((n) => n.type === 'control.start');
                 if (hasStart) {
@@ -122,10 +199,14 @@ export function FlowCanvas({
 
             const id = `${type}-${Date.now()}`;
             let data: Record<string, unknown> = {};
+            const targetPosition = position ?? { x: 360, y: 260 };
 
             switch (type) {
                 case 'data.kraken.ticker':
                     data = { pair: 'BTC/USD' };
+                    break;
+                case 'logic.if':
+                    data = { comparator: '>', threshold: 90000 };
                     break;
                 case 'action.placeOrder':
                     data = { pair: 'BTC/USD', side: 'buy', type: 'market', amount: 0.1 };
@@ -134,13 +215,16 @@ export function FlowCanvas({
                     data = { orderId: '' };
                     break;
                 case 'risk.guard':
-                    data = { maxOrderSize: 5, maxTrades: 10, priceDeviation: 1.5 };
+                    data = { pair: 'BTC/USD', maxSpread: 5 };
+                    break;
+                case 'action.logIntent':
+                    data = { note: 'Capture execution intent' };
                     break;
                 default:
                     data = {};
             }
 
-            const newNode: Node = { id, type, position, data };
+            const newNode: Node = { id, type, position: targetPosition, data };
             setNodes((nds) => [...nds, newNode]);
         },
         [nodes, setNodes]
@@ -182,6 +266,9 @@ export function FlowCanvas({
     return (
         <div className="canvas-panel">
             <div className="canvas-shell">
+                <button className="palette-toggle btn btn-ghost" onClick={() => setPaletteOpen((v) => !v)}>
+                    {paletteOpen ? 'Hide Strategy Blocks' : 'Show Strategy Blocks'}
+                </button>
                 <div className="lane-backdrop">
                     {lanes.map((lane) => (
                         <div key={lane.id} className="lane">
@@ -189,60 +276,33 @@ export function FlowCanvas({
                         </div>
                     ))}
                 </div>
-                <div className="palette-floating panel">
-                    <div className="panel-title">Strategy Blocks</div>
-                    <div className="node-palette">
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('control.start', { x: 80, y: 200 })}
-                        >
-                            <div className="palette-label">Strategy Start</div>
-                            <span className="palette-chip">Control</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('data.kraken.ticker', { x: 260, y: 200 })}
-                        >
-                            <div className="palette-label">Market Data</div>
-                            <span className="palette-chip">Data</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('logic.if', { x: 520, y: 220 })}
-                        >
-                            <div className="palette-label">Condition</div>
-                            <span className="palette-chip">Logic</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('risk.guard', { x: 720, y: 200 })}
-                        >
-                            <div className="palette-label">Risk Guard</div>
-                            <span className="palette-chip">Risk</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.placeOrder', { x: 940, y: 200 })}
-                        >
-                            <div className="palette-label">Execution</div>
-                            <span className="palette-chip">Action</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.cancelOrder', { x: 940, y: 320 })}
-                        >
-                            <div className="palette-label">Order Control</div>
-                            <span className="palette-chip">Action</span>
-                        </div>
-                        <div
-                            className="palette-item"
-                            onClick={() => handleAddNode('action.logIntent', { x: 940, y: 420 })}
-                        >
-                            <div className="palette-label">Audit Log</div>
-                            <span className="palette-chip">Audit</span>
+                {paletteOpen && (
+                    <div className="palette-floating panel">
+                        <div className="panel-title">Strategy Blocks</div>
+                        <div className="node-palette">
+                            {paletteGroups.map((group) => (
+                                <div key={group.id} className={`palette-group palette-${group.id}`}>
+                                    <div className="palette-group-title">{group.label}</div>
+                                    {group.items.map((item) => (
+                                        <div
+                                            key={item.type + item.label}
+                                            className="palette-item"
+                                            onClick={() => handleAddNode(item.type, item.position)}
+                                        >
+                                            <div className="palette-text">
+                                                <div className="palette-label">{item.label}</div>
+                                                <div className="palette-subtext">{item.description}</div>
+                                            </div>
+                                            <span className={`palette-role role-${item.role.toLowerCase()}`}>
+                                                {item.role}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
+                )}
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}

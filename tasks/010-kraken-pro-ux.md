@@ -2,8 +2,8 @@
 
 ## 1. Task Overview
 
-**Title:** Redesign frontend to feel native to Kraken Pro  
-**Goal:** Apply Kraken Pro visual language (dark-first, Kraken colors, Inter) and UX framing (Strategy Canvas, execution lanes, market context) without changing backend or execution logic.
+**Title:** Final Kraken Pro-grade UI pass  
+**Goal:** Deliver the final demo-ready Kraken DaD UI with Kraken-native styling, aligned header copy, lane-first canvas, categorized strategy blocks, and explicit fee rate display in previews and execution summaries.
 
 ---
 
@@ -25,17 +25,15 @@
 ## 3. Context & Problem Definition
 
 ### Problem Statement
-The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: terminology is developer-centric, nodes lack standardized headers/status, no Kraken-style market dock or order preview, and dry-run safety messaging is not prominent.
+The canvas and shell need final convergence: header copy must drop “Dry-run only,” the strategy block palette must be categorized and labeled per Kraken references, lanes need clearer Market→Logic→Risk→Execution flow, and fees must show both rate (%) and computed value wherever execution is previewed.
 
 ### Success Criteria
-- [ ] Centralized Kraken Pro token file (colors, spacing, radii, typography scale) applied across canvas, nodes, panels.
-- [ ] Strategy Canvas framing: renamed nodes (Strategy Start, Market Data, Condition, Execution, Order Control, Audit Log) and lane layout (Market Data → Logic → Risk → Execution) with visual dividers.
-- [ ] Node redesign: header with icon/title/status, labeled inputs, human-readable condition text, Kraken-format numbers, footer state text.
-- [ ] Execution feedback: timeline steps, soft node highlights during run, order preview panel (pair/side/size/est. price/fees) fed by node data.
-- [ ] Market context dock on right updates with selected pair (last price, spread, 24h change, status badge).
-- [ ] Safety UX: persistent dry-run banner, default dry-run mode, optional Risk node (limits/guards) supported in UI.
-- [ ] Trader-friendly error copy replaces developer errors without breaking existing logic.
-- [ ] Strategy export labeled “Kraken Strategy Definition,” no live trading or credential changes.
+- [ ] Header shows exactly “Kraken DaD” and “Strategy Builder” (no “Dry-run only” in the title) while keeping dry-run status elsewhere.
+- [ ] Strategy Blocks panel groups blocks into CONTROL, MARKET, LOGIC & RISK, EXECUTION with distinct but subtle Kraken-native styling; each block shows label and role (Control/Data/Logic/Risk/Action/Audit).
+- [ ] Strategy Canvas lanes (Market → Logic → Risk → Execution) are visually clear with intentional node placement cues and lane labeling.
+- [ ] Order Preview and execution summary surfaces display fee rate (%) and computed fee value from that rate.
+- [ ] Kraken Pro dark theme, gradients, and contrast applied consistently; no off-brand accents.
+- [ ] Existing dry-run safeguards preserved; no backend schema changes.
 
 ---
 
@@ -95,12 +93,11 @@ The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: te
 
 ## 9. Implementation Plan
 
-1) Create Kraken Pro theme tokens (colors/spacing/radii/type) and apply to layout shell (header, banners, canvas background, lanes).  
-2) Reframe canvas: rename nodes/palette to Strategy Canvas terminology, add lane dividers/tints, add dry-run banner and export CTA label.  
-3) Redesign nodes: shared card style with icon/title/status, labeled inputs, condition text rendering, formatted price/amount, footer state.  
-4) Add execution feedback: step timeline, soft node highlight state, order preview panel fed by node data.  
-5) Build market context dock reacting to selected pair with last price/spread/change/status; wire pair updates.  
-6) Add risk/safety UX (Risk node UI, calm error copy) and verify serialization/export still works.
+1) Update shell/header and banners to final copy and Kraken Pro styling; ensure dry-run status moves out of title.  
+2) Rebuild Strategy Blocks panel with required categories and role chips; apply Kraken-native styling.  
+3) Clarify canvas lanes (Market/Logic/Risk/Execution) with visuals and node layout cues.  
+4) Wire fee rate (%) + calculated fee display into Order Preview and any execution summary panels.  
+5) Sweep theme polish for Kraken Pro visuals and verify dry-run safeguards unaffected.
 
 ---
 
@@ -130,4 +127,3 @@ The strategy builder lacks Kraken Pro visual identity and trader-friendly UX: te
 - Ensure new node data fields serialize without breaking backend dry-run expectations.  
 - Keep React Flow performance (avoid expensive re-renders on highlight/animations).  
 - Confirm dry-run messaging persists across UI states and export label aligns with “Kraken Strategy Definition.”
-

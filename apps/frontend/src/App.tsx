@@ -6,9 +6,11 @@ import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
-import { formatPair } from './utils/format';
+import { formatPair, formatPrice, formatRate } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
+
+const FEE_RATE = 0.0026;
 
 type MarketStatus = 'Open' | 'Halted';
 
@@ -28,37 +30,37 @@ const demoNodes: Node[] = [
     {
         id: 'start-1',
         type: 'control.start',
-        position: { x: 80, y: 220 },
+        position: { x: 360, y: 260 },
         data: {},
     },
     {
         id: 'ticker-1',
         type: 'data.kraken.ticker',
-        position: { x: 260, y: 200 },
+        position: { x: 560, y: 240 },
         data: { pair: 'BTC/USD' },
     },
     {
         id: 'if-1',
         type: 'logic.if',
-        position: { x: 520, y: 220 },
+        position: { x: 800, y: 260 },
         data: { comparator: '>', threshold: 90135.6 },
     },
     {
         id: 'risk-1',
         type: 'risk.guard',
-        position: { x: 720, y: 200 },
+        position: { x: 1040, y: 240 },
         data: { pair: 'BTC/USD', maxSpread: 5 },
     },
     {
         id: 'order-1',
         type: 'action.placeOrder',
-        position: { x: 940, y: 200 },
+        position: { x: 1260, y: 240 },
         data: { pair: 'BTC/USD', side: 'buy', type: 'limit', amount: 0.1, price: 90135.6 },
     },
     {
         id: 'audit-1',
         type: 'action.logIntent',
-        position: { x: 980, y: 380 },
+        position: { x: 1280, y: 500 },
         data: { note: 'Capture execution intent' },
     },
 ];
@@ -187,6 +189,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
+    const [rightRailOpen, setRightRailOpen] = useState(true);
     const validateWithKraken = true;
 
     const handleNodesChange = useCallback((newNodes: Node[]) => {
@@ -236,6 +239,11 @@ function App() {
         () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
         [nodes, marketContext, activePair]
     );
+    const orderNotional =
+        orderPreview.estimatedPrice !== undefined
+            ? orderPreview.estimatedPrice * orderPreview.amount
+            : undefined;
+    const orderFeeValue = orderNotional !== undefined ? orderNotional * FEE_RATE : undefined;
     const { data: streamData, warning: streamWarning } = useMarketStream(activePair);
 
     useEffect(() => {
@@ -296,6 +304,10 @@ function App() {
                         <div className="brand-mark">
                             <img src="/KrakenPro.png" alt="Kraken Pro" className="brand-logo-img" />
                         </div>
+                        <div className="brand-text">
+                            <span>Kraken DaD</span>
+                            <span>Strategy Builder</span>
+                        </div>
                     </div>
                 </div>
                 <div className="header-actions">
@@ -308,7 +320,19 @@ function App() {
                 </div>
             </header>
 
-            <div className="workspace">
+            <div
+                className="workspace"
+                style={{ gridTemplateColumns: rightRailOpen ? 'minmax(0, 1fr) 380px' : '1fr' }}
+            >
+                {!rightRailOpen && (
+                    <button
+                        className="btn btn-ghost rail-toggle-floating"
+                        onClick={() => setRightRailOpen(true)}
+                    >
+                        Show Context & Preview
+                    </button>
+                )}
+
                 <FlowCanvas
                     initialNodes={demoNodes}
                     initialEdges={demoEdges}
@@ -317,62 +341,98 @@ function App() {
                     nodeStatuses={nodeStatuses}
                 />
 
-                <div className="right-rail">
-                    <div className="panel">
-                        <div className="panel-title">Market Context</div>
-                        {warningMessage && (
-                            <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
-                                {warningMessage}
+                {rightRailOpen && (
+                    <div className="right-rail-shell">
+                        <div className="right-rail">
+                            <div className="rail-toggle-row">
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => setRightRailOpen(false)}
+                                >
+                                    Hide Context & Preview
+                                </button>
                             </div>
-                        )}
-                        <MarketContextDock
-                            pair={displayMarketContext.pair}
-                            lastPrice={displayMarketContext.lastPrice}
-                            spread={displayMarketContext.spread}
-                            change={displayMarketContext.change}
-                            status={displayMarketContext.status}
-                            source={marketSourceLabel}
-                        />
-                    </div>
-                    <div className="panel">
-                        <div className="panel-title">Order Preview</div>
-                        <OrderPreviewPanel
-                            pair={orderPreview.pair}
-                            side={orderPreview.side}
-                            amount={orderPreview.amount}
-                            type={orderPreview.type}
-                            estimatedPrice={orderPreview.estimatedPrice}
-                            feeRate={0.0026}
-                            sourceLabel={orderSourceLabel}
-                        />
-                        {result && (
-                            <div className="result-summary" style={{ marginTop: '12px' }}>
-                                <div className="summary-card">
-                                    <h4>Status</h4>
-                                    <div className="value" style={{ color: result.success ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>
-                                        {result.success ? 'Success' : 'Check strategy'}
+                            <div className="panel">
+                                <div className="panel-title">Market Context</div>
+                                {warningMessage && (
+                                    <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                        {warningMessage}
+                                    </div>
+                                )}
+                                <MarketContextDock
+                                    pair={displayMarketContext.pair}
+                                    lastPrice={displayMarketContext.lastPrice}
+                                    spread={displayMarketContext.spread}
+                                    change={displayMarketContext.change}
+                                    status={displayMarketContext.status}
+                                    source={marketSourceLabel}
+                                />
+                            </div>
+                            <div className="panel">
+                                <div className="panel-title">Order Preview</div>
+                                <OrderPreviewPanel
+                                    pair={orderPreview.pair}
+                                    side={orderPreview.side}
+                                    amount={orderPreview.amount}
+                                    type={orderPreview.type}
+                                    estimatedPrice={orderPreview.estimatedPrice}
+                                    feeRate={FEE_RATE}
+                                    notional={orderNotional}
+                                    feeValue={orderFeeValue}
+                                    sourceLabel={orderSourceLabel}
+                                />
+                                <div className="result-summary" style={{ marginTop: '12px' }}>
+                                    {result ? (
+                                        <>
+                                            <div className="summary-card">
+                                                <h4>Status</h4>
+                                                <div className="value" style={{ color: result.success ? 'var(--kraken-green)' : 'var(--kraken-red)' }}>
+                                                    {result.success ? 'Success' : 'Check strategy'}
+                                                </div>
+                                            </div>
+                                            <div className="summary-card">
+                                                <h4>Nodes Executed</h4>
+                                                <div className="value">{result.nodesExecuted}</div>
+                                            </div>
+                                            <div className="summary-card">
+                                                <h4>Warnings</h4>
+                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>
+                                                    {result.warnings.length}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="summary-card">
+                                                <h4>Status</h4>
+                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>Not run</div>
+                                            </div>
+                                            <div className="summary-card">
+                                                <h4>Nodes Executed</h4>
+                                                <div className="value">0</div>
+                                            </div>
+                                            <div className="summary-card">
+                                                <h4>Warnings</h4>
+                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>0</div>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="summary-card">
+                                        <h4>Fees</h4>
+                                        <div className="value">{orderFeeValue !== undefined ? formatPrice(orderFeeValue) : '$—'}</div>
+                                        <div className="muted">Fee rate {formatRate(FEE_RATE)}</div>
                                     </div>
                                 </div>
-                                <div className="summary-card">
-                                    <h4>Nodes Executed</h4>
-                                    <div className="value">{result.nodesExecuted}</div>
-                                </div>
-                                <div className="summary-card">
-                                    <h4>Warnings</h4>
-                                    <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                        {result.warnings.length}
+                                {error && (
+                                    <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
+                                        <h4>Alert</h4>
+                                        <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        )}
-                        {error && (
-                            <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                <h4>Alert</h4>
-                                <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
-                            </div>
-                        )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
