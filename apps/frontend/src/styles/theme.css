@@ -326,6 +326,14 @@ body {
     padding: 8px 14px;
 }
 
+.recenter-control {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 5;
+    padding: 8px 14px;
+}
+
 .lane-backdrop {
     position: absolute;
     inset: 0;
@@ -489,6 +497,44 @@ body {
 
 .react-flow {
     height: 100%;
+}
+
+.empty-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.empty-card {
+    pointer-events: auto;
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    background: linear-gradient(145deg, rgba(61, 44, 105, 0.2), rgba(12, 10, 18, 0.9));
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    display: grid;
+    gap: 12px;
+    min-width: 320px;
+    text-align: center;
+}
+
+.empty-title {
+    font-size: var(--text-md);
+    font-weight: 700;
+}
+
+.empty-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+}
+
+.empty-subtext {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .react-flow__node {

@@ -12,6 +12,7 @@ import {
     BackgroundVariant,
     StepEdge,
     SimpleBezierEdge,
+    useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -123,9 +124,10 @@ export function FlowCanvas({
     initialEdges,
     nodeStatuses,
 }: FlowCanvasProps) {
-    const [paletteOpen, setPaletteOpen] = useState(true);
+    const [paletteOpen, setPaletteOpen] = useState(false);
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
+    const { fitView } = useReactFlow();
 
     const edgeTypes = useMemo(
         () => ({
@@ -263,11 +265,22 @@ export function FlowCanvas({
         [setEdges]
     );
 
+    const handleFitView = useCallback(() => {
+        if (nodes.length === 0) {
+            fitView({ padding: 0.9, minZoom: 0.8, maxZoom: 1.2 });
+        } else {
+            fitView({ padding: 0.2, duration: 300 });
+        }
+    }, [fitView, nodes.length]);
+
     return (
         <div className="canvas-panel">
             <div className="canvas-shell">
                 <button className="palette-toggle btn btn-ghost" onClick={() => setPaletteOpen((v) => !v)}>
                     {paletteOpen ? 'Hide Strategy Blocks' : 'Show Strategy Blocks'}
+                </button>
+                <button className="recenter-control btn btn-ghost" onClick={handleFitView}>
+                    Recenter
                 </button>
                 <div className="lane-backdrop">
                     {lanes.map((lane) => (
@@ -300,6 +313,25 @@ export function FlowCanvas({
                                     ))}
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                )}
+                {nodes.length === 0 && (
+                    <div className="empty-state">
+                        <div className="empty-card">
+                            <div className="empty-title">Add first step</div>
+                            <div className="empty-actions">
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => handleAddNode('control.start', { x: 520, y: 320 })}
+                                >
+                                    Add Strategy Start
+                                </button>
+                                <button className="btn btn-ghost" onClick={() => setPaletteOpen(true)}>
+                                    Open Strategy Blocks
+                                </button>
+                            </div>
+                            <div className="empty-subtext">Or start from a template once blocks are defined.</div>
                         </div>
                     </div>
                 )}

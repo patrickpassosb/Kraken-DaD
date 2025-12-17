@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { FlowCanvas } from './canvas/FlowCanvas';
+import { ReactFlowProvider } from '@xyflow/react';
 import { executeDryRun, ExecutionResult } from './api/executeDryRun';
 import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
@@ -26,103 +27,9 @@ interface MarketContext {
 }
 
 // Demo strategy: Strategy Start -> Market Data -> Condition -> Risk -> Execution
-const demoNodes: Node[] = [
-    {
-        id: 'start-1',
-        type: 'control.start',
-        position: { x: 360, y: 260 },
-        data: {},
-    },
-    {
-        id: 'ticker-1',
-        type: 'data.kraken.ticker',
-        position: { x: 560, y: 240 },
-        data: { pair: 'BTC/USD' },
-    },
-    {
-        id: 'if-1',
-        type: 'logic.if',
-        position: { x: 800, y: 260 },
-        data: { comparator: '>', threshold: 90135.6 },
-    },
-    {
-        id: 'risk-1',
-        type: 'risk.guard',
-        position: { x: 1040, y: 240 },
-        data: { pair: 'BTC/USD', maxSpread: 5 },
-    },
-    {
-        id: 'order-1',
-        type: 'action.placeOrder',
-        position: { x: 1260, y: 240 },
-        data: { pair: 'BTC/USD', side: 'buy', type: 'limit', amount: 0.1, price: 90135.6 },
-    },
-    {
-        id: 'audit-1',
-        type: 'action.logIntent',
-        position: { x: 1280, y: 500 },
-        data: { note: 'Capture execution intent' },
-    },
-];
+const demoNodes: Node[] = [];
 
-const demoEdges: Edge[] = [
-    {
-        id: 'e-start-ticker',
-        source: 'start-1',
-        sourceHandle: 'control:out',
-        target: 'ticker-1',
-        targetHandle: 'control:in',
-        type: 'control',
-    },
-    {
-        id: 'e-ticker-if-control',
-        source: 'ticker-1',
-        sourceHandle: 'control:out',
-        target: 'if-1',
-        targetHandle: 'control:in',
-        type: 'control',
-    },
-    {
-        id: 'e-if-risk',
-        source: 'if-1',
-        sourceHandle: 'control:true',
-        target: 'risk-1',
-        targetHandle: 'control:in',
-        type: 'control',
-    },
-    {
-        id: 'e-risk-order',
-        source: 'risk-1',
-        sourceHandle: 'control:out',
-        target: 'order-1',
-        targetHandle: 'control:trigger',
-        type: 'control',
-    },
-    {
-        id: 'e-if-audit',
-        source: 'if-1',
-        sourceHandle: 'control:false',
-        target: 'audit-1',
-        targetHandle: 'control:in',
-        type: 'control',
-    },
-    {
-        id: 'e-ticker-if-condition',
-        source: 'ticker-1',
-        sourceHandle: 'data:price',
-        target: 'if-1',
-        targetHandle: 'data:condition',
-        type: 'data',
-    },
-    {
-        id: 'e-ticker-order-price',
-        source: 'ticker-1',
-        sourceHandle: 'data:price',
-        target: 'order-1',
-        targetHandle: 'data:price',
-        type: 'data',
-    },
-];
+const demoEdges: Edge[] = [];
 
 function friendlyError(err: unknown): string {
     const raw = err instanceof Error ? err.message : 'Unable to run strategy';
@@ -333,13 +240,15 @@ function App() {
                     gap: rightRailOpen ? 'var(--space-4)' : '0px',
                 }}
             >
-                <FlowCanvas
-                    initialNodes={demoNodes}
-                    initialEdges={demoEdges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={handleEdgesChange}
-                    nodeStatuses={nodeStatuses}
-                />
+                <ReactFlowProvider>
+                    <FlowCanvas
+                        initialNodes={demoNodes}
+                        initialEdges={demoEdges}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={handleEdgesChange}
+                        nodeStatuses={nodeStatuses}
+                    />
+                </ReactFlowProvider>
 
                 {rightRailOpen && (
                     <div className="right-rail-shell">
