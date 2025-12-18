@@ -9,6 +9,7 @@ interface KrakenTickerRaw {
     c?: [string, string?];
     v?: [string, string?];
     p?: [string, string?];
+    o?: string | [string, string?];
 }
 
 export interface KrakenTickerSnapshot {
@@ -18,6 +19,7 @@ export interface KrakenTickerSnapshot {
     bid: number;
     volume24h: number;
     change24h: number;
+    change24hPct?: number;
     spread: number;
     timestamp: number;
 }
@@ -92,6 +94,17 @@ export async function fetchTicker(pair: string, options: FetchOptions = {}): Pro
     const last = toNumber(ticker.c?.[0]);
     const volume24h = toNumber(ticker.v?.[1]);
     const change24h = toNumber(ticker.p?.[1]);
+    const openPrice = Array.isArray(ticker.o)
+        ? toNumber(ticker.o[1] ?? ticker.o[0])
+        : toNumber(ticker.o);
+    // Kraken UI percent closely matches last vs 24h VWAP (p[1]); fall back to open if unavailable.
+    const vwap24h = change24h;
+    const change24hPct =
+        vwap24h && last
+            ? ((last - vwap24h) / vwap24h) * 100
+            : openPrice && last
+            ? ((last - openPrice) / openPrice) * 100
+            : undefined;
 
     return {
         pair: display,
@@ -100,6 +113,7 @@ export async function fetchTicker(pair: string, options: FetchOptions = {}): Pro
         bid: bid ?? 0,
         volume24h: volume24h ?? 0,
         change24h: change24h ?? 0,
+        change24hPct,
         spread: ask !== undefined && bid !== undefined ? ask - bid : 0,
         timestamp: Date.now(),
     };

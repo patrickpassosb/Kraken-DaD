@@ -29,6 +29,7 @@ export async function marketRoute(fastify: FastifyInstance) {
                     bid: ticker.bid ?? depth.bestBid ?? null,
                     spread: ticker.spread ?? depth.spread ?? null,
                     change24h: ticker.change24h,
+                    change24hPct: ticker.change24hPct,
                     volume24h: ticker.volume24h,
                     timestamp: ticker.timestamp,
                     source: 'kraken',

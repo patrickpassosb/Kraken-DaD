@@ -7,6 +7,7 @@ export interface MarketContextResponse {
     bid: number | null;
     spread: number | null;
     change24h: number;
+    change24hPct?: number;
     volume24h?: number;
     timestamp?: number;
     source: 'kraken';

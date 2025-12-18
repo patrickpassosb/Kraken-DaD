@@ -19,7 +19,7 @@ interface MarketContext {
     pair: string;
     lastPrice: number;
     spread: number;
-    change: number;
+    changePct?: number;
     status: MarketStatus;
     ask?: number | null;
     bid?: number | null;
@@ -56,11 +56,11 @@ function derivePair(nodes: Node[]): string {
 
 function mockMarketContext(pair: string): MarketContext {
     const defaults: Record<string, Omit<MarketContext, 'pair'>> = {
-        'BTC/USD': { lastPrice: 90135.6, spread: 0.8, change: 0.5, status: 'Open' },
-        'ETH/USD': { lastPrice: 3450.12, spread: 0.5, change: -0.3, status: 'Open' },
+        'BTC/USD': { lastPrice: 90135.6, spread: 0.8, changePct: 0.5, status: 'Open' },
+        'ETH/USD': { lastPrice: 3450.12, spread: 0.5, changePct: -0.3, status: 'Open' },
     };
     const normalized = formatPair(pair);
-    const context = defaults[normalized] ?? { lastPrice: 1250, spread: 0.6, change: 0.1, status: 'Open' as MarketStatus };
+    const context = defaults[normalized] ?? { lastPrice: 1250, spread: 0.6, changePct: 0.1, status: 'Open' as MarketStatus };
     return { pair: normalized, ...context };
 }
 
@@ -168,7 +168,7 @@ function App() {
                     pair: ctx.pair,
                     lastPrice: ctx.lastPrice,
                     spread: ctx.spread ?? 0,
-                    change: ctx.change24h,
+                    changePct: ctx.change24hPct,
                     status: 'Open',
                     ask: ctx.ask,
                     bid: ctx.bid,
@@ -192,7 +192,7 @@ function App() {
             ask: streamData.ask ?? prev?.ask ?? null,
             bid: streamData.bid ?? prev?.bid ?? null,
             spread: streamData.spread ?? prev?.spread ?? 0,
-            change: prev?.change ?? 0,
+            changePct: prev?.changePct,
             status: prev?.status ?? 'Open',
             source: streamData.source,
         }));
@@ -265,6 +265,7 @@ function App() {
                                     pair={displayMarketContext.pair}
                                     lastPrice={displayMarketContext.lastPrice}
                                     spread={displayMarketContext.spread}
+                                    changePct={displayMarketContext.changePct}
                                     status={displayMarketContext.status}
                                     source={marketSourceLabel}
                                 />
