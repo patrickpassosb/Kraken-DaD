@@ -7,7 +7,7 @@ import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
-import { formatPair, formatPrice, formatRate } from './utils/format';
+import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
 
@@ -296,11 +296,11 @@ function App() {
                                                 <h4>Nodes Executed</h4>
                                                 <div className="value">{result.nodesExecuted}</div>
                                             </div>
-                                            <div className="summary-card">
-                                                <h4>Warnings</h4>
-                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                                    {result.warnings.length}
-                                                </div>
+                                        <div className="summary-card">
+                                            <h4>Warnings</h4>
+                                            <div className="value" style={{ color: 'var(--text-secondary)' }}>
+                                                {result.warnings.length}
+                                            </div>
                                             </div>
                                         </>
                                     ) : (
@@ -313,22 +313,17 @@ function App() {
                                                 <h4>Nodes Executed</h4>
                                                 <div className="value">0</div>
                                             </div>
-                                            <div className="summary-card">
-                                                <h4>Warnings</h4>
-                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>0</div>
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="summary-card">
-                                        <h4>Fees</h4>
-                                        <div className="value">{orderFeeValue !== undefined ? formatPrice(orderFeeValue) : '$—'}</div>
-                                        <div className="muted">Fee rate {formatRate(FEE_RATE)}</div>
-                                    </div>
-                                </div>
-                                {error && (
-                                    <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                        <h4>Alert</h4>
-                                        <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
+                                        <div className="summary-card">
+                                            <h4>Warnings</h4>
+                                            <div className="value" style={{ color: 'var(--text-secondary)' }}>0</div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            {error && (
+                                <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
+                                    <h4>Alert</h4>
+                                    <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
                                     </div>
                                 )}
                             </div>
