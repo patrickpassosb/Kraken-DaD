@@ -32,7 +32,28 @@ export function getAssetMeta(symbol: string): AssetMeta | undefined {
 export function getAssetIconUrl(symbol: string): string | undefined {
     const meta = getAssetMeta(symbol);
     if (meta?.icon) return meta.icon;
-    const sym = symbol.toLowerCase();
+    const alias: Record<string, string> = {
+        BTC: 'btc',
+        XBT: 'btc',
+        TBTC: 'btc',
+        WBTC: 'wbtc',
+        ETH: 'eth',
+        XETH: 'eth',
+        USDC: 'usdc',
+        USDT: 'usdt',
+        EUR: 'eur',
+        USD: 'usd',
+        XRP: 'xrp',
+        BNB: 'bnb',
+        DOGE: 'doge',
+        DOT: 'dot',
+        LINK: 'link',
+        LTC: 'ltc',
+        BCH: 'bch',
+        TRX: 'trx',
+        MATIC: 'matic',
+    };
+    const sym = alias[symbol.toUpperCase()] ?? symbol.toLowerCase();
     if (!/^[0-9a-z]+$/.test(sym)) return undefined;
     return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${sym}.png`;
 }

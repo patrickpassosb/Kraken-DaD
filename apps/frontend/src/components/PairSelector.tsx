@@ -63,6 +63,7 @@ export function PairSelector({ value, onSelect, onClose, pairs }: PairSelectorPr
             <div className="pair-list">
                 {filtered.map((pair) => {
                     const baseMeta = getAssetMeta(pair.base);
+                    const displayLabel = (pair as { label?: string }).label || pair.id;
                     return (
                         <button
                             key={pair.id}
@@ -71,7 +72,7 @@ export function PairSelector({ value, onSelect, onClose, pairs }: PairSelectorPr
                         >
                             <AssetBadge symbol={pair.base} />
                             <div className="pair-row-text">
-                                <div className="pair-row-label">{pair.label}</div>
+                                <div className="pair-row-label">{displayLabel}</div>
                                 <div className="pair-row-sub">
                                     {baseMeta?.name ?? pair.base} • {pair.quote}
                                 </div>
