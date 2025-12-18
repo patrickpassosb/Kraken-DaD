@@ -265,7 +265,6 @@ function App() {
                                     pair={displayMarketContext.pair}
                                     lastPrice={displayMarketContext.lastPrice}
                                     spread={displayMarketContext.spread}
-                                    change={displayMarketContext.change}
                                     status={displayMarketContext.status}
                                     source={marketSourceLabel}
                                 />

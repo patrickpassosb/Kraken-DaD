@@ -17,6 +17,13 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from '../nodes/nodeTypes';
+import {
+    buildTemplateEdges,
+    buildTemplateNodes,
+    createNodeWithDefaults,
+    nodeDefinitionMap,
+    paletteGroups,
+} from '../nodes/nodeRegistry';
 import { NodeStatus } from '../utils/status';
 
 interface FlowCanvasProps {
@@ -32,89 +39,6 @@ const lanes = [
     { id: 'logic', label: 'Logic' },
     { id: 'risk', label: 'Risk' },
     { id: 'execution', label: 'Execution' },
-];
-
-const paletteGroups = [
-    {
-        id: 'control',
-        label: 'CONTROL',
-        items: [
-            {
-                type: 'control.start',
-                label: 'Strategy Start',
-                role: 'Control',
-                description: 'Kick off control lane',
-                icon: '▶',
-                position: { x: 360, y: 260 },
-            },
-        ],
-    },
-    {
-        id: 'market',
-        label: 'MARKET',
-        items: [
-            {
-                type: 'data.kraken.ticker',
-                label: 'Market Data',
-                role: 'Data',
-                description: 'Live Kraken ticker snapshot',
-                icon: '$',
-                position: { x: 560, y: 240 },
-            },
-        ],
-    },
-    {
-        id: 'logic',
-        label: 'LOGIC & RISK',
-        items: [
-            {
-                type: 'logic.if',
-                label: 'Condition (IF)',
-                role: 'Logic',
-                description: 'Branch on price rule (true/false)',
-                icon: '?',
-                position: { x: 800, y: 260 },
-            },
-            {
-                type: 'risk.guard',
-                label: 'Orderbook Guard',
-                role: 'Risk',
-                description: 'Block on wide spreads',
-                icon: '⚑',
-                position: { x: 1040, y: 240 },
-            },
-        ],
-    },
-    {
-        id: 'execution',
-        label: 'EXECUTION',
-        items: [
-            {
-                type: 'action.placeOrder',
-                label: 'Execution',
-                role: 'Action',
-                description: 'Prepare Kraken order intent',
-                icon: '✓',
-                position: { x: 1260, y: 240 },
-            },
-            {
-                type: 'action.cancelOrder',
-                label: 'Order Control',
-                role: 'Action',
-                description: 'Cancel intent by ID',
-                icon: '⤺',
-                position: { x: 1260, y: 360 },
-            },
-            {
-                type: 'action.logIntent',
-                label: 'Audit Log',
-                role: 'Audit',
-                description: 'Record audit trail',
-                icon: '✎',
-                position: { x: 1280, y: 500 },
-            },
-        ],
-    },
 ];
 
 function nodeHighlight(status?: NodeStatus): string {
@@ -210,27 +134,17 @@ export function FlowCanvas({
     }, [edges, onEdgesChange]);
 
     const handleLoadTemplate = useCallback(() => {
-        const templateNodes: Node[] = [
-            { id: 'start-template', type: 'control.start', position: { x: 360, y: 260 }, data: {} },
-            { id: 'ticker-template', type: 'data.kraken.ticker', position: { x: 560, y: 240 }, data: { pair: 'BTC/USD' } },
-            { id: 'if-template', type: 'logic.if', position: { x: 780, y: 260 }, data: { comparator: '>', threshold: 90000 } },
-            { id: 'order-template', type: 'action.placeOrder', position: { x: 1000, y: 260 }, data: { pair: 'BTC/USD', side: 'buy', type: 'market', amount: 0.1 } },
-        ];
-        const templateEdges: Edge[] = [
-            { id: 'e-start-ticker-template', source: 'start-template', sourceHandle: 'control:out', target: 'ticker-template', targetHandle: 'control:in', type: 'control' },
-            { id: 'e-ticker-if-control-template', source: 'ticker-template', sourceHandle: 'control:out', target: 'if-template', targetHandle: 'control:in', type: 'control' },
-            { id: 'e-if-order-template', source: 'if-template', sourceHandle: 'control:true', target: 'order-template', targetHandle: 'control:trigger', type: 'control' },
-            { id: 'e-ticker-if-data-template', source: 'ticker-template', sourceHandle: 'data:price', target: 'if-template', targetHandle: 'data:condition', type: 'data' },
-            { id: 'e-ticker-order-data-template', source: 'ticker-template', sourceHandle: 'data:price', target: 'order-template', targetHandle: 'data:price', type: 'data' },
-        ];
-        setNodes(templateNodes);
-        setEdges(templateEdges);
+        setNodes(buildTemplateNodes());
+        setEdges(buildTemplateEdges());
         setPaletteOpen(false);
         fitView({ padding: 0.2, duration: 300 });
     }, [fitView, setEdges, setNodes]);
 
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
+            const meta = nodeDefinitionMap[type];
+            if (!meta) return;
+
             if (type === 'control.start') {
                 const hasStart = nodes.some((n) => n.type === 'control.start');
                 if (hasStart) {
@@ -240,33 +154,7 @@ export function FlowCanvas({
             }
 
             const id = `${type}-${Date.now()}`;
-            let data: Record<string, unknown> = {};
-            const targetPosition = position ?? { x: 360, y: 260 };
-
-            switch (type) {
-                case 'data.kraken.ticker':
-                    data = { pair: 'BTC/USD' };
-                    break;
-                case 'logic.if':
-                    data = { comparator: '>', threshold: 90000 };
-                    break;
-                case 'action.placeOrder':
-                    data = { pair: 'BTC/USD', side: 'buy', type: 'market', amount: 0.1 };
-                    break;
-                case 'action.cancelOrder':
-                    data = { orderId: '' };
-                    break;
-                case 'risk.guard':
-                    data = { pair: 'BTC/USD', maxSpread: 5 };
-                    break;
-                case 'action.logIntent':
-                    data = { note: 'Capture execution intent' };
-                    break;
-                default:
-                    data = {};
-            }
-
-            const newNode: Node = { id, type, position: targetPosition, data };
+            const newNode = createNodeWithDefaults(meta.type, id, position);
             setNodes((nds) => [...nds, newNode]);
         },
         [nodes, setNodes]
@@ -460,7 +348,7 @@ export function FlowCanvas({
                                         <div
                                         key={item.type + item.label}
                                         className="palette-item"
-                                        onClick={() => handleAddNode(item.type, item.position)}
+                                        onClick={() => handleAddNode(item.type, item.defaultPosition)}
                                         title={`${item.label} — ${item.description}`}
                                     >
                                         <div className="palette-icon">{item.icon}</div>

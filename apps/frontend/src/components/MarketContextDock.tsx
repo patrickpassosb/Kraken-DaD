@@ -1,10 +1,9 @@
-import { formatPair, formatPercent, formatPrice, formatSpread } from '../utils/format';
+import { formatPair, formatPrice, formatSpread } from '../utils/format';
 
 interface MarketContextProps {
     pair: string;
     lastPrice: number;
     spread: number;
-    change: number;
     status: 'Open' | 'Halted';
     source?: string;
 }
@@ -13,21 +12,13 @@ export function MarketContextDock({
     pair,
     lastPrice,
     spread,
-    change,
     status,
     source,
 }: MarketContextProps) {
-    const isUp = change >= 0;
     return (
         <div className="dock-card">
             <div className="market-header">
                 <div className="market-pair">{formatPair(pair)}</div>
-                <span
-                    className="market-badge"
-                    style={{ color: isUp ? 'var(--kraken-green)' : 'var(--kraken-red)' }}
-                >
-                    {formatPercent(change)}
-                </span>
             </div>
             {source && <div className="market-subtitle">{source}</div>}
             <div className="kv">
