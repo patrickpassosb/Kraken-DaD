@@ -11,7 +11,6 @@ import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
 import { PairSelector } from './components/PairSelector';
-import { tradingPairs } from './data/pairs';
 
 const FEE_RATE = 0.0026;
 

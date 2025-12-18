@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { tradingPairs, TradingPair } from '../data/pairs';
+import { tradingPairs } from '../data/pairs';
 import { getAssetMeta } from '../data/assets';
 
 interface PairSelectorProps {
