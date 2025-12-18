@@ -124,6 +124,18 @@ function nodeHighlight(status?: NodeStatus): string {
     return '';
 }
 
+function laneIndexForType(type?: string): number {
+    if (!type) return 0;
+    if (type.startsWith('control')) return 0;
+    if (type.startsWith('data')) return 1;
+    if (type.startsWith('logic') || type.startsWith('risk')) return 2;
+    if (type.startsWith('action')) return 3;
+    return 4;
+}
+
+const GRID_SIZE = 20;
+const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
+
 export function FlowCanvas({
     onNodesChange,
     onEdgesChange,
@@ -301,18 +313,96 @@ export function FlowCanvas({
         }
     }, [fitView, nodes.length]);
 
+    const handleTidyLayout = useCallback(() => {
+        if (nodes.length === 0) {
+            handleFitView();
+            return;
+        }
+
+        const controlEdges = edges.filter((e) => e.type === 'control');
+        const incoming = new Map<string, string[]>();
+        controlEdges.forEach(({ source, target }) => {
+            incoming.set(target, [...(incoming.get(target) ?? []), source]);
+        });
+
+        const memo = new Map<string, number>();
+        const visiting = new Set<string>();
+        const depthFor = (id: string): number => {
+            if (memo.has(id)) return memo.get(id) ?? 0;
+            if (visiting.has(id)) return 0;
+            visiting.add(id);
+            const parents = incoming.get(id) ?? [];
+            const depth = parents.length
+                ? Math.max(...parents.map((parent) => depthFor(parent) + 1))
+                : 0;
+            visiting.delete(id);
+            memo.set(id, depth);
+            return depth;
+        };
+
+        const columns = new Map<number, Node[]>();
+        nodes.forEach((node) => {
+            const laneIndex = laneIndexForType(node.type);
+            const controlDepth = depthFor(node.id);
+            const column = Math.max(laneIndex, controlDepth);
+            const bucket = columns.get(column) ?? [];
+            bucket.push(node);
+            columns.set(column, bucket);
+        });
+
+        const layoutPositions = new Map<string, { x: number; y: number }>();
+        const xStart = 240;
+        const yStart = 160;
+        const xSpacing = 260;
+        const ySpacing = 180;
+
+        Array.from(columns.entries())
+            .sort(([a], [b]) => a - b)
+            .forEach(([col, bucket]) => {
+                bucket
+                    .sort(
+                        (a, b) =>
+                            (a.position?.y ?? 0) - (b.position?.y ?? 0) ||
+                            a.id.localeCompare(b.id)
+                    )
+                    .forEach((node, idx) => {
+                        layoutPositions.set(node.id, {
+                            x: snapToGrid(xStart + col * xSpacing),
+                            y: snapToGrid(yStart + idx * ySpacing),
+                        });
+                    });
+            });
+
+        setNodes((nds) =>
+            nds.map((node) => {
+                const next = layoutPositions.get(node.id);
+                if (!next) return node;
+                return { ...node, position: next, dragging: false };
+            })
+        );
+
+        requestAnimationFrame(() => {
+            fitView({ padding: 0.2, duration: 300 });
+        });
+    }, [edges, fitView, handleFitView, nodes, setNodes]);
+
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === 'r') {
+            const key = e.key.toLowerCase();
+            if (key === 'r' || key === 't') {
                 const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
                 if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
                 e.preventDefault();
-                handleFitView();
+                if (key === 'r') {
+                    handleFitView();
+                } else {
+                    handleTidyLayout();
+                }
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [handleFitView]);
+    }, [handleFitView, handleTidyLayout]);
 
     const filteredGroups = useMemo(() => {
         const term = paletteSearch.trim().toLowerCase();
@@ -336,10 +426,16 @@ export function FlowCanvas({
                 <button className="palette-toggle btn btn-ghost" onClick={() => setPaletteOpen((v) => !v)}>
                     {paletteOpen ? 'Hide Strategy Blocks' : 'Show Strategy Blocks'}
                 </button>
-                <button className="recenter-control btn btn-ghost" onClick={handleFitView} title="Recenter (R)">
-                    <span>Recenter</span>
-                    <span className="key-hint">R</span>
-                </button>
+                <div className="canvas-controls">
+                    <button className="tidy-control btn btn-ghost" onClick={handleTidyLayout} title="Tidy Up (T)">
+                        <span>Tidy Up</span>
+                        <span className="key-hint">T</span>
+                    </button>
+                    <button className="recenter-control btn btn-ghost" onClick={handleFitView} title="Recenter (R)">
+                        <span>Recenter</span>
+                        <span className="key-hint">R</span>
+                    </button>
+                </div>
                 <div className="lane-backdrop">
                     {lanes.map((lane) => (
                         <div key={lane.id} className="lane">
