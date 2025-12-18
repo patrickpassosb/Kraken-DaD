@@ -33,6 +33,21 @@ export interface KrakenDepthSnapshot {
     bids: Array<{ price: number; volume: number }>;
 }
 
+export interface KrakenAsset {
+    altname: string;
+    aclass: string;
+    decimals: number;
+    display_decimals: number;
+}
+
+export interface KrakenAssetPair {
+    altname: string;
+    wsname?: string;
+    base: string;
+    quote: string;
+    status?: string;
+}
+
 export interface KrakenCredentials {
     key: string;
     secret: string;
@@ -117,6 +132,34 @@ export async function fetchTicker(pair: string, options: FetchOptions = {}): Pro
         spread: ask !== undefined && bid !== undefined ? ask - bid : 0,
         timestamp: Date.now(),
     };
+}
+
+export async function fetchAssets(options: FetchOptions = {}): Promise<Record<string, KrakenAsset>> {
+    const url = `${API_BASE}/0/public/Assets`;
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
+    ensureFetchResponse(response);
+    const payload = (await response.json()) as { error?: string[]; result?: Record<string, KrakenAsset> };
+    if (payload.error?.length) {
+        throw new Error(`Kraken API error: ${payload.error.join(',')}`);
+    }
+    if (!payload.result) {
+        throw new Error('Kraken API error: empty assets result');
+    }
+    return payload.result;
+}
+
+export async function fetchAssetPairs(options: FetchOptions = {}): Promise<Record<string, KrakenAssetPair>> {
+    const url = `${API_BASE}/0/public/AssetPairs`;
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
+    ensureFetchResponse(response);
+    const payload = (await response.json()) as { error?: string[]; result?: Record<string, KrakenAssetPair> };
+    if (payload.error?.length) {
+        throw new Error(`Kraken API error: ${payload.error.join(',')}`);
+    }
+    if (!payload.result) {
+        throw new Error('Kraken API error: empty asset pairs result');
+    }
+    return payload.result;
 }
 
 export async function fetchDepth(pair: string, count = 10, options: FetchOptions = {}): Promise<KrakenDepthSnapshot> {
