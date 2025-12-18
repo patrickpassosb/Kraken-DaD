@@ -10,6 +10,7 @@ import { OrderPreviewPanel } from './components/OrderPreviewPanel';
 import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
+import { PairSelector } from './components/PairSelector';
 
 const FEE_RATE = 0.0026;
 
@@ -42,18 +43,6 @@ function friendlyError(err: unknown): string {
     return 'Strategy needs valid connections and a start trigger. Please review the canvas.';
 }
 
-function derivePair(nodes: Node[]): string {
-    const orderNode = nodes.find((n) => n.type === 'action.placeOrder');
-    if (orderNode?.data && typeof orderNode.data === 'object' && 'pair' in orderNode.data) {
-        return (orderNode.data as { pair?: string }).pair || 'BTC/USD';
-    }
-    const marketNode = nodes.find((n) => n.type === 'data.kraken.ticker');
-    if (marketNode?.data && typeof marketNode.data === 'object' && 'pair' in marketNode.data) {
-        return (marketNode.data as { pair?: string }).pair || 'BTC/USD';
-    }
-    return 'BTC/USD';
-}
-
 function mockMarketContext(pair: string): MarketContext {
     const defaults: Record<string, Omit<MarketContext, 'pair'>> = {
         'BTC/USD': { lastPrice: 90135.6, spread: 0.8, changePct: 0.5, status: 'Open' },
@@ -64,16 +53,17 @@ function mockMarketContext(pair: string): MarketContext {
     return { pair: normalized, ...context };
 }
 
-function deriveOrderPreview(nodes: Node[], context: MarketContext) {
+function deriveOrderPreview(nodes: Node[], context: MarketContext, fallbackPair: string) {
     const orderNode = nodes.find((n) => n.type === 'action.placeOrder');
     const data = (orderNode?.data as Record<string, unknown>) || {};
     const side = (data.side as 'buy' | 'sell') || 'buy';
     const amount = (data.amount as number) ?? 0.1;
     const type = (data.type as 'market' | 'limit') || 'market';
     const price = (data.price as number | undefined) ?? context.lastPrice;
+    const pairValue = (data.pair as string) || fallbackPair || context.pair;
 
     return {
-        pair: formatPair((data.pair as string) || context.pair),
+        pair: formatPair(pairValue),
         side,
         amount,
         type,
@@ -97,7 +87,36 @@ function App() {
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
     const [rightRailOpen, setRightRailOpen] = useState(true);
+    const [pairSelectorOpen, setPairSelectorOpen] = useState(false);
+    const [selectedPair, setSelectedPair] = useState('BTC/USD');
+    const [previousPair, setPreviousPair] = useState<string>('BTC/USD');
     const validateWithKraken = true;
+
+    // Sync nodes when pair selection changes; only overwrite nodes using the previous selected pair.
+    useEffect(() => {
+        if (selectedPair === previousPair) return;
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (
+                    (node.type === 'data.kraken.ticker' ||
+                        node.type === 'action.placeOrder' ||
+                        node.type === 'risk.guard') &&
+                    node.data &&
+                    typeof node.data === 'object'
+                ) {
+                    const currentPair = (node.data as Record<string, unknown>).pair as string | undefined;
+                    if (!currentPair || currentPair === previousPair) {
+                        return {
+                            ...node,
+                            data: { ...node.data, pair: selectedPair },
+                        };
+                    }
+                }
+                return node;
+            })
+        );
+        setPreviousPair(selectedPair);
+    }, [previousPair, selectedPair, setNodes]);
 
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
@@ -141,9 +160,9 @@ function App() {
         URL.revokeObjectURL(url);
     };
 
-    const activePair = useMemo(() => derivePair(nodes), [nodes]);
+    const activePair = selectedPair;
     const orderPreview = useMemo(
-        () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair)),
+        () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair), activePair),
         [nodes, marketContext, activePair]
     );
     const orderNotional =
@@ -204,6 +223,7 @@ function App() {
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
 
     return (
+        <>
         <div className="app-shell">
             <header className="kraken-header">
                 <div className="header-left">
@@ -218,6 +238,13 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => setPairSelectorOpen(true)}
+                        title="Select trading pair"
+                    >
+                        Pair: {selectedPair}
+                    </button>
                     <span className="mode-pill">Mode: Dry-run (no live orders)</span>
                     <button
                         className="btn btn-ghost"
@@ -248,6 +275,7 @@ function App() {
                         onNodesChange={handleNodesChange}
                         onEdgesChange={handleEdgesChange}
                         nodeStatuses={nodeStatuses}
+                        activePair={selectedPair}
                     />
                 </ReactFlowProvider>
 
@@ -296,11 +324,11 @@ function App() {
                                                 <h4>Nodes Executed</h4>
                                                 <div className="value">{result.nodesExecuted}</div>
                                             </div>
-                                        <div className="summary-card">
-                                            <h4>Warnings</h4>
-                                            <div className="value" style={{ color: 'var(--text-secondary)' }}>
-                                                {result.warnings.length}
-                                            </div>
+                                            <div className="summary-card">
+                                                <h4>Warnings</h4>
+                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>
+                                                    {result.warnings.length}
+                                                </div>
                                             </div>
                                         </>
                                     ) : (
@@ -313,17 +341,17 @@ function App() {
                                                 <h4>Nodes Executed</h4>
                                                 <div className="value">0</div>
                                             </div>
-                                        <div className="summary-card">
-                                            <h4>Warnings</h4>
-                                            <div className="value" style={{ color: 'var(--text-secondary)' }}>0</div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            {error && (
-                                <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
-                                    <h4>Alert</h4>
-                                    <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
+                                            <div className="summary-card">
+                                                <h4>Warnings</h4>
+                                                <div className="value" style={{ color: 'var(--text-secondary)' }}>0</div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                {error && (
+                                    <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
+                                        <h4>Alert</h4>
+                                        <div className="value" style={{ color: 'var(--kraken-red)', fontSize: '15px' }}>{error}</div>
                                     </div>
                                 )}
                             </div>
@@ -332,6 +360,21 @@ function App() {
                 )}
             </div>
         </div>
+        {pairSelectorOpen && (
+            <div className="pair-selector-overlay" onClick={() => setPairSelectorOpen(false)}>
+                <div className="pair-selector-container" onClick={(e) => e.stopPropagation()}>
+                    <PairSelector
+                        value={selectedPair}
+                        onSelect={(pairId) => {
+                            setSelectedPair(pairId);
+                            setPairSelectorOpen(false);
+                        }}
+                        onClose={() => setPairSelectorOpen(false)}
+                    />
+                </div>
+            </div>
+        )}
+        </>
     );
 }
 
