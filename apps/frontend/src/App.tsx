@@ -4,6 +4,7 @@ import { FlowCanvas } from './canvas/FlowCanvas';
 import { ReactFlowProvider } from '@xyflow/react';
 import { executeDryRun, ExecutionResult } from './api/executeDryRun';
 import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
+import { fetchPairs, PairItem } from './api/pairs';
 import { toStrategyJSON } from './utils/toStrategyJSON';
 import { MarketContextDock } from './components/MarketContextDock';
 import { OrderPreviewPanel } from './components/OrderPreviewPanel';
@@ -90,6 +91,8 @@ function App() {
     const [pairSelectorOpen, setPairSelectorOpen] = useState(false);
     const [selectedPair, setSelectedPair] = useState('BTC/USD');
     const [previousPair, setPreviousPair] = useState<string>('BTC/USD');
+    const [pairCatalog, setPairCatalog] = useState<PairItem[]>([]);
+    const [pairCatalogError, setPairCatalogError] = useState<string | null>(null);
     const validateWithKraken = true;
 
     // Sync nodes when pair selection changes; only overwrite nodes using the previous selected pair.
@@ -204,6 +207,23 @@ function App() {
     }, [activePair]);
 
     useEffect(() => {
+        let isMounted = true;
+        fetchPairs()
+            .then((pairs) => {
+                if (!isMounted) return;
+                setPairCatalog(pairs);
+                setPairCatalogError(null);
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setPairCatalogError('Using bundled pair list');
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
         if (!streamData) return;
         setMarketContext((prev) => ({
             pair: streamData.pair,
@@ -245,6 +265,7 @@ function App() {
                     >
                         Pair: {selectedPair}
                     </button>
+                    {pairCatalogError && <span className="chip">{pairCatalogError}</span>}
                     <span className="mode-pill">Mode: Dry-run (no live orders)</span>
                     <button
                         className="btn btn-ghost"
@@ -365,6 +386,7 @@ function App() {
                 <div className="pair-selector-container" onClick={(e) => e.stopPropagation()}>
                     <PairSelector
                         value={selectedPair}
+                        pairs={pairCatalog}
                         onSelect={(pairId) => {
                             setSelectedPair(pairId);
                             setPairSelectorOpen(false);
