@@ -1,4 +1,5 @@
 import { formatPair, formatPercent, formatPrice, formatSpread } from '../utils/format';
+import { getAssetsForPair } from '../data/pairs';
 
 interface MarketContextProps {
     pair: string;
@@ -17,11 +18,23 @@ export function MarketContextDock({
     status,
     source,
 }: MarketContextProps) {
+    const assets = getAssetsForPair(pair);
+    const baseIcon = assets.base?.icon;
+    const baseColor = assets.base?.color ?? 'var(--kraken-purple)';
     const hasChange = changePct !== undefined && !Number.isNaN(changePct);
     return (
         <div className="dock-card">
             <div className="market-header">
-                <div className="market-pair">{formatPair(pair)}</div>
+                <div className="market-pair">
+                    {baseIcon ? (
+                        <img className="asset-icon" src={baseIcon} alt={assets.base?.symbol ?? pair} />
+                    ) : (
+                        <div className="asset-initial" style={{ background: baseColor }}>
+                            {(assets.base?.symbol ?? pair.split('/')[0]).slice(0, 3).toUpperCase()}
+                        </div>
+                    )}
+                    <span>{formatPair(pair)}</span>
+                </div>
                 {hasChange && (
                     <span
                         className="market-badge"

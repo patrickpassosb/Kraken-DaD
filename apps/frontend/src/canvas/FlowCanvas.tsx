@@ -32,6 +32,7 @@ interface FlowCanvasProps {
     initialNodes: Node[];
     initialEdges: Edge[];
     nodeStatuses?: Record<string, NodeStatus>;
+    activePair?: string;
 }
 
 const lanes = [
@@ -66,6 +67,7 @@ export function FlowCanvas({
     initialNodes,
     initialEdges,
     nodeStatuses,
+    activePair = 'BTC/USD',
 }: FlowCanvasProps) {
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [paletteSearch, setPaletteSearch] = useState('');
@@ -134,11 +136,17 @@ export function FlowCanvas({
     }, [edges, onEdgesChange]);
 
     const handleLoadTemplate = useCallback(() => {
-        setNodes(buildTemplateNodes());
+        const templateNodes = buildTemplateNodes().map((node) => {
+            if (node.data && typeof node.data === 'object' && 'pair' in node.data) {
+                return { ...node, data: { ...node.data, pair: activePair } };
+            }
+            return node;
+        });
+        setNodes(templateNodes);
         setEdges(buildTemplateEdges());
         setPaletteOpen(false);
         fitView({ padding: 0.2, duration: 300 });
-    }, [fitView, setEdges, setNodes]);
+    }, [activePair, fitView, setEdges, setNodes]);
 
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
@@ -155,9 +163,14 @@ export function FlowCanvas({
 
             const id = `${type}-${Date.now()}`;
             const newNode = createNodeWithDefaults(meta.type, id, position);
+            if (newNode.data && typeof newNode.data === 'object') {
+                if ('pair' in newNode.data) {
+                    (newNode.data as Record<string, unknown>).pair = activePair;
+                }
+            }
             setNodes((nds) => [...nds, newNode]);
         },
-        [nodes, setNodes]
+        [activePair, nodes, setNodes]
     );
 
     useEffect(() => {
