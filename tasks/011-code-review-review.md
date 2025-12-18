@@ -39,9 +39,9 @@ We need actionable guidance on risks and improvements before evolving the demo f
 
 ### Success Criteria
 <!-- Define exactly how you'll know when this task is complete and successful -->
-- [ ] Deliver a written review summarizing key issues and risks by area
-- [ ] Provide prioritized, actionable recommendations with file-level pointers
-- [ ] Validate suggestions against current code to ensure accuracy
+- [x] Deliver a written review summarizing key issues and risks by area
+- [x] Provide prioritized, actionable recommendations with file-level pointers
+- [x] Validate suggestions against current code to ensure accuracy
 
 ---
 
@@ -138,6 +138,10 @@ React Flow state in frontend; shared types drive backend executor.
 ## 9. Implementation Plan
 
 1) Read core/shared/back-end/front-end files; 2) Note issues by impact; 3) Summarize recommendations with file pointers.
+
+## 10b. Notes & Findings
+
+- Review completed across strategy core executor, Kraken client, backend routes, and frontend app shell. Key improvement areas captured in accompanying summary (code validation gaps, Kraken API resilience, SSE lifecycle, mock defaults, and strategy export safety).
 
 ---
 

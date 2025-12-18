@@ -151,11 +151,19 @@ async function buildMarketData(
     const marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number; timestamp?: number }> = {};
     const warnings: ExecutionWarning[] = [];
 
-    for (const pair of pairs) {
+    const pairResults = Array.from(pairs).map(async (pair) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+
+        const fallback = MARKET_FALLBACKS[pairKey(pair)] ?? { last: 42000, spread: 2.5 };
+
         try {
             const [wsTicker, restResults] = await Promise.allSettled([
                 fetchTickerWsOnce(pair, 2500),
-                Promise.allSettled([fetchTicker(pair), fetchDepth(pair, 10)]),
+                Promise.allSettled([
+                    fetchTicker(pair, { signal: controller.signal }),
+                    fetchDepth(pair, 10, { signal: controller.signal }),
+                ]),
             ]);
 
             const ticker =
@@ -179,21 +187,22 @@ async function buildMarketData(
                     spread: ticker.spread ?? depth?.spread,
                     timestamp: Date.now(),
                 };
-            } else {
-                const fallback = MARKET_FALLBACKS[pairKey(pair)] ?? { last: 42000, spread: 2.5 };
-                marketData[pairKey(pair)] = {
-                    pair: pairKey(pair),
-                    ...fallback,
-                    timestamp: Date.now(),
-                };
-                warnings.push({
-                    code: 'MARKET_DATA_FALLBACK',
-                    message: `Using fallback market data for ${pairKey(pair)}; live fetch failed.`,
-                });
+                return;
             }
+
+            marketData[pairKey(pair)] = {
+                pair: pairKey(pair),
+                ...fallback,
+                timestamp: Date.now(),
+            };
+            warnings.push({
+                code: 'MARKET_DATA_FALLBACK',
+                message: `Using fallback market data for ${pairKey(pair)}; live fetch failed.`,
+            });
         } catch (err) {
-            fastify.log.warn({ err, pair }, 'Failed to fetch Kraken market data');
-            const fallback = MARKET_FALLBACKS[pairKey(pair)] ?? { last: 42000, spread: 2.5 };
+            if ((err as Error)?.name !== 'AbortError') {
+                fastify.log.warn({ err, pair }, 'Failed to fetch Kraken market data');
+            }
             marketData[pairKey(pair)] = {
                 pair: pairKey(pair),
                 ...fallback,
@@ -203,8 +212,12 @@ async function buildMarketData(
                 code: 'MARKET_DATA_FALLBACK',
                 message: `Error fetching ${pairKey(pair)} market data; using fallback snapshot.`,
             });
+        } finally {
+            clearTimeout(timeout);
         }
-    }
+    });
+
+    await Promise.all(pairResults);
 
     return { marketData, warnings };
 }
