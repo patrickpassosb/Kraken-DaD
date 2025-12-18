@@ -12,6 +12,7 @@ const symbolOverrides: Record<string, string> = {
     XREP: 'REP',
     XXRP: 'XRP',
     DASH: 'DASH',
+    MET: 'METIS', // normalize short forms
 };
 
 function normalizeSymbol(altname: string): string {

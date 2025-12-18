@@ -1,7 +1,7 @@
 import { formatPair, formatPercent, formatPrice, formatSpread } from '../utils/format';
 import { useState } from 'react';
 import { getAssetsForPair } from '../data/pairs';
-import { getAssetIconUrl, getAssetMeta } from '../data/assets';
+import { getAssetIconUrl, getAssetMeta, hashedColor } from '../data/assets';
 
 interface MarketContextProps {
     pair: string;
@@ -24,6 +24,7 @@ export function MarketContextDock({
     const baseMeta = assets.base ?? getAssetMeta(pair.split('/')[0]) ?? undefined;
     const baseIcon = baseMeta ? getAssetIconUrl(baseMeta.symbol) ?? baseMeta.icon : undefined;
     const [iconOk, setIconOk] = useState(true);
+    const colorB = hashedColor(baseMeta?.symbol ?? pair, 1);
     const baseColor = baseMeta?.color ?? 'var(--kraken-purple)';
     const hasChange = changePct !== undefined && !Number.isNaN(changePct);
     return (
@@ -38,7 +39,10 @@ export function MarketContextDock({
                             onError={() => setIconOk(false)}
                         />
                     ) : (
-                        <div className="asset-initial" style={{ background: baseColor }}>
+                        <div
+                            className="asset-initial"
+                            style={{ background: `linear-gradient(135deg, ${baseColor}, ${colorB})` }}
+                        >
                             {(assets.base?.symbol ?? pair.split('/')[0]).slice(0, 3).toUpperCase()}
                         </div>
                     )}

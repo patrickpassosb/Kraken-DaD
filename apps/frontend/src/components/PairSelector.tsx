@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { tradingPairs } from '../data/pairs';
-import { getAssetIconUrl, getAssetMeta } from '../data/assets';
+import { getAssetIconUrl, getAssetMeta, hashedColor } from '../data/assets';
 import type { PairItem } from '../api/pairs';
 
 interface PairSelectorProps {
@@ -24,9 +24,13 @@ function AssetBadge({ symbol }: { symbol: string }) {
             />
         );
     }
-    const color = meta?.color ?? '#6c7aa0';
+    const colorA = meta?.color ?? hashedColor(symbol);
+    const colorB = hashedColor(symbol, 1);
     return (
-        <div className="asset-initial" style={{ background: color }}>
+        <div
+            className="asset-initial"
+            style={{ background: `linear-gradient(135deg, ${colorA}, ${colorB})` }}
+        >
             {symbol.slice(0, 3).toUpperCase()}
         </div>
     );
@@ -34,6 +38,11 @@ function AssetBadge({ symbol }: { symbol: string }) {
 
 export function PairSelector({ value, onSelect, onClose, pairs }: PairSelectorProps) {
     const [term, setTerm] = useState('');
+    const displaySymbol = (sym: string) => {
+        const upper = sym.toUpperCase();
+        if (upper === 'XBT' || upper === 'TBTC') return 'BTC';
+        return upper;
+    };
     const filtered = useMemo(() => {
         const source = pairs && pairs.length > 0 ? pairs : tradingPairs;
         const q = term.trim().toLowerCase();
@@ -63,7 +72,9 @@ export function PairSelector({ value, onSelect, onClose, pairs }: PairSelectorPr
             <div className="pair-list">
                 {filtered.map((pair) => {
                     const baseMeta = getAssetMeta(pair.base);
-                    const displayLabel = (pair as { label?: string }).label || pair.id;
+                    const displayLabel =
+                        (pair as { label?: string }).label ||
+                        `${displaySymbol(pair.base)}/${pair.quote}`;
                     return (
                         <button
                             key={pair.id}
