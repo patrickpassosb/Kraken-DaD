@@ -71,10 +71,12 @@ function toNumber(value: unknown): number | undefined {
     return num;
 }
 
-export async function fetchTicker(pair: string): Promise<KrakenTickerSnapshot> {
+type FetchOptions = { signal?: AbortSignal };
+
+export async function fetchTicker(pair: string, options: FetchOptions = {}): Promise<KrakenTickerSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     const url = `${API_BASE}/0/public/Ticker?pair=${encodeURIComponent(krakenPair)}`;
-    const response = await fetch(url, { method: 'GET' });
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
     ensureFetchResponse(response);
     const payload = (await response.json()) as {
         error?: string[];
@@ -103,10 +105,10 @@ export async function fetchTicker(pair: string): Promise<KrakenTickerSnapshot> {
     };
 }
 
-export async function fetchDepth(pair: string, count = 10): Promise<KrakenDepthSnapshot> {
+export async function fetchDepth(pair: string, count = 10, options: FetchOptions = {}): Promise<KrakenDepthSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     const url = `${API_BASE}/0/public/Depth?pair=${encodeURIComponent(krakenPair)}&count=${count}`;
-    const response = await fetch(url, { method: 'GET' });
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
     ensureFetchResponse(response);
     const payload = (await response.json()) as {
         error?: string[];

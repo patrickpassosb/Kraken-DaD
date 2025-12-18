@@ -1,4 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
+import { SCHEMA_VERSION } from '../../../../packages/strategy-core/schema.ts';
 import { Strategy } from '../api/executeDryRun';
 
 export function getPortType(handleId: string): 'data' | 'control' {
@@ -61,7 +62,7 @@ export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     });
 
     return {
-        version: 1,
+        version: SCHEMA_VERSION,
         metadata: {
             name: 'Kraken Strategy Definition',
             description: 'Built with Kraken DaD',

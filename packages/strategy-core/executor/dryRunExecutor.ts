@@ -408,6 +408,7 @@ interface GraphIndex {
     incomingControlEdges: Map<string, StrategyEdge[]>;
     incomingDataEdges: Map<string, StrategyEdge[]>;
     outgoingControlEdges: Map<string, StrategyEdge[]>;
+    outgoingDataEdges: Map<string, StrategyEdge[]>;
 }
 
 function buildGraphIndex(strategy: Strategy): GraphIndex {
@@ -417,12 +418,14 @@ function buildGraphIndex(strategy: Strategy): GraphIndex {
     const incomingControlEdges = new Map<string, StrategyEdge[]>();
     const incomingDataEdges = new Map<string, StrategyEdge[]>();
     const outgoingControlEdges = new Map<string, StrategyEdge[]>();
+    const outgoingDataEdges = new Map<string, StrategyEdge[]>();
 
     for (const node of strategy.nodes) {
         nodeMap.set(node.id, node);
         incomingControlEdges.set(node.id, []);
         incomingDataEdges.set(node.id, []);
         outgoingControlEdges.set(node.id, []);
+        outgoingDataEdges.set(node.id, []);
     }
 
     for (const edge of strategy.edges) {
@@ -433,6 +436,7 @@ function buildGraphIndex(strategy: Strategy): GraphIndex {
         } else {
             dataEdges.push(edge);
             incomingDataEdges.get(edge.target)?.push(edge);
+            outgoingDataEdges.get(edge.source)?.push(edge);
         }
     }
 
@@ -443,6 +447,7 @@ function buildGraphIndex(strategy: Strategy): GraphIndex {
         incomingControlEdges,
         incomingDataEdges,
         outgoingControlEdges,
+        outgoingDataEdges,
     };
 }
 
@@ -636,7 +641,7 @@ function topologicalSort(
         inDegree.set(node.id, 0);
     }
 
-    for (const edge of graph.controlEdges) {
+    for (const edge of [...graph.controlEdges, ...graph.dataEdges]) {
         inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
     }
 
@@ -656,8 +661,9 @@ function topologicalSort(
         order.push(nodeId);
 
         const outgoing = graph.outgoingControlEdges.get(nodeId) ?? [];
+        const outgoingData = graph.outgoingDataEdges.get(nodeId) ?? [];
         // Sort outgoing edges by target ID for determinism
-        const sortedOutgoing = [...outgoing].sort((a, b) =>
+        const sortedOutgoing = [...outgoing, ...outgoingData].sort((a, b) =>
             a.target.localeCompare(b.target)
         );
 

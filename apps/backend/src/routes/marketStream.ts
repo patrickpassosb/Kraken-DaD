@@ -16,6 +16,7 @@ type StreamState = {
     socket?: WebSocket;
     reconnectTimer?: NodeJS.Timeout;
     lastSnapshot?: TickerSnapshot;
+    subscribers: number;
 };
 
 const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: number; spread?: number }> = {
@@ -27,6 +28,15 @@ const streams = new Map<string, StreamState>();
 
 function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
+}
+
+function getOrCreateStreamState(pair: string): StreamState {
+    const key = pairKey(pair);
+    const existing = streams.get(key);
+    if (existing) return existing;
+    const initial: StreamState = { subscribers: 0 };
+    streams.set(key, initial);
+    return initial;
 }
 
 function fallbackSnapshot(pair: string): TickerSnapshot {
@@ -45,26 +55,62 @@ function fallbackSnapshot(pair: string): TickerSnapshot {
 
 function setSnapshot(pair: string, snapshot: TickerSnapshot) {
     const key = pairKey(pair);
-    const current = streams.get(key) ?? {};
+    const current = getOrCreateStreamState(key);
     streams.set(key, { ...current, lastSnapshot: snapshot });
 }
 
 function getSnapshot(pair: string): TickerSnapshot {
     const key = pairKey(pair);
-    const state = streams.get(key);
+    const state = getOrCreateStreamState(key);
     if (state?.lastSnapshot) return state.lastSnapshot;
     return fallbackSnapshot(key);
 }
 
 function scheduleReconnect(pair: string, delayMs: number, log: FastifyInstance['log']) {
     const key = pairKey(pair);
-    const state = streams.get(key) ?? {};
+    const state = getOrCreateStreamState(key);
+    if (state.subscribers === 0) return; // no listeners, no reconnect
     if (state.reconnectTimer) return; // already scheduled
     state.reconnectTimer = setTimeout(() => {
         state.reconnectTimer = undefined;
         startWs(pair, log);
     }, delayMs);
     streams.set(key, state);
+}
+
+function cleanupStream(pair: string, log: FastifyInstance['log']) {
+    const key = pairKey(pair);
+    const state = streams.get(key);
+    if (!state) return;
+
+    if (state.reconnectTimer) {
+        clearTimeout(state.reconnectTimer);
+    }
+
+    if (state.socket && state.socket.readyState !== WebSocket.CLOSED && state.socket.readyState !== WebSocket.CLOSING) {
+        state.socket.close();
+    }
+
+    streams.set(key, { ...state, socket: undefined, reconnectTimer: undefined });
+    log.debug({ pair: key }, 'Cleaned up Kraken stream state');
+}
+
+function incrementSubscribers(pair: string): number {
+    const state = getOrCreateStreamState(pair);
+    state.subscribers += 1;
+    streams.set(pairKey(pair), state);
+    return state.subscribers;
+}
+
+function decrementSubscribers(pair: string, log: FastifyInstance['log']): number {
+    const key = pairKey(pair);
+    const state = getOrCreateStreamState(key);
+    state.subscribers = Math.max(0, state.subscribers - 1);
+    streams.set(key, state);
+    if (state.subscribers === 0) {
+        cleanupStream(key, log);
+    }
+    return state.subscribers;
 }
 
 async function seedFromRest(pair: string, log: FastifyInstance['log']) {
@@ -87,14 +133,17 @@ async function seedFromRest(pair: string, log: FastifyInstance['log']) {
 
 function startWs(pair: string, log: FastifyInstance['log']) {
     const key = pairKey(pair);
-    const existing = streams.get(key);
-    if (existing?.socket && existing.socket.readyState === WebSocket.OPEN) {
+    const existing = getOrCreateStreamState(key);
+    if (existing.subscribers === 0) {
+        return;
+    }
+    if (existing.socket && existing.socket.readyState === WebSocket.OPEN) {
         return;
     }
 
     const { krakenPair, display } = normalizePair(pair);
     const socket = new WebSocket('wss://ws.kraken.com');
-    const state: StreamState = { socket, lastSnapshot: existing?.lastSnapshot };
+    const state: StreamState = { ...existing, socket };
     streams.set(key, state);
 
     socket.on('open', () => {
@@ -132,7 +181,11 @@ function startWs(pair: string, log: FastifyInstance['log']) {
     });
 
     socket.on('close', () => {
-        scheduleReconnect(key, 2000, log);
+        const updated = getOrCreateStreamState(key);
+        streams.set(key, { ...updated, socket: undefined });
+        if (updated.subscribers > 0) {
+            scheduleReconnect(key, 2000, log);
+        }
     });
 
     socket.on('error', (err) => {
@@ -163,6 +216,7 @@ export async function marketStreamRoute(fastify: FastifyInstance) {
         async (request: FastifyRequest<{ Querystring: StreamQuery }>, reply: FastifyReply) => {
             const pair = request.query.pair ?? 'BTC/USD';
             const retryMs = parseInt(request.query.retry ?? '2000', 10);
+            incrementSubscribers(pair);
 
             // Seed cache from REST so clients get immediate data even before WS ticks
             await seedFromRest(pair, fastify.log);
@@ -190,9 +244,16 @@ export async function marketStreamRoute(fastify: FastifyInstance) {
                 reply.raw.write(`event: ticker\ndata:${JSON.stringify(snapshot)}\n\n`);
             }, 250);
 
-            request.raw.on('close', () => {
+            let closed = false;
+            const teardown = () => {
+                if (closed) return;
+                closed = true;
                 clearInterval(interval);
-            });
+                decrementSubscribers(pair, fastify.log);
+            };
+
+            request.raw.on('close', teardown);
+            request.raw.on('error', teardown);
         }
     );
 }
