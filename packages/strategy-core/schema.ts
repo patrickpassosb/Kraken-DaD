@@ -208,6 +208,8 @@ export interface ExecutionContext {
     readonly endTime?: string;
     /** Optional pre-fetched market data (populated by backend) */
     readonly marketData?: Record<string, MarketDataSnapshot>;
+    /** Optional target node ID for partial execution */
+    readonly targetNodeId?: string;
 }
 
 /**

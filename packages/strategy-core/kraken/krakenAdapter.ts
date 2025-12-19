@@ -2,7 +2,7 @@
  * Kraken DaD - Kraken API Adapter Interface
  *
  * Defines the contracts for Kraken API adapters.
- * Public adapter is used for market data; private adapter is stubbed (no live trading).
+ * Public adapter is used for market data; private adapter is stubbed in strategy-core.
  *
  * @module strategy-core/kraken/krakenAdapter
  */
@@ -44,7 +44,7 @@ export interface KrakenPublicAdapter {
 
 /**
  * Kraken private API adapter interface (orders).
- * This project ships a stub only; live trading is not enabled.
+ * Strategy-core ships a stub only; live trading is handled in backend integrations.
  */
 export interface KrakenPrivateAdapter {
     /**
@@ -60,7 +60,7 @@ export interface KrakenPrivateAdapter {
 
 /**
  * Stub implementation of KrakenPrivateAdapter.
- * Always throws to keep live trading disabled in this demo.
+ * Always throws; strategy-core does not execute live orders directly.
  */
 export class KrakenPrivateStubAdapter implements KrakenPrivateAdapter {
     async placeOrder(_params: Record<string, unknown>): Promise<never> {

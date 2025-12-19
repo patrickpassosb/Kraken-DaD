@@ -14,6 +14,7 @@ import {
     StrategyNode,
     StrategyEdge,
     ExecutionContext,
+    ExecutionMode,
     BlockDefinition,
     BlockCategory,
     NodeConfig,
@@ -46,7 +47,7 @@ export interface ActionIntent {
         readonly action: string;
         readonly params: NodeConfig;
     };
-    readonly executed: false;
+    readonly executed: boolean;
 }
 
 export interface NodeExecutionLog {
@@ -60,7 +61,7 @@ export interface NodeExecutionLog {
 
 export interface ExecutionResult {
     readonly success: boolean;
-    readonly mode: 'dry-run';
+    readonly mode: ExecutionMode;
     readonly startedAt: string;
     readonly completedAt: string;
     readonly nodesExecuted: number;
@@ -69,9 +70,18 @@ export interface ExecutionResult {
     warnings: ExecutionWarning[];
     actionIntents: ActionIntent[];
     krakenValidations?: KrakenValidation[];
+    liveActions?: LiveActionResult[];
 }
 
 export interface KrakenValidation {
+    readonly nodeId: string;
+    readonly action: string;
+    readonly status: 'ok' | 'error';
+    readonly detail?: string;
+    readonly response?: Record<string, unknown>;
+}
+
+export interface LiveActionResult {
     readonly nodeId: string;
     readonly action: string;
     readonly status: 'ok' | 'error';
@@ -100,6 +110,11 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function isNodeDisabled(node: StrategyNode): boolean {
+    const config = node.config as Record<string, unknown>;
+    return Boolean(config?.disabled);
+}
+
 /**
  * control.start - Entry point for control flow
  */
@@ -115,7 +130,7 @@ blockDefinitions.set('control.start', {
 });
 
 blockHandlers.set('control.start', (_node, _inputs, _ctx) => {
-    return { outputs: {} };
+    return { outputs: { out: true } };
 });
 
 /**
@@ -690,6 +705,32 @@ function topologicalSort(
     return { order };
 }
 
+function collectDependencyNodes(
+    targetNodeId: string,
+    graph: GraphIndex
+): Set<string> {
+    const visited = new Set<string>();
+    const stack = [targetNodeId];
+
+    while (stack.length > 0) {
+        const nodeId = stack.pop()!;
+        if (visited.has(nodeId)) continue;
+        visited.add(nodeId);
+
+        const incoming = [
+            ...(graph.incomingControlEdges.get(nodeId) ?? []),
+            ...(graph.incomingDataEdges.get(nodeId) ?? []),
+        ];
+        for (const edge of incoming) {
+            if (!visited.has(edge.source)) {
+                stack.push(edge.source);
+            }
+        }
+    }
+
+    return visited;
+}
+
 // =============================================================================
 // DATA RESOLUTION
 // =============================================================================
@@ -716,6 +757,16 @@ function resolveInputs(
 
         // Check if TARGET input port is required and value is missing
         if ((value === undefined || value === null) && targetInputPort?.required) {
+            const sourceNode = graph.nodeMap.get(edge.source);
+            if (sourceNode && isNodeDisabled(sourceNode)) {
+                warnings.push({
+                    code: 'DISABLED_INPUT',
+                    message: `Input '${edge.targetPort}' on node '${nodeId}' is missing because source node '${edge.source}' is disabled`,
+                    nodeId,
+                });
+                inputs[edge.targetPort] = null;
+                continue;
+            }
             return {
                 inputs,
                 warnings,
@@ -800,10 +851,45 @@ export function executeDryRun(
     const dataCache = new Map<string, unknown>();
 
     // Step 1 & 2: Build graph index
-    const graph = buildGraphIndex(strategy);
+    const fullGraph = buildGraphIndex(strategy);
+    const targetNodeId = ctx.targetNodeId;
+
+    if (targetNodeId && !fullGraph.nodeMap.has(targetNodeId)) {
+        errors.push({
+            code: 'TARGET_NODE_NOT_FOUND',
+            message: `Target node not found: ${targetNodeId}`,
+            nodeId: targetNodeId,
+        });
+        return {
+            success: false,
+            mode: ctx.mode,
+            startedAt,
+            completedAt: new Date().toISOString(),
+            nodesExecuted: 0,
+            log,
+            errors,
+            warnings,
+            actionIntents,
+        };
+    }
+
+    const strategyToRun = targetNodeId
+        ? (() => {
+              const requiredNodes = collectDependencyNodes(targetNodeId, fullGraph);
+              return {
+                  ...strategy,
+                  nodes: strategy.nodes.filter((node) => requiredNodes.has(node.id)),
+                  edges: strategy.edges.filter(
+                      (edge) => requiredNodes.has(edge.source) && requiredNodes.has(edge.target)
+                  ),
+              };
+          })()
+        : strategy;
+
+    const graph = targetNodeId ? buildGraphIndex(strategyToRun) : fullGraph;
 
     // Step 3: Validate
-    const validation = validateStrategy(strategy, graph);
+    const validation = validateStrategy(strategyToRun, graph);
     errors.push(...validation.errors);
     warnings.push(...validation.warnings);
 
@@ -822,7 +908,7 @@ export function executeDryRun(
     }
 
     // Step 4 & 5: Compute execution order
-    const sortResult = topologicalSort(strategy, graph);
+    const sortResult = topologicalSort(strategyToRun, graph);
     if (sortResult.error) {
         errors.push(sortResult.error);
         return {
@@ -840,11 +926,76 @@ export function executeDryRun(
 
     const executionOrder = sortResult.order;
 
-    // Step 6: Execute nodes in order
-    for (const nodeId of executionOrder) {
-        const node = graph.nodeMap.get(nodeId)!;
-        const handler = blockHandlers.get(node.type);
+    // Step 6: Execute nodes in order (control flow gating)
+    const nodeOrderIndex = new Map<string, number>();
+    executionOrder.forEach((nodeId, index) => nodeOrderIndex.set(nodeId, index));
 
+    const pendingQueue: string[] = [];
+    const pendingSet = new Set<string>();
+    const executedNodes = new Set<string>();
+
+    const enqueueNode = (nodeId: string) => {
+        if (executedNodes.has(nodeId) || pendingSet.has(nodeId)) {
+            return;
+        }
+        pendingQueue.push(nodeId);
+        pendingSet.add(nodeId);
+    };
+
+    for (const node of strategyToRun.nodes) {
+        const incoming = graph.incomingControlEdges.get(node.id)?.length ?? 0;
+        if (incoming === 0) {
+            enqueueNode(node.id);
+        }
+    }
+
+    const dequeueNextNode = (): string | undefined => {
+        if (pendingQueue.length === 0) {
+            return undefined;
+        }
+        let bestIndex = 0;
+        for (let i = 1; i < pendingQueue.length; i++) {
+            const currentId = pendingQueue[i];
+            const bestId = pendingQueue[bestIndex];
+            if (
+                (nodeOrderIndex.get(currentId) ?? Infinity) <
+                (nodeOrderIndex.get(bestId) ?? Infinity)
+            ) {
+                bestIndex = i;
+            }
+        }
+        const [nodeId] = pendingQueue.splice(bestIndex, 1);
+        pendingSet.delete(nodeId);
+        return nodeId;
+    };
+
+    while (pendingQueue.length > 0) {
+        const nodeId = dequeueNextNode();
+        if (!nodeId) {
+            break;
+        }
+        if (executedNodes.has(nodeId)) {
+            continue;
+        }
+        const node = graph.nodeMap.get(nodeId);
+        if (!node) {
+            continue;
+        }
+
+        if (isNodeDisabled(node)) {
+            executedNodes.add(nodeId);
+            log.push({
+                nodeId,
+                nodeType: node.type,
+                inputs: {},
+                outputs: {},
+                durationMs: 0,
+                status: 'skipped',
+            });
+            continue;
+        }
+
+        const handler = blockHandlers.get(node.type);
         if (!handler) {
             errors.push({
                 code: 'UNKNOWN_BLOCK_TYPE',
@@ -862,7 +1013,6 @@ export function executeDryRun(
             break;
         }
 
-        // Resolve inputs
         const inputResult = resolveInputs(nodeId, graph, dataCache);
         warnings.push(...inputResult.warnings);
         if (inputResult.error) {
@@ -878,7 +1028,6 @@ export function executeDryRun(
             break;
         }
 
-        // Execute node
         const execStart = Date.now();
         let outputs: Record<string, unknown> = {};
         let actionIntent: ActionIntent | undefined;
@@ -907,12 +1056,10 @@ export function executeDryRun(
 
         const durationMs = Date.now() - execStart;
 
-        // Store outputs in cache
         for (const [portId, value] of Object.entries(outputs)) {
             dataCache.set(`${nodeId}:${portId}`, value);
         }
 
-        // Collect action intent
         if (actionIntent) {
             actionIntents.push(actionIntent);
         }
@@ -925,6 +1072,24 @@ export function executeDryRun(
             durationMs,
             status: 'success',
         });
+
+        executedNodes.add(nodeId);
+
+        const outgoingControls = graph.outgoingControlEdges.get(nodeId) ?? [];
+        for (const edge of outgoingControls) {
+            const triggerValue =
+                Object.prototype.hasOwnProperty.call(outputs, edge.sourcePort) &&
+                outputs[edge.sourcePort] !== undefined
+                    ? outputs[edge.sourcePort]
+                    : undefined;
+            const shouldTrigger =
+                triggerValue === undefined || triggerValue === null
+                    ? true
+                    : Boolean(triggerValue);
+            if (shouldTrigger) {
+                enqueueNode(edge.target);
+            }
+        }
     }
 
     // Step 7: Return result
@@ -932,7 +1097,7 @@ export function executeDryRun(
 
     return {
         success: errors.length === 0,
-        mode: 'dry-run',
+        mode: ctx.mode,
         startedAt,
         completedAt,
         nodesExecuted: log.filter((l) => l.status === 'success').length,

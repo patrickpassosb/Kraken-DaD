@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatAmount, formatPair, formatPrice } from '../utils/format';
 import { NodeStatus } from '../utils/status';
 
@@ -11,11 +12,13 @@ export interface PlaceOrderNodeData {
     amount?: number;
     price?: number;
     status?: NodeStatus;
+    disabled?: boolean;
 }
 
-export function PlaceOrderNode({ id, data }: NodeProps) {
+export function PlaceOrderNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as PlaceOrderNodeData;
+    const isDisabled = nodeData?.disabled;
 
     const [pair, setPair] = useState(nodeData?.pair || 'BTC/USD');
     const [side, setSide] = useState<'buy' | 'sell'>(nodeData?.side || 'buy');
@@ -37,6 +40,7 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Execution</span>
@@ -80,9 +84,12 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
                     <input
                         type="number"
                         step="0.0001"
+                        min="0"
+                        inputMode="decimal"
                         value={amount}
                         onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
+                            const parsed = parseFloat(e.target.value);
+                            const val = Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
                             setAmount(val);
                             updateData({ amount: val });
                         }}
@@ -93,10 +100,18 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
                     <input
                         type="number"
                         step="0.01"
+                        min="0"
+                        inputMode="decimal"
                         value={price ?? ''}
                         placeholder="Market if empty"
                         onChange={(e) => {
-                            const val = e.target.value === '' ? undefined : parseFloat(e.target.value) || 0;
+                            if (e.target.value === '') {
+                                setPrice(undefined);
+                                updateData({ price: undefined });
+                                return;
+                            }
+                            const parsed = parseFloat(e.target.value);
+                            const val = Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
                             setPrice(val);
                             updateData({ price: val });
                         }}

@@ -178,7 +178,7 @@ Data values are cached in a `Map<nodeId:portId, value>` after each node executes
 ```typescript
 interface ExecutionResult {
   success: boolean;
-  mode: 'dry-run';
+  mode: 'dry-run' | 'live';
   startedAt: string;      // ISO 8601
   completedAt: string;    // ISO 8601
   nodesExecuted: number;
@@ -186,6 +186,16 @@ interface ExecutionResult {
   errors: ExecutionError[];
   warnings: ExecutionWarning[];
   actionIntents: ActionIntent[];  // All action nodes' dry-run output
+  krakenValidations?: KrakenValidation[]; // validate-only Kraken checks
+  liveActions?: LiveActionResult[]; // live order results (when enabled)
+}
+
+interface LiveActionResult {
+  nodeId: string;
+  action: string;
+  status: 'ok' | 'error';
+  detail?: string;
+  response?: Record<string, unknown>;
 }
 
 interface NodeExecutionLog {

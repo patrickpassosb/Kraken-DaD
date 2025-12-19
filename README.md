@@ -1,15 +1,15 @@
 # Kraken DaD
 
-Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in **dry-run / validate-only** mode. It pairs a React Flow UI with a Fastify backend and a shared TypeScript strategy core. The UI, blocks, and copy are aligned to Kraken Pro, and market data comes from Kraken’s public APIs.
+Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in **dry-run by default** with an **explicit live mode** for real orders. It pairs a React Flow UI with a Fastify backend and a shared TypeScript strategy core. The UI, blocks, and copy are aligned to Kraken Pro, and market data comes from Kraken’s public APIs.
 
 ## What’s Included (quick tour)
 - **Visual Strategy Canvas**: React Flow nodes/edges with type-safe handles (`control:*`, `data:*`), delete/selection support, one-start-node guard, and lane layout.
 - **Strategy Core**: Shared schema + dry-run executor that validates the graph, orders control flow, executes block handlers, and returns structured execution results.
 - **Kraken API integration**:
   - Public: `/0/public/Ticker` and `/0/public/Depth` fetched server-side, injected into strategy execution, and exposed via `GET /market/context`.
-  - Private (validate-only scaffold): HMAC signing for `AddOrder`/`CancelOrder` with `validate=true` only; live trading stays disabled unless explicitly wired.
+  - Private (live mode): HMAC signing for `AddOrder`/`CancelOrder` with optional validate-only checks; live trading is gated behind explicit opt-in + credential status.
 - **Execution Feedback**: Preview with est. price/notional/fees, node status highlighting, and result summary.
-- **Safety-first**: Dry-run enforced by default; private calls are validate-only; no credentials stored client-side.
+- **Safety-first**: Dry-run enforced by default; private calls are gated and server-side; no credentials stored client-side.
 - **Open source (MIT License)**: See `LICENSE`.
 
 ## Demo walkthrough (what judges should see)
@@ -23,18 +23,18 @@ Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in *
 ## Features
 - Blank-start canvas with empty-state CTA and one-click template.
 - Kraken-themed palette with icons, search, tooltips, and scrollable groups.
-- Mode pill: Dry-run (no live orders) always visible.
+- Mode pill with live/dry-run state + gated live toggle.
 - Recenter control + keyboard shortcut (**R**) to refit the canvas.
 - Live Market Context + Order Preview using Kraken data (fallback to mock with warning).
-- Export strategy JSON; validate-only private scaffold in backend package.
+- Export strategy JSON; optional live mode with server-side credentials.
 
 ## Architecture snapshot
 - **apps/frontend**: React + React Flow, Kraken Pro styling, controls/rails/palette.
-- **apps/backend**: Fastify API (`/execute/dry-run`, `/market/context`, `/health`); optional Kraken private validate-only signing.
+- **apps/backend**: Fastify API (`/execute`, `/execute/dry-run`, `/market/context`, `/kraken/credentials/*`, `/health`); live Kraken private orders when enabled.
 - **packages/strategy-core**: Strategy schema + dry-run executor shared across UI/backend.
-- **packages/kraken-client**: Typed Kraken REST helpers (public + validate-only private).
+- **packages/kraken-client**: Typed Kraken REST helpers (public + private; validate or live).
 
-Data flow: UI builds graph → serialize to strategy JSON → backend dry-run injects Kraken market data → returns `ExecutionResult` → UI shows statuses/preview.
+Data flow: UI builds graph → serialize to strategy JSON → backend executes (dry-run or live) with Kraken market data → returns `ExecutionResult` → UI shows statuses/preview.
 
 ```mermaid
 flowchart LR
@@ -46,7 +46,7 @@ flowchart LR
     Canvas["Strategy Canvas\nBlocks/Edges -> Strategy JSON"]
     ContextDock["Market Context"]
     Preview["Order Preview"]
-    DryRun["POST /execute/dry-run"]
+    Execute["POST /execute\n(mode: dry-run | live)"]
     Market["GET /market/context"]
     Schema["Strategy Schema & Validation"]
     Exec["Dry-run Executor"]
@@ -66,14 +66,14 @@ flowchart LR
     KrakenAPI --> Public
     KrakenAPI --> Private
 
-    Canvas -->|serialize| DryRun
-    DryRun -->|inject market data| Exec
+    Canvas -->|serialize| Execute
+    Execute -->|inject market data| Exec
     Exec -->|ExecutionResult| Preview
     ContextDock -->|fetch| Market
     Market --> Public
     Exec --> Public
     Exec -. optional validate=true .-> Private
-    DryRun --> Schema
+    Execute --> Schema
 ```
 
 ## Strategy blocks (current set)
@@ -92,15 +92,15 @@ flowchart LR
 
 ## Repository Layout
 - `apps/frontend/` — Vite + React Flow UI (dark Kraken Pro styling), nodes, canvas, API clients, formatting utils.
-- `apps/backend/` — Fastify server with `/execute/dry-run`, `/market/context`, and `/health`.
+- `apps/backend/` — Fastify server with `/execute`, `/execute/dry-run`, `/market/context`, `/kraken/credentials/*`, and `/health`.
 - `packages/strategy-core/` — Strategy schema, dry-run executor, block definitions (Kraken ticker + order blocks).
-- `packages/kraken-client/` — Typed Kraken REST helpers (public Ticker/Depth; validate-only AddOrder/Cancel scaffolding).
+- `packages/kraken-client/` — Typed Kraken REST helpers (public Ticker/Depth; private AddOrder/Cancel for validate or live).
 - `docs/`, `tasks/` — Design notes and task trackers; `tasks/010-kraken-pro-ux.md` documents the current UX direction.
 
 ## Kraken API Usage
 - **Public market data**: Backend fetches `/0/public/Ticker` and `/0/public/Depth` for strategy pairs, injects snapshots into `ExecutionContext.marketData`, and serves `GET /market/context` for the UI (Market Context dock + order preview). Dry-run execution now uses real Kraken prices where available (fallback to mock if unreachable).
-- **Private endpoints (safe by default)**: `packages/kraken-client` includes HMAC signing for `AddOrder`/`CancelOrder` with `validate=true` enforced. Credentials are optional and read from env (`KRAKEN_API_KEY`, `KRAKEN_API_SECRET`); no live trading is performed unless explicitly wired and opted-in.
-- **UI transparency**: Banner and panels indicate that public data is Kraken-sourced and private calls are stubbed/validate-only.
+- **Private endpoints (safe by default)**: `packages/kraken-client` includes HMAC signing for `AddOrder`/`CancelOrder` with live order support gated by explicit UI opt-in. Credentials are stored server-side only (in-memory for runtime, or from env) and never returned to the frontend.
+- **UI transparency**: Mode controls call out dry-run vs live execution and warn about real trades.
 
 ## Running Locally
 Prereq: Node.js >= 18 (for native `fetch`).
@@ -132,30 +132,34 @@ Use the UI
 - Export the graph as **Kraken Strategy Definition** (JSON).
 
 Mode & Safety
-- Mode: Dry-run (no live orders). Private API calls are validate-only and opt-in.
+- Mode: Dry-run by default; live mode requires credentials + explicit toggle and warns before placing orders.
 - Recenter: Use the **Recenter** button or press **R** to fit the canvas if you pan/zoom away.
 
 ## API Endpoints
 - `GET /health` — simple health check.
 - `GET /market/context?pair=BTC/USD` — Kraken Ticker + Depth snapshot (pair, lastPrice, bid/ask, spread, change24h).
-- `POST /execute/dry-run` — body `{ strategy: Strategy }`; returns `ExecutionResult` after injecting Kraken market data into execution.
+- `POST /execute` — body `{ strategy: Strategy, mode?: 'dry-run' | 'live', validate?: boolean }`; returns `ExecutionResult`.
+- `POST /execute/dry-run` — body `{ strategy: Strategy }`; backward-compatible dry-run execution.
+- `GET /kraken/credentials/status` — credential status flag (configured + source).
+- `POST /kraken/credentials` — store Kraken API key/secret (server-side only).
+- `DELETE /kraken/credentials` — clear runtime credentials.
 
-## Configuration (Optional Validate-Only Private Calls)
-Set env vars in `apps/backend` if you want to hit Kraken private endpoints with `validate=true` (no live trading):
+## Configuration (Optional Live Mode)
+You can either submit credentials via the UI (stored in-memory on the backend for the current session), or set env vars in `apps/backend` for a persistent setup:
 ```
 KRAKEN_API_KEY=...
 KRAKEN_API_SECRET=...
 ```
-Private calls are scaffolded in `packages/kraken-client` but are not invoked by default; dry-run remains the default behavior.
+Live mode only runs when explicitly enabled in the UI; dry-run remains the default behavior.
 
 ## Safety & Constraints
-- Live trading is **disabled**; dry-run is enforced.
-- Private API usage is validate-only and opt-in; credentials are never sent to the frontend.
+- Live trading is **opt-in**; dry-run is enforced unless the user explicitly enables live mode.
+- Private API usage is server-side only; credentials are never sent back to the frontend.
 - CORS is open for local demo; lock down in production.
 
 ## Known limitations / future work
 - Backend dry-run may use mock data if Kraken public API is unreachable.
-- Validate-only private calls scaffolded; live trading intentionally disabled.
+- Live mode uses in-memory credential storage only; add encrypted persistence for production.
 - Block catalog is minimal; more Kraken-native blocks (OHLC signals, spread guards) can be added in `strategy-core`.
 - No persistence of user-created strategies across sessions (out of scope for hackathon).
 

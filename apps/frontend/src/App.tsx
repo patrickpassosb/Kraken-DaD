@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, FormEvent } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { FlowCanvas } from './canvas/FlowCanvas';
 import { ReactFlowProvider } from '@xyflow/react';
-import { executeDryRun, ExecutionResult } from './api/executeDryRun';
+import { executeStrategy, ExecutionResult, ExecutionMode } from './api/executeStrategy';
 import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { fetchPairs, PairItem } from './api/pairs';
 import { toStrategyJSON } from './utils/toStrategyJSON';
@@ -12,6 +12,12 @@ import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
 import { PairSelector } from './components/PairSelector';
+import {
+    clearKrakenCredentials,
+    fetchKrakenCredentialsStatus,
+    KrakenCredentialsStatus,
+    saveKrakenCredentials,
+} from './api/krakenCredentials';
 
 const FEE_RATE = 0.0026;
 
@@ -35,6 +41,9 @@ const demoEdges: Edge[] = [];
 
 function friendlyError(err: unknown): string {
     const raw = err instanceof Error ? err.message : 'Unable to run strategy';
+    if (raw.toLowerCase().includes('kraken')) {
+        return raw;
+    }
     if (raw.toLowerCase().includes('schema')) {
         return 'Strategy definition looks out of date. Refresh and retry the dry-run.';
     }
@@ -85,15 +94,25 @@ function App() {
     const [result, setResult] = useState<ExecutionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [executionMode, setExecutionMode] = useState<ExecutionMode>('dry-run');
+    const [credentialsStatus, setCredentialsStatus] = useState<KrakenCredentialsStatus>({
+        configured: false,
+        source: 'none',
+    });
+    const [credentialsError, setCredentialsError] = useState<string | null>(null);
+    const [credentialsLoading, setCredentialsLoading] = useState(false);
+    const [apiKeyInput, setApiKeyInput] = useState('');
+    const [apiSecretInput, setApiSecretInput] = useState('');
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
     const [rightRailOpen, setRightRailOpen] = useState(true);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [pairSelectorOpen, setPairSelectorOpen] = useState(false);
     const [selectedPair, setSelectedPair] = useState('BTC/USD');
     const [previousPair, setPreviousPair] = useState<string>('BTC/USD');
     const [pairCatalog, setPairCatalog] = useState<PairItem[]>([]);
     const [pairCatalogError, setPairCatalogError] = useState<string | null>(null);
-    const validateWithKraken = true;
+    const validateWithKraken = executionMode === 'dry-run';
 
     // Sync nodes when pair selection changes; only overwrite nodes using the previous selected pair.
     useEffect(() => {
@@ -121,6 +140,29 @@ function App() {
         setPreviousPair(selectedPair);
     }, [previousPair, selectedPair, setNodes]);
 
+    useEffect(() => {
+        let isMounted = true;
+        setCredentialsError(null);
+        fetchKrakenCredentialsStatus()
+            .then((status) => {
+                if (!isMounted) return;
+                setCredentialsStatus(status);
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setCredentialsError('Unable to load Kraken credential status.');
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!credentialsStatus.configured && executionMode === 'live') {
+            setExecutionMode('dry-run');
+        }
+    }, [credentialsStatus.configured, executionMode]);
+
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
     }, []);
@@ -129,27 +171,95 @@ function App() {
         setEdges(newEdges);
     }, []);
 
-    const handleExecute = async () => {
-        setLoading(true);
-        setError(null);
-        setResult(null);
-        setNodeStatuses({});
-
+    const handleSaveCredentials = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!apiKeyInput.trim() || !apiSecretInput.trim()) {
+            setCredentialsError('API key and secret are required.');
+            return;
+        }
+        setCredentialsLoading(true);
+        setCredentialsError(null);
         try {
-            const strategy = toStrategyJSON(nodes, edges);
-            const executionResult = await executeDryRun(strategy, validateWithKraken);
-            const statusMap: Record<string, NodeStatus> = {};
-            executionResult.log.forEach((entry) => {
-                statusMap[entry.nodeId] = mapLogToStatus(entry.status);
-            });
-            setNodeStatuses(statusMap);
-            setResult(executionResult);
+            const status = await saveKrakenCredentials(apiKeyInput, apiSecretInput);
+            setCredentialsStatus(status);
+            setApiKeyInput('');
+            setApiSecretInput('');
         } catch (err) {
-            setError(friendlyError(err));
+            setCredentialsError(err instanceof Error ? err.message : 'Unable to save credentials.');
         } finally {
-            setLoading(false);
+            setCredentialsLoading(false);
         }
     };
+
+    const handleClearCredentials = async () => {
+        setCredentialsLoading(true);
+        setCredentialsError(null);
+        try {
+            const status = await clearKrakenCredentials();
+            setCredentialsStatus(status);
+        } catch (err) {
+            setCredentialsError(err instanceof Error ? err.message : 'Unable to clear credentials.');
+        } finally {
+            setCredentialsLoading(false);
+        }
+    };
+
+    const handleToggleLive = () => {
+        if (!credentialsStatus.configured) return;
+        setExecutionMode((current) => (current === 'live' ? 'dry-run' : 'live'));
+    };
+
+    const runStrategy = useCallback(
+        async (targetNodeId?: string) => {
+            if (executionMode === 'live') {
+                const message = targetNodeId
+                    ? 'Live mode places real Kraken orders. Confirm you want to execute this node live.'
+                    : 'Live mode places real Kraken orders. Confirm you want to execute live orders.';
+                const confirmed = window.confirm(message);
+                if (!confirmed) {
+                    return;
+                }
+            }
+            setLoading(true);
+            setError(null);
+            setResult(null);
+            setNodeStatuses({});
+
+            try {
+                const strategy = toStrategyJSON(nodes, edges);
+                const executionResult = await executeStrategy(strategy, {
+                    mode: executionMode,
+                    validate: validateWithKraken,
+                    targetNodeId,
+                });
+                const statusMap: Record<string, NodeStatus> = {};
+                executionResult.log.forEach((entry) => {
+                    statusMap[entry.nodeId] = mapLogToStatus(entry.status);
+                });
+                setNodeStatuses(statusMap);
+                setResult(executionResult);
+                if (!executionResult.success && executionResult.errors.length > 0) {
+                    setError(executionResult.errors[0].message);
+                }
+            } catch (err) {
+                setError(friendlyError(err));
+            } finally {
+                setLoading(false);
+            }
+        },
+        [edges, executionMode, nodes, validateWithKraken]
+    );
+
+    const handleExecute = () => {
+        void runStrategy();
+    };
+
+    const handleRunNode = useCallback(
+        (nodeId: string) => {
+            void runStrategy(nodeId);
+        },
+        [runStrategy]
+    );
 
     const handleExportJSON = () => {
         const strategy = toStrategyJSON(nodes, edges);
@@ -241,6 +351,10 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const liveBlocked = executionMode === 'live' && !credentialsStatus.configured;
+    const modeLabel = executionMode === 'live' ? 'Live (real orders)' : 'Dry-run (no live orders)';
+    const executeLabel = executionMode === 'live' ? 'Execute live' : 'Execute workflow';
+    const canClearCredentials = credentialsStatus.source === 'runtime';
 
     return (
         <>
@@ -258,6 +372,9 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    <span className={`mode-pill ${executionMode === 'live' ? 'mode-pill-live' : ''}`}>
+                        Mode: {modeLabel}
+                    </span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setPairSelectorOpen(true)}
@@ -266,7 +383,6 @@ function App() {
                         Pair: {selectedPair}
                     </button>
                     {pairCatalogError && <span className="chip">{pairCatalogError}</span>}
-                    <span className="mode-pill">Mode: Dry-run (no live orders)</span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setRightRailOpen((v) => !v)}
@@ -276,8 +392,8 @@ function App() {
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
-                    <button className="btn btn-primary" onClick={handleExecute} disabled={loading}>
-                        {loading ? 'Executing workflow...' : 'Execute workflow'}
+                    <button className="btn btn-primary" onClick={handleExecute} disabled={loading || liveBlocked}>
+                        {loading ? 'Executing workflow...' : executeLabel}
                     </button>
                 </div>
             </header>
@@ -297,6 +413,7 @@ function App() {
                         onEdgesChange={handleEdgesChange}
                         nodeStatuses={nodeStatuses}
                         activePair={selectedPair}
+                        onRunNode={handleRunNode}
                     />
                 </ReactFlowProvider>
 
@@ -381,6 +498,129 @@ function App() {
                 )}
             </div>
         </div>
+        <button
+            className="settings-fab"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            title="Settings"
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                    className="gear-outer"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.11-.2-.36-.28-.57-.2l-2.39.96c-.5-.38-1.04-.69-1.63-.94l-.36-2.54a.47.47 0 0 0-.45-.38H9.13c-.23 0-.42.16-.45.38l-.36 2.54c-.59.25-1.13.56-1.63.94l-2.39-.96c-.21-.08-.46 0-.57.2l-1.92 3.32c-.11.2-.06.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.11.2.36.28.57.2l2.39-.96c.5.38 1.04.69 1.63.94l.36 2.54c.03.22.22.38.45.38h4.74c.23 0 .42-.16.45-.38l.36-2.54c.59-.25 1.13-.56 1.63-.94l2.39.96c.21.08.46 0 .57-.2l1.92-3.32c.11-.2.06-.47-.12-.61l-2.03-1.58ZM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2Z"
+                />
+                <circle className="gear-ring" cx="12" cy="12" r="3.2" />
+                <circle className="gear-core" cx="12" cy="12" r="2" />
+            </svg>
+        </button>
+        {settingsOpen && (
+            <div className="settings-overlay" onClick={() => setSettingsOpen(false)}>
+                <div className="settings-panel" onClick={(event) => event.stopPropagation()}>
+                    <div className="settings-header">
+                        <div>
+                            <div className="settings-title">Settings</div>
+                            <div className="settings-subtitle">Kraken API credentials and execution controls</div>
+                        </div>
+                        <button className="btn btn-ghost" onClick={() => setSettingsOpen(false)}>
+                            Close
+                        </button>
+                    </div>
+                    <div className="settings-section">
+                        <div className="panel-title">Execution Mode</div>
+                        <div className="mode-panel">
+                            <div className="mode-row">
+                                <div>
+                                    <div className="mode-label">Live Orders</div>
+                                    <div className="mode-subtitle">Real Kraken orders (requires API key)</div>
+                                </div>
+                                <button
+                                    className={`btn ${executionMode === 'live' ? 'btn-live' : 'btn-ghost'}`}
+                                    onClick={handleToggleLive}
+                                    disabled={!credentialsStatus.configured || credentialsLoading}
+                                >
+                                    {executionMode === 'live' ? 'Live On' : 'Live Off'}
+                                </button>
+                            </div>
+                            <div className="mode-status">
+                                <span
+                                    className={`status-dot ${
+                                        credentialsStatus.configured ? 'status-dot-live' : 'status-dot-muted'
+                                    }`}
+                                />
+                                <span>
+                                    Credentials {credentialsStatus.configured ? 'Configured' : 'Not configured'}
+                                </span>
+                                {credentialsStatus.configured && (
+                                    <span className="mode-source">Source: {credentialsStatus.source}</span>
+                                )}
+                            </div>
+                            <div className="mode-warning">
+                                Live mode sends real orders to Kraken. Start small and verify your workflow.
+                                This feature is in test and not ready.
+                            </div>
+                            {credentialsError && <div className="chip">{credentialsError}</div>}
+                            <form className="mode-form" onSubmit={handleSaveCredentials}>
+                                <div className="field">
+                                    <label htmlFor="kraken-key">Kraken API Key</label>
+                                    <input
+                                        id="kraken-key"
+                                        type="password"
+                                        value={apiKeyInput}
+                                        onChange={(event) => setApiKeyInput(event.target.value)}
+                                        placeholder="Paste your Kraken API key"
+                                        autoComplete="new-password"
+                                        disabled={credentialsLoading}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="kraken-secret">Kraken API Secret</label>
+                                    <input
+                                        id="kraken-secret"
+                                        type="password"
+                                        value={apiSecretInput}
+                                        onChange={(event) => setApiSecretInput(event.target.value)}
+                                        placeholder="Paste your Kraken API secret"
+                                        autoComplete="new-password"
+                                        disabled={credentialsLoading}
+                                    />
+                                </div>
+                                <div className="mode-actions">
+                                    <button
+                                        className="btn btn-primary"
+                                        type="submit"
+                                        disabled={
+                                            credentialsLoading ||
+                                            !apiKeyInput.trim() ||
+                                            !apiSecretInput.trim()
+                                        }
+                                    >
+                                        {credentialsLoading
+                                            ? 'Saving...'
+                                            : credentialsStatus.configured
+                                            ? 'Update credentials'
+                                            : 'Save credentials'}
+                                    </button>
+                                    <button
+                                        className="btn btn-ghost"
+                                        type="button"
+                                        onClick={handleClearCredentials}
+                                        disabled={!canClearCredentials || credentialsLoading}
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </form>
+                            <div className="mode-hint">
+                                Credentials are stored in-memory for this session only.
+                                {credentialsStatus.source === 'env' && ' Clear env keys in backend config.'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
         {pairSelectorOpen && (
             <div className="pair-selector-overlay" onClick={() => setPairSelectorOpen(false)}>
                 <div className="pair-selector-container" onClick={(e) => e.stopPropagation()}>

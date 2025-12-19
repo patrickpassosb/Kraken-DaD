@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatPrice } from '../utils/format';
 import { NodeStatus } from '../utils/status';
 
@@ -8,11 +9,13 @@ export interface ConditionNodeData {
     status?: NodeStatus;
     comparator?: string;
     threshold?: number;
+    disabled?: boolean;
 }
 
-export function IfNode({ id, data }: NodeProps) {
+export function IfNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConditionNodeData) || {};
+    const isDisabled = nodeData.disabled;
 
     const [comparator, setComparator] = useState(nodeData.comparator || '>');
     const [threshold, setThreshold] = useState<number>(nodeData.threshold ?? 90135.6);
@@ -32,6 +35,7 @@ export function IfNode({ id, data }: NodeProps) {
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Condition</span>

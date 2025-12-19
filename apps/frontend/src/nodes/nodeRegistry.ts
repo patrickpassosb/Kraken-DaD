@@ -172,6 +172,7 @@ export function buildTemplateEdges(): Edge[] {
             target: 'if-template',
             targetHandle: 'data:condition',
             type: 'data',
+            data: { implied: true },
         },
         {
             id: 'e-ticker-order-data-template',
@@ -180,6 +181,7 @@ export function buildTemplateEdges(): Edge[] {
             target: 'order-template',
             targetHandle: 'data:price',
             type: 'data',
+            data: { implied: true },
         },
     ];
 }

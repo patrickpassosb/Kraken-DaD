@@ -1,17 +1,20 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 
 export interface LogIntentNodeData {
     action?: string;
     status?: NodeStatus;
     note?: string;
+    disabled?: boolean;
 }
 
-export function LogIntentNode({ id, data }: NodeProps) {
+export function LogIntentNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as LogIntentNodeData) || {};
+    const isDisabled = nodeData.disabled;
     const [note, setNote] = useState(nodeData.note || 'Log execution intent for audit');
 
     const updateData = useCallback(
@@ -29,6 +32,7 @@ export function LogIntentNode({ id, data }: NodeProps) {
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Audit Log</span>

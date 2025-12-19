@@ -10,6 +10,7 @@
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import { executeRoute } from './routes/execute.js';
+import { krakenCredentialsRoute } from './routes/krakenCredentials.js';
 import { marketRoute } from './routes/market.js';
 import { marketStreamRoute } from './routes/marketStream.js';
 import { pairsRoute } from './routes/pairs.js';
@@ -44,6 +45,7 @@ async function main() {
 
     // Register execute routes
     await fastify.register(executeRoute);
+    await fastify.register(krakenCredentialsRoute);
     await fastify.register(marketRoute);
     await fastify.register(marketStreamRoute);
     await fastify.register(pairsRoute);
