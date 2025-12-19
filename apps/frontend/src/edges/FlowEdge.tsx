@@ -9,6 +9,9 @@ import {
 
 type FlowEdgeData = {
     onInsert?: (edgeId: string, position: { x: number; y: number }) => void;
+    offset?: number;
+    stepPosition?: number;
+    hidden?: boolean;
 };
 
 function FlowEdge({
@@ -34,13 +37,17 @@ function FlowEdge({
         targetY,
         targetPosition,
         borderRadius: 18,
+        offset: data?.offset,
+        stepPosition: data?.stepPosition,
     });
 
     const isControl = type === 'control';
+    const hidden = data?.hidden;
     const edgeStyle = {
         stroke: isControl ? 'var(--kraken-purple)' : 'var(--kraken-cyan)',
         strokeWidth: 2,
         strokeLinecap: 'round',
+        opacity: hidden ? 0 : 1,
         ...style,
     };
 
@@ -53,6 +60,12 @@ function FlowEdge({
         event.stopPropagation();
         data?.onInsert?.(id, { x: labelX, y: labelY });
     };
+
+    if (hidden) {
+        return (
+            <BaseEdge id={id} path={path} markerEnd={markerEnd} style={edgeStyle} interactionWidth={0} />
+        );
+    }
 
     return (
         <>

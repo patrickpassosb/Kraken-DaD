@@ -997,6 +997,11 @@ body {
     box-shadow: 0 0 0 2px rgba(59, 201, 219, 0.18);
 }
 
+.react-flow__handle.data {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .react-flow__handle.control {
     background: var(--kraken-purple);
     box-shadow: 0 0 0 2px rgba(121, 80, 242, 0.18);

@@ -54,6 +54,34 @@ type InsertHandles = { in: string; out: string };
 const EDGE_STYLE_CONTROL = { stroke: '#8f6bff', strokeWidth: 2 };
 const EDGE_STYLE_DATA = { stroke: '#3bc9db', strokeWidth: 2 };
 
+type ImpliedDataEdge = {
+    source: NodeTypeId;
+    target: NodeTypeId;
+    sourcePort: string;
+    targetPort: string;
+};
+
+const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
+    {
+        source: 'data.kraken.ticker',
+        target: 'logic.if',
+        sourcePort: 'price',
+        targetPort: 'condition',
+    },
+    {
+        source: 'data.kraken.ticker',
+        target: 'action.placeOrder',
+        sourcePort: 'price',
+        targetPort: 'price',
+    },
+    {
+        source: 'action.placeOrder',
+        target: 'action.cancelOrder',
+        sourcePort: 'orderId',
+        targetPort: 'orderId',
+    },
+];
+
 const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
     'control.start': null,
     'data.kraken.ticker': { in: 'control:in', out: 'control:out' },
@@ -66,6 +94,63 @@ const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
 
 function edgeStyleForType(type?: string) {
     return type === 'control' ? EDGE_STYLE_CONTROL : EDGE_STYLE_DATA;
+}
+
+function resolveNodeType(
+    nodeId: string,
+    nodes: Node[],
+    extraNode?: Node
+): NodeTypeId | null {
+    if (extraNode?.id === nodeId && extraNode.type) {
+        return extraNode.type as NodeTypeId;
+    }
+    const node = nodes.find((item) => item.id === nodeId);
+    return node?.type ? (node.type as NodeTypeId) : null;
+}
+
+function findImpliedDataEdges(
+    sourceId: string,
+    targetId: string,
+    nodes: Node[],
+    extraNode?: Node
+): Edge[] {
+    const sourceType = resolveNodeType(sourceId, nodes, extraNode);
+    const targetType = resolveNodeType(targetId, nodes, extraNode);
+    if (!sourceType || !targetType) return [];
+
+    return IMPLIED_DATA_EDGES.filter(
+        (rule) => rule.source === sourceType && rule.target === targetType
+    ).map((rule) => ({
+        id: `e-${sourceId}-${targetId}-data-${rule.sourcePort}-${rule.targetPort}`,
+        source: sourceId,
+        sourceHandle: `data:${rule.sourcePort}`,
+        target: targetId,
+        targetHandle: `data:${rule.targetPort}`,
+        type: 'data',
+        style: EDGE_STYLE_DATA,
+        data: { implied: true },
+    }));
+}
+
+function appendImpliedEdges(
+    baseEdges: Edge[],
+    impliedEdges: Edge[]
+): Edge[] {
+    const existing = new Set(
+        baseEdges.map(
+            (edge) =>
+                `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`
+        )
+    );
+    const nextEdges = [...baseEdges];
+    impliedEdges.forEach((edge) => {
+        const key = `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`;
+        if (!existing.has(key)) {
+            existing.add(key);
+            nextEdges.push(edge);
+        }
+    });
+    return nextEdges;
 }
 
 function nodeHighlight(status?: NodeStatus): string {
@@ -107,6 +192,7 @@ export function FlowCanvas({
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [paletteSearch, setPaletteSearch] = useState('');
     const [pendingInsert, setPendingInsert] = useState<PendingInsert | null>(null);
+    const [pendingTidy, setPendingTidy] = useState(false);
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
     const { fitView } = useReactFlow();
@@ -128,14 +214,34 @@ export function FlowCanvas({
         [setPaletteOpen, setPaletteSearch, setPendingInsert]
     );
 
-    const edgesWithActions = useMemo(
-        () =>
-            edges.map((edge) => ({
+    const edgesWithActions = useMemo(() => {
+        const pairCounts = new Map<string, number>();
+        edges.forEach((edge) => {
+            const key = `${edge.source}->${edge.target}`;
+            pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+        });
+
+        const pairCursor = new Map<string, number>();
+        return edges.map((edge) => {
+            const key = `${edge.source}->${edge.target}`;
+            const count = pairCounts.get(key) ?? 1;
+            const index = pairCursor.get(key) ?? 0;
+            pairCursor.set(key, index + 1);
+            const offset = count > 1 ? (index - (count - 1) / 2) * 20 : 0;
+            const stepPosition = count > 1 ? 0.5 + (index - (count - 1) / 2) * 0.08 : undefined;
+            const hidden = edge.type === 'data';
+            return {
                 ...edge,
-                data: { ...(edge.data as Record<string, unknown>), onInsert: handleEdgeInsertRequest },
-            })),
-        [edges, handleEdgeInsertRequest]
-    );
+                data: {
+                    ...(edge.data as Record<string, unknown>),
+                    onInsert: handleEdgeInsertRequest,
+                    offset,
+                    stepPosition,
+                    hidden,
+                },
+            };
+        });
+    }, [edges, handleEdgeInsertRequest]);
 
     const isValidConnection = useCallback(
         (connection: Connection | Edge) => {
@@ -165,17 +271,24 @@ export function FlowCanvas({
 
             const edgeType = connection.sourceHandle?.startsWith('control') ? 'control' : 'data';
             setEdges((eds) =>
-                addEdge(
-                    {
-                        ...connection,
-                        type: edgeType,
-                        style: edgeStyleForType(edgeType),
-                    },
-                    eds
-                )
+                {
+                    const nextEdges = addEdge(
+                        {
+                            ...connection,
+                            type: edgeType,
+                            style: edgeStyleForType(edgeType),
+                        },
+                        eds
+                    );
+                    if (edgeType !== 'control') return nextEdges;
+                    const sourceId = connection.source ?? '';
+                    const targetId = connection.target ?? '';
+                    const impliedEdges = findImpliedDataEdges(sourceId, targetId, nodes);
+                    return appendImpliedEdges(nextEdges, impliedEdges);
+                }
             );
         },
-        [isValidConnection, setEdges]
+        [isValidConnection, nodes, setEdges]
     );
 
     useEffect(() => {
@@ -197,8 +310,9 @@ export function FlowCanvas({
         setEdges(buildTemplateEdges());
         setPaletteOpen(false);
         setPendingInsert(null);
+        setPendingTidy(true);
         fitView({ padding: 0.2, duration: 300 });
-    }, [activePair, fitView, setEdges, setNodes, setPendingInsert]);
+    }, [activePair, fitView, setEdges, setNodes, setPendingInsert, setPendingTidy]);
 
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
@@ -258,7 +372,11 @@ export function FlowCanvas({
                         type: edgeType,
                         style,
                     };
-                    return [...withoutEdge, edgeIn, edgeOut];
+                    const implied = [
+                        ...findImpliedDataEdges(insertEdge.source, id, nodes, newNode),
+                        ...findImpliedDataEdges(id, insertEdge.target, nodes, newNode),
+                    ];
+                    return appendImpliedEdges([...withoutEdge, edgeIn, edgeOut], implied);
                 });
                 setPendingInsert(null);
                 setPaletteOpen(false);
@@ -300,7 +418,20 @@ export function FlowCanvas({
     const onEdgesDelete = useCallback(
         (deleted: Edge[]) => {
             const deletedIds = new Set(deleted.map((e) => e.id));
-            setEdges((eds) => eds.filter((e) => !deletedIds.has(e.id)));
+            const deletedControlPairs = new Set(
+                deleted
+                    .filter((edge) => edge.type === 'control')
+                    .map((edge) => `${edge.source}->${edge.target}`)
+            );
+            setEdges((eds) =>
+                eds.filter((edge) => {
+                    if (deletedIds.has(edge.id)) return false;
+                    if (edge.type === 'data' && deletedControlPairs.has(`${edge.source}->${edge.target}`)) {
+                        return false;
+                    }
+                    return true;
+                })
+            );
         },
         [setEdges]
     );
@@ -379,19 +510,17 @@ export function FlowCanvas({
 
         const columns = new Map<number, Node[]>();
         nodes.forEach((node) => {
-            const laneIndex = laneIndexForType(node.type);
             const controlDepth = depthFor(node.id);
-            const column = Math.max(laneIndex, controlDepth);
-            const bucket = columns.get(column) ?? [];
+            const bucket = columns.get(controlDepth) ?? [];
             bucket.push(node);
-            columns.set(column, bucket);
+            columns.set(controlDepth, bucket);
         });
 
         const layoutPositions = new Map<string, { x: number; y: number }>();
         const xStart = 240;
-        const yStart = 160;
-        const xSpacing = 260;
-        const ySpacing = 180;
+        const yStart = 220;
+        const xSpacing = 300;
+        const stackSpacing = 170;
 
         Array.from(columns.entries())
             .sort(([a], [b]) => a - b)
@@ -399,13 +528,14 @@ export function FlowCanvas({
                 bucket
                     .sort(
                         (a, b) =>
+                            laneIndexForType(a.type) - laneIndexForType(b.type) ||
                             (a.position?.y ?? 0) - (b.position?.y ?? 0) ||
                             a.id.localeCompare(b.id)
                     )
                     .forEach((node, idx) => {
                         layoutPositions.set(node.id, {
                             x: snapToGrid(xStart + col * xSpacing),
-                            y: snapToGrid(yStart + idx * ySpacing),
+                            y: snapToGrid(yStart + idx * stackSpacing),
                         });
                     });
             });
@@ -422,6 +552,14 @@ export function FlowCanvas({
             fitView({ padding: 0.2, duration: 300 });
         });
     }, [edges, fitView, handleFitView, nodes, setNodes]);
+
+    useEffect(() => {
+        if (!pendingTidy) return;
+        setPendingTidy(false);
+        requestAnimationFrame(() => {
+            handleTidyLayout();
+        });
+    }, [handleTidyLayout, pendingTidy]);
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
