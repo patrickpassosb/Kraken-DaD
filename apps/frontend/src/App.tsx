@@ -106,6 +106,7 @@ function App() {
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
     const [rightRailOpen, setRightRailOpen] = useState(true);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [pairSelectorOpen, setPairSelectorOpen] = useState(false);
     const [selectedPair, setSelectedPair] = useState('BTC/USD');
     const [previousPair, setPreviousPair] = useState<string>('BTC/USD');
@@ -403,96 +404,6 @@ function App() {
                     <div className="right-rail-shell">
                         <div className="right-rail">
                             <div className="panel">
-                                <div className="panel-title">Execution Mode</div>
-                                <div className="mode-panel">
-                                    <div className="mode-row">
-                                        <div>
-                                            <div className="mode-label">Live Orders</div>
-                                            <div className="mode-subtitle">Real Kraken orders (requires API key)</div>
-                                        </div>
-                                        <button
-                                            className={`btn ${executionMode === 'live' ? 'btn-live' : 'btn-ghost'}`}
-                                            onClick={handleToggleLive}
-                                            disabled={!credentialsStatus.configured || credentialsLoading}
-                                        >
-                                            {executionMode === 'live' ? 'Live On' : 'Live Off'}
-                                        </button>
-                                    </div>
-                                    <div className="mode-status">
-                                        <span
-                                            className={`status-dot ${
-                                                credentialsStatus.configured ? 'status-dot-live' : 'status-dot-muted'
-                                            }`}
-                                        />
-                                        <span>
-                                            Credentials {credentialsStatus.configured ? 'Configured' : 'Not configured'}
-                                        </span>
-                                        {credentialsStatus.configured && (
-                                            <span className="mode-source">Source: {credentialsStatus.source}</span>
-                                        )}
-                                    </div>
-                                    <div className="mode-warning">
-                                        Live mode sends real orders to Kraken. Start small and verify your workflow.
-                                    </div>
-                                    {credentialsError && <div className="chip">{credentialsError}</div>}
-                                    <form className="mode-form" onSubmit={handleSaveCredentials}>
-                                        <div className="field">
-                                            <label htmlFor="kraken-key">Kraken API Key</label>
-                                            <input
-                                                id="kraken-key"
-                                                type="password"
-                                                value={apiKeyInput}
-                                                onChange={(event) => setApiKeyInput(event.target.value)}
-                                                placeholder="Paste your Kraken API key"
-                                                autoComplete="new-password"
-                                                disabled={credentialsLoading}
-                                            />
-                                        </div>
-                                        <div className="field">
-                                            <label htmlFor="kraken-secret">Kraken API Secret</label>
-                                            <input
-                                                id="kraken-secret"
-                                                type="password"
-                                                value={apiSecretInput}
-                                                onChange={(event) => setApiSecretInput(event.target.value)}
-                                                placeholder="Paste your Kraken API secret"
-                                                autoComplete="new-password"
-                                                disabled={credentialsLoading}
-                                            />
-                                        </div>
-                                        <div className="mode-actions">
-                                            <button
-                                                className="btn btn-primary"
-                                                type="submit"
-                                                disabled={
-                                                    credentialsLoading ||
-                                                    !apiKeyInput.trim() ||
-                                                    !apiSecretInput.trim()
-                                                }
-                                            >
-                                                {credentialsLoading
-                                                    ? 'Saving...'
-                                                    : credentialsStatus.configured
-                                                    ? 'Update credentials'
-                                                    : 'Save credentials'}
-                                            </button>
-                                            <button
-                                                className="btn btn-ghost"
-                                                type="button"
-                                                onClick={handleClearCredentials}
-                                                disabled={!canClearCredentials || credentialsLoading}
-                                            >
-                                                Clear
-                                            </button>
-                                        </div>
-                                    </form>
-                                    <div className="mode-hint">
-                                        Credentials are stored in-memory for this session only.
-                                        {credentialsStatus.source === 'env' && ' Clear env keys in backend config.'}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="panel">
                                 <div className="panel-title">Market Context</div>
                                 {warningMessage && (
                                     <div className="chip" style={{ marginBottom: '8px', color: '#ffffff' }}>
@@ -570,6 +481,121 @@ function App() {
                 )}
             </div>
         </div>
+        <button
+            className="settings-fab"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            title="Settings"
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9 3.5c0-.6-.1-1.2-.2-1.7l2.1-1.6-2-3.5-2.5 1c-.8-.7-1.6-1.2-2.6-1.6l-.4-2.6H8.6l-.4 2.6c-1 .4-1.8.9-2.6 1.6l-2.5-1-2 3.5 2.1 1.6c-.1.5-.2 1.1-.2 1.7s.1 1.2.2 1.7l-2.1 1.6 2 3.5 2.5-1c.8.7 1.6 1.2 2.6 1.6l.4 2.6h6.8l.4-2.6c1-.4 1.8-.9 2.6-1.6l2.5 1 2-3.5-2.1-1.6c.1-.5.2-1.1.2-1.7Z" />
+            </svg>
+        </button>
+        {settingsOpen && (
+            <div className="settings-overlay" onClick={() => setSettingsOpen(false)}>
+                <div className="settings-panel" onClick={(event) => event.stopPropagation()}>
+                    <div className="settings-header">
+                        <div>
+                            <div className="settings-title">Settings</div>
+                            <div className="settings-subtitle">Kraken API credentials and execution controls</div>
+                        </div>
+                        <button className="btn btn-ghost" onClick={() => setSettingsOpen(false)}>
+                            Close
+                        </button>
+                    </div>
+                    <div className="settings-section">
+                        <div className="panel-title">Execution Mode</div>
+                        <div className="mode-panel">
+                            <div className="mode-row">
+                                <div>
+                                    <div className="mode-label">Live Orders</div>
+                                    <div className="mode-subtitle">Real Kraken orders (requires API key)</div>
+                                </div>
+                                <button
+                                    className={`btn ${executionMode === 'live' ? 'btn-live' : 'btn-ghost'}`}
+                                    onClick={handleToggleLive}
+                                    disabled={!credentialsStatus.configured || credentialsLoading}
+                                >
+                                    {executionMode === 'live' ? 'Live On' : 'Live Off'}
+                                </button>
+                            </div>
+                            <div className="mode-status">
+                                <span
+                                    className={`status-dot ${
+                                        credentialsStatus.configured ? 'status-dot-live' : 'status-dot-muted'
+                                    }`}
+                                />
+                                <span>
+                                    Credentials {credentialsStatus.configured ? 'Configured' : 'Not configured'}
+                                </span>
+                                {credentialsStatus.configured && (
+                                    <span className="mode-source">Source: {credentialsStatus.source}</span>
+                                )}
+                            </div>
+                            <div className="mode-warning">
+                                Live mode sends real orders to Kraken. Start small and verify your workflow.
+                            </div>
+                            {credentialsError && <div className="chip">{credentialsError}</div>}
+                            <form className="mode-form" onSubmit={handleSaveCredentials}>
+                                <div className="field">
+                                    <label htmlFor="kraken-key">Kraken API Key</label>
+                                    <input
+                                        id="kraken-key"
+                                        type="password"
+                                        value={apiKeyInput}
+                                        onChange={(event) => setApiKeyInput(event.target.value)}
+                                        placeholder="Paste your Kraken API key"
+                                        autoComplete="new-password"
+                                        disabled={credentialsLoading}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="kraken-secret">Kraken API Secret</label>
+                                    <input
+                                        id="kraken-secret"
+                                        type="password"
+                                        value={apiSecretInput}
+                                        onChange={(event) => setApiSecretInput(event.target.value)}
+                                        placeholder="Paste your Kraken API secret"
+                                        autoComplete="new-password"
+                                        disabled={credentialsLoading}
+                                    />
+                                </div>
+                                <div className="mode-actions">
+                                    <button
+                                        className="btn btn-primary"
+                                        type="submit"
+                                        disabled={
+                                            credentialsLoading ||
+                                            !apiKeyInput.trim() ||
+                                            !apiSecretInput.trim()
+                                        }
+                                    >
+                                        {credentialsLoading
+                                            ? 'Saving...'
+                                            : credentialsStatus.configured
+                                            ? 'Update credentials'
+                                            : 'Save credentials'}
+                                    </button>
+                                    <button
+                                        className="btn btn-ghost"
+                                        type="button"
+                                        onClick={handleClearCredentials}
+                                        disabled={!canClearCredentials || credentialsLoading}
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </form>
+                            <div className="mode-hint">
+                                Credentials are stored in-memory for this session only.
+                                {credentialsStatus.source === 'env' && ' Clear env keys in backend config.'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
         {pairSelectorOpen && (
             <div className="pair-selector-overlay" onClick={() => setPairSelectorOpen(false)}>
                 <div className="pair-selector-container" onClick={(e) => e.stopPropagation()}>
