@@ -1,7 +1,8 @@
-import { memo, type MouseEvent } from 'react';
+import { memo, type CSSProperties, type MouseEvent } from 'react';
 import {
     BaseEdge,
     EdgeLabelRenderer,
+    type Edge,
     type EdgeProps,
     getSmoothStepPath,
     useReactFlow,
@@ -27,7 +28,7 @@ function FlowEdge({
     markerEnd,
     selected,
     type,
-}: EdgeProps<FlowEdgeData>) {
+}: EdgeProps<Edge<FlowEdgeData>>) {
     const { deleteElements } = useReactFlow();
     const [path, labelX, labelY] = getSmoothStepPath({
         sourceX,
@@ -43,12 +44,12 @@ function FlowEdge({
 
     const isControl = type === 'control';
     const hidden = data?.hidden;
-    const edgeStyle = {
+    const edgeStyle: CSSProperties = {
         stroke: isControl ? 'var(--kraken-purple)' : 'var(--kraken-cyan)',
         strokeWidth: 2,
         strokeLinecap: 'round',
         opacity: hidden ? 0 : 1,
-        ...style,
+        ...(style ?? {}),
     };
 
     const handleDelete = (event: MouseEvent<HTMLButtonElement>) => {

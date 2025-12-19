@@ -558,6 +558,7 @@ function App() {
                             </div>
                             <div className="mode-warning">
                                 Live mode sends real orders to Kraken. Start small and verify your workflow.
+                                This feature is in test and not ready.
                             </div>
                             {credentialsError && <div className="chip">{credentialsError}</div>}
                             <form className="mode-form" onSubmit={handleSaveCredentials}>

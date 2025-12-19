@@ -130,7 +130,7 @@ blockDefinitions.set('control.start', {
 });
 
 blockHandlers.set('control.start', (_node, _inputs, _ctx) => {
-    return { outputs: {} };
+    return { outputs: { out: true } };
 });
 
 /**
@@ -926,12 +926,64 @@ export function executeDryRun(
 
     const executionOrder = sortResult.order;
 
-    // Step 6: Execute nodes in order
-    for (const nodeId of executionOrder) {
-        const node = graph.nodeMap.get(nodeId)!;
-        const handler = blockHandlers.get(node.type);
+    // Step 6: Execute nodes in order (control flow gating)
+    const nodeOrderIndex = new Map<string, number>();
+    executionOrder.forEach((nodeId, index) => nodeOrderIndex.set(nodeId, index));
+
+    const pendingQueue: string[] = [];
+    const pendingSet = new Set<string>();
+    const executedNodes = new Set<string>();
+
+    const enqueueNode = (nodeId: string) => {
+        if (executedNodes.has(nodeId) || pendingSet.has(nodeId)) {
+            return;
+        }
+        pendingQueue.push(nodeId);
+        pendingSet.add(nodeId);
+    };
+
+    for (const node of strategyToRun.nodes) {
+        const incoming = graph.incomingControlEdges.get(node.id)?.length ?? 0;
+        if (incoming === 0) {
+            enqueueNode(node.id);
+        }
+    }
+
+    const dequeueNextNode = (): string | undefined => {
+        if (pendingQueue.length === 0) {
+            return undefined;
+        }
+        let bestIndex = 0;
+        for (let i = 1; i < pendingQueue.length; i++) {
+            const currentId = pendingQueue[i];
+            const bestId = pendingQueue[bestIndex];
+            if (
+                (nodeOrderIndex.get(currentId) ?? Infinity) <
+                (nodeOrderIndex.get(bestId) ?? Infinity)
+            ) {
+                bestIndex = i;
+            }
+        }
+        const [nodeId] = pendingQueue.splice(bestIndex, 1);
+        pendingSet.delete(nodeId);
+        return nodeId;
+    };
+
+    while (pendingQueue.length > 0) {
+        const nodeId = dequeueNextNode();
+        if (!nodeId) {
+            break;
+        }
+        if (executedNodes.has(nodeId)) {
+            continue;
+        }
+        const node = graph.nodeMap.get(nodeId);
+        if (!node) {
+            continue;
+        }
 
         if (isNodeDisabled(node)) {
+            executedNodes.add(nodeId);
             log.push({
                 nodeId,
                 nodeType: node.type,
@@ -943,6 +995,7 @@ export function executeDryRun(
             continue;
         }
 
+        const handler = blockHandlers.get(node.type);
         if (!handler) {
             errors.push({
                 code: 'UNKNOWN_BLOCK_TYPE',
@@ -960,7 +1013,6 @@ export function executeDryRun(
             break;
         }
 
-        // Resolve inputs
         const inputResult = resolveInputs(nodeId, graph, dataCache);
         warnings.push(...inputResult.warnings);
         if (inputResult.error) {
@@ -976,7 +1028,6 @@ export function executeDryRun(
             break;
         }
 
-        // Execute node
         const execStart = Date.now();
         let outputs: Record<string, unknown> = {};
         let actionIntent: ActionIntent | undefined;
@@ -1005,12 +1056,10 @@ export function executeDryRun(
 
         const durationMs = Date.now() - execStart;
 
-        // Store outputs in cache
         for (const [portId, value] of Object.entries(outputs)) {
             dataCache.set(`${nodeId}:${portId}`, value);
         }
 
-        // Collect action intent
         if (actionIntent) {
             actionIntents.push(actionIntent);
         }
@@ -1023,6 +1072,24 @@ export function executeDryRun(
             durationMs,
             status: 'success',
         });
+
+        executedNodes.add(nodeId);
+
+        const outgoingControls = graph.outgoingControlEdges.get(nodeId) ?? [];
+        for (const edge of outgoingControls) {
+            const triggerValue =
+                Object.prototype.hasOwnProperty.call(outputs, edge.sourcePort) &&
+                outputs[edge.sourcePort] !== undefined
+                    ? outputs[edge.sourcePort]
+                    : undefined;
+            const shouldTrigger =
+                triggerValue === undefined || triggerValue === null
+                    ? true
+                    : Boolean(triggerValue);
+            if (shouldTrigger) {
+                enqueueNode(edge.target);
+            }
+        }
     }
 
     // Step 7: Return result
