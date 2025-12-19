@@ -1,8 +1,10 @@
 import { API_BASE } from './config';
 
+export type ExecutionMode = 'dry-run' | 'live';
+
 export interface ExecutionResult {
     success: boolean;
-    mode: 'dry-run';
+    mode: ExecutionMode;
     startedAt: string;
     completedAt: string;
     nodesExecuted: number;
@@ -31,9 +33,16 @@ export interface ExecutionResult {
             action: string;
             params: Record<string, unknown>;
         };
-        executed: false;
+        executed: boolean;
     }>;
     krakenValidations?: Array<{
+        nodeId: string;
+        action: string;
+        status: 'ok' | 'error';
+        detail?: string;
+        response?: Record<string, unknown>;
+    }>;
+    liveActions?: Array<{
         nodeId: string;
         action: string;
         status: 'ok' | 'error';
@@ -66,18 +75,26 @@ export interface Strategy {
     }>;
 }
 
-export async function executeDryRun(strategy: Strategy, validate?: boolean): Promise<ExecutionResult> {
-    const response = await fetch(`${API_BASE}/execute/dry-run`, {
+export async function executeStrategy(
+    strategy: Strategy,
+    options: { mode?: ExecutionMode; validate?: boolean } = {}
+): Promise<ExecutionResult> {
+    const response = await fetch(`${API_BASE}/execute`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ strategy, validate }),
+        body: JSON.stringify({
+            strategy,
+            validate: options.validate,
+            mode: options.mode,
+        }),
     });
 
+    const payload = (await response.json()) as { error?: string } & ExecutionResult;
     if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(payload.error ?? `API error: ${response.status}`);
     }
 
-    return response.json();
+    return payload;
 }

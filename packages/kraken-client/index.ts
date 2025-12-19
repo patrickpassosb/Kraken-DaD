@@ -53,6 +53,49 @@ export interface KrakenCredentials {
     secret: string;
 }
 
+type KrakenCredentialsSource = 'runtime' | 'env' | 'none';
+
+interface KrakenCredentialsStatus {
+    configured: boolean;
+    source: KrakenCredentialsSource;
+}
+
+let runtimeCreds: KrakenCredentials | null = null;
+let lastNonce = 0;
+
+function nextNonce(): string {
+    const now = Date.now();
+    if (now <= lastNonce) {
+        lastNonce += 1;
+    } else {
+        lastNonce = now;
+    }
+    return String(lastNonce);
+}
+
+export function setPrivateCreds(creds: KrakenCredentials): void {
+    runtimeCreds = {
+        key: creds.key.trim(),
+        secret: creds.secret.trim(),
+    };
+}
+
+export function clearPrivateCreds(): void {
+    runtimeCreds = null;
+}
+
+export function getPrivateCredsStatus(): KrakenCredentialsStatus {
+    if (runtimeCreds) {
+        return { configured: true, source: 'runtime' };
+    }
+    const key = process.env.KRAKEN_API_KEY;
+    const secret = process.env.KRAKEN_API_SECRET;
+    if (key && secret) {
+        return { configured: true, source: 'env' };
+    }
+    return { configured: false, source: 'none' };
+}
+
 export function normalizePair(pair: string): { krakenPair: string; display: string } {
     const trimmed = pair.trim().toUpperCase().replace(/\s+/g, '');
     const cleaned = trimmed.replace('XBT', 'BTC');
@@ -205,10 +248,21 @@ export async function fetchDepth(pair: string, count = 10, options: FetchOptions
 }
 
 export function hasPrivateCreds(): KrakenCredentials | null {
+    if (runtimeCreds) {
+        return runtimeCreds;
+    }
     const key = process.env.KRAKEN_API_KEY;
     const secret = process.env.KRAKEN_API_SECRET;
     if (!key || !secret) return null;
     return { key, secret };
+}
+
+function getPrivateCreds(): KrakenCredentials {
+    const creds = hasPrivateCreds();
+    if (!creds) {
+        throw new Error('Kraken private API credentials not configured.');
+    }
+    return creds;
 }
 
 interface AddOrderParams {
@@ -217,31 +271,58 @@ interface AddOrderParams {
     ordertype: 'market' | 'limit';
     volume: string;
     price?: string;
-    validate?: boolean;
 }
 
 export async function validateAddOrder(params: AddOrderParams): Promise<Record<string, unknown>> {
-    const creds = hasPrivateCreds();
-    if (!creds) {
-        throw new Error('Kraken private API credentials not configured.');
-    }
-    const body = new URLSearchParams({
-        ...params,
+    const creds = getPrivateCreds();
+    const { krakenPair } = normalizePair(params.pair);
+    const payload: Record<string, string> = {
+        pair: krakenPair,
+        type: params.type,
+        ordertype: params.ordertype,
+        volume: params.volume,
         validate: 'true',
-        nonce: Date.now().toString(),
-    });
+        nonce: nextNonce(),
+    };
+    if (params.price !== undefined) {
+        payload.price = params.price;
+    }
+    const body = new URLSearchParams(payload);
     return privatePost('/0/private/AddOrder', body, creds.secret, creds.key);
 }
 
 export async function validateCancelOrder(txid: string): Promise<Record<string, unknown>> {
-    const creds = hasPrivateCreds();
-    if (!creds) {
-        throw new Error('Kraken private API credentials not configured.');
-    }
+    const creds = getPrivateCreds();
     const body = new URLSearchParams({
         txid,
         validate: 'true',
-        nonce: Date.now().toString(),
+        nonce: nextNonce(),
+    });
+    return privatePost('/0/private/CancelOrder', body, creds.secret, creds.key);
+}
+
+export async function placeOrder(params: AddOrderParams): Promise<Record<string, unknown>> {
+    const creds = getPrivateCreds();
+    const { krakenPair } = normalizePair(params.pair);
+    const payload: Record<string, string> = {
+        pair: krakenPair,
+        type: params.type,
+        ordertype: params.ordertype,
+        volume: params.volume,
+        nonce: nextNonce(),
+    };
+    if (params.price !== undefined) {
+        payload.price = params.price;
+    }
+    const body = new URLSearchParams(payload);
+    return privatePost('/0/private/AddOrder', body, creds.secret, creds.key);
+}
+
+export async function cancelOrder(txid: string): Promise<Record<string, unknown>> {
+    const creds = getPrivateCreds();
+    const body = new URLSearchParams({
+        txid,
+        nonce: nextNonce(),
     });
     return privatePost('/0/private/CancelOrder', body, creds.secret, creds.key);
 }

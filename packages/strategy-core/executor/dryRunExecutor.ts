@@ -14,6 +14,7 @@ import {
     StrategyNode,
     StrategyEdge,
     ExecutionContext,
+    ExecutionMode,
     BlockDefinition,
     BlockCategory,
     NodeConfig,
@@ -46,7 +47,7 @@ export interface ActionIntent {
         readonly action: string;
         readonly params: NodeConfig;
     };
-    readonly executed: false;
+    readonly executed: boolean;
 }
 
 export interface NodeExecutionLog {
@@ -60,7 +61,7 @@ export interface NodeExecutionLog {
 
 export interface ExecutionResult {
     readonly success: boolean;
-    readonly mode: 'dry-run';
+    readonly mode: ExecutionMode;
     readonly startedAt: string;
     readonly completedAt: string;
     readonly nodesExecuted: number;
@@ -69,9 +70,18 @@ export interface ExecutionResult {
     warnings: ExecutionWarning[];
     actionIntents: ActionIntent[];
     krakenValidations?: KrakenValidation[];
+    liveActions?: LiveActionResult[];
 }
 
 export interface KrakenValidation {
+    readonly nodeId: string;
+    readonly action: string;
+    readonly status: 'ok' | 'error';
+    readonly detail?: string;
+    readonly response?: Record<string, unknown>;
+}
+
+export interface LiveActionResult {
     readonly nodeId: string;
     readonly action: string;
     readonly status: 'ok' | 'error';
@@ -932,7 +942,7 @@ export function executeDryRun(
 
     return {
         success: errors.length === 0,
-        mode: 'dry-run',
+        mode: ctx.mode,
         startedAt,
         completedAt,
         nodesExecuted: log.filter((l) => l.status === 'success').length,

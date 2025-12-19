@@ -206,6 +206,18 @@ body {
     transform: translateY(1px);
 }
 
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn:disabled:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    border-color: var(--border-subtle);
+}
+
 .btn-primary {
     background: linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong));
     border-color: var(--kraken-purple);
@@ -235,6 +247,95 @@ body {
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-secondary);
     font-size: var(--text-xs);
+}
+
+.mode-pill-live {
+    background: var(--surface-red);
+    border-color: rgba(255, 95, 109, 0.45);
+    color: #ffd4d7;
+}
+
+.btn-live {
+    background: linear-gradient(135deg, var(--kraken-red), #ff7582);
+    border-color: var(--kraken-red);
+    color: #ffffff;
+}
+
+.btn-live:hover {
+    border-color: #ff8f99;
+    box-shadow: 0 0 0 1px rgba(255, 95, 109, 0.25), 0 14px 28px rgba(0, 0, 0, 0.4);
+}
+
+.mode-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.mode-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+
+.mode-subtitle {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+.mode-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+
+.status-dot-live {
+    background: var(--kraken-green);
+    box-shadow: 0 0 0 4px rgba(43, 210, 127, 0.14);
+}
+
+.status-dot-muted {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.mode-source {
+    color: var(--text-muted);
+    margin-left: var(--space-1);
+}
+
+.mode-warning {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    background: rgba(255, 95, 109, 0.12);
+    border: 1px solid rgba(255, 95, 109, 0.25);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.mode-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.mode-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.mode-hint {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .dry-run-banner {

@@ -1,6 +1,6 @@
 import { Node, Edge } from '@xyflow/react';
 import { SCHEMA_VERSION } from '../../../../packages/strategy-core/schema.ts';
-import { Strategy } from '../api/executeDryRun';
+import { Strategy } from '../api/executeStrategy';
 
 export function getPortType(handleId: string): 'data' | 'control' {
     if (handleId.startsWith('control:')) {

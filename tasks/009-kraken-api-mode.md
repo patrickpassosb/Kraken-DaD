@@ -92,4 +92,3 @@ Track via the success criteria checklist above.
 ## 13. Second-Order Impact Analysis
 
 - Ensure dry-run executor remains unchanged; no new network calls; UI messaging aligns with disabled live trading.
-

@@ -10,11 +10,13 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
     Strategy,
     ExecutionContext,
+    ExecutionMode,
 } from '../../../../packages/strategy-core/schema.ts';
 import {
     executeDryRun,
     ExecutionResult,
     ExecutionWarning,
+    LiveActionResult,
 } from '../../../../packages/strategy-core/executor/dryRunExecutor.ts';
 import {
     fetchTicker,
@@ -23,6 +25,8 @@ import {
     hasPrivateCreds,
     validateAddOrder,
     validateCancelOrder,
+    placeOrder,
+    cancelOrder,
 } from '@kraken-dad/kraken-client';
 
 // =============================================================================
@@ -32,6 +36,11 @@ import {
 interface ExecuteRequestBody {
     strategy: Strategy;
     validate?: boolean;
+    mode?: ExecutionMode;
+}
+
+interface ErrorResponseBody {
+    error: string;
 }
 
 // =============================================================================
@@ -39,6 +48,84 @@ interface ExecuteRequestBody {
 // =============================================================================
 
 export async function executeRoute(fastify: FastifyInstance) {
+    /**
+     * POST /execute
+     *
+     * Execute a strategy in dry-run or live mode.
+     */
+    fastify.post<{ Body: ExecuteRequestBody }>(
+        '/execute',
+        {
+            schema: {
+                body: {
+                    type: 'object',
+                    required: ['strategy'],
+                    properties: {
+                        strategy: {
+                            type: 'object',
+                            required: ['version', 'metadata', 'nodes', 'edges'],
+                            properties: {
+                                version: { type: 'number' },
+                                metadata: {
+                                    type: 'object',
+                                    required: ['name', 'createdAt', 'updatedAt'],
+                                    properties: {
+                                        name: { type: 'string' },
+                                        description: { type: 'string' },
+                                        createdAt: { type: 'string' },
+                                        updatedAt: { type: 'string' },
+                                        author: { type: 'string' },
+                                        tags: { type: 'array', items: { type: 'string' } },
+                                    },
+                                },
+                                nodes: { type: 'array' },
+                                edges: { type: 'array' },
+                            },
+                        },
+                        validate: { type: 'boolean' },
+                        mode: { type: 'string', enum: ['dry-run', 'live'] },
+                    },
+                },
+                response: {
+                    200: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            mode: { type: 'string' },
+                            startedAt: { type: 'string' },
+                            completedAt: { type: 'string' },
+                            nodesExecuted: { type: 'number' },
+                            log: { type: 'array' },
+                            errors: { type: 'array' },
+                            warnings: { type: 'array' },
+                            actionIntents: { type: 'array' },
+                            krakenValidations: { type: 'array' },
+                            liveActions: { type: 'array' },
+                        },
+                    },
+                    400: {
+                        type: 'object',
+                        properties: {
+                            error: { type: 'string' },
+                        },
+                    },
+                },
+            },
+        },
+        async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
+            const { strategy, validate } = request.body;
+            const mode: ExecutionMode = request.body.mode ?? 'dry-run';
+
+            try {
+                const result = await runExecution(strategy, fastify, mode, validate);
+                return reply.status(200).send(result);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Execution failed';
+                return reply.status(400).send({ error: message } satisfies ErrorResponseBody);
+            }
+        }
+    );
+
     /**
      * POST /execute/dry-run
      *
@@ -90,6 +177,8 @@ export async function executeRoute(fastify: FastifyInstance) {
                             errors: { type: 'array' },
                             warnings: { type: 'array' },
                             actionIntents: { type: 'array' },
+                            krakenValidations: { type: 'array' },
+                            liveActions: { type: 'array' },
                         },
                     },
                 },
@@ -97,23 +186,7 @@ export async function executeRoute(fastify: FastifyInstance) {
         },
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
             const { strategy, validate } = request.body;
-
-            const { marketData, warnings: marketWarnings } = await buildMarketData(strategy, fastify);
-
-            // Create execution context for dry-run mode
-            const ctx: ExecutionContext = {
-                mode: 'dry-run',
-                marketData,
-            };
-
-            // Execute strategy
-            const result: ExecutionResult = executeDryRun(strategy, ctx);
-            result.warnings.push(...marketWarnings);
-
-            if (validate) {
-                await applyKrakenValidation(result, fastify);
-            }
-
+            const result = await runExecution(strategy, fastify, 'dry-run', validate);
             return reply.status(200).send(result);
         }
     );
@@ -222,6 +295,33 @@ async function buildMarketData(
     return { marketData, warnings };
 }
 
+async function runExecution(
+    strategy: Strategy,
+    fastify: FastifyInstance,
+    mode: ExecutionMode,
+    validate?: boolean
+): Promise<ExecutionResult> {
+    const { marketData, warnings: marketWarnings } = await buildMarketData(strategy, fastify);
+
+    const ctx: ExecutionContext = {
+        mode,
+        marketData,
+    };
+
+    const result: ExecutionResult = executeDryRun(strategy, ctx);
+    result.warnings.push(...marketWarnings);
+
+    if (mode === 'dry-run' && validate) {
+        await applyKrakenValidation(result, fastify);
+    }
+
+    if (mode === 'live') {
+        return applyKrakenLive(result, fastify);
+    }
+
+    return result;
+}
+
 async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyInstance) {
     const creds = hasPrivateCreds();
     if (!creds) {
@@ -249,7 +349,6 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
                     ordertype: type,
                     volume,
                     price,
-                    validate: true,
                 });
                 validations.push({
                     nodeId: intent.nodeId,
@@ -281,4 +380,92 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
     }
 
     result.krakenValidations = validations;
+}
+
+async function applyKrakenLive(result: ExecutionResult, fastify: FastifyInstance): Promise<ExecutionResult> {
+    const creds = hasPrivateCreds();
+    if (!creds) {
+        const errors = [
+            ...result.errors,
+            {
+                code: 'LIVE_CREDENTIALS_MISSING',
+                message: 'Kraken API credentials are required for live mode.',
+            },
+        ];
+        return {
+            ...result,
+            errors,
+            success: false,
+            liveActions: [],
+        };
+    }
+
+    if (result.errors.length > 0) {
+        return {
+            ...result,
+            success: false,
+            liveActions: [],
+        };
+    }
+
+    const liveActions: LiveActionResult[] = [];
+    const errors = [...result.errors];
+
+    for (const intent of result.actionIntents) {
+        try {
+            if (intent.intent.action === 'PLACE_ORDER') {
+                const params = intent.intent.params;
+                const pair = (params.pair as string) ?? 'BTC/USD';
+                const side = (params.side as 'buy' | 'sell') ?? 'buy';
+                const type = (params.type as 'market' | 'limit') ?? 'market';
+                const volume = String(params.amount ?? 0.1);
+                const price = params.price !== undefined ? String(params.price) : undefined;
+                const response = await placeOrder({
+                    pair,
+                    type: side,
+                    ordertype: type,
+                    volume,
+                    price,
+                });
+                liveActions.push({
+                    nodeId: intent.nodeId,
+                    action: intent.intent.action,
+                    status: 'ok',
+                    detail: 'Kraken order placed',
+                    response,
+                });
+            } else if (intent.intent.action === 'CANCEL_ORDER') {
+                const txid = (intent.intent.params.orderId as string) ?? '';
+                const response = await cancelOrder(txid);
+                liveActions.push({
+                    nodeId: intent.nodeId,
+                    action: intent.intent.action,
+                    status: 'ok',
+                    detail: 'Kraken order cancelled',
+                    response,
+                });
+            }
+        } catch (err) {
+            const detail = err instanceof Error ? err.message : 'Unknown Kraken error';
+            liveActions.push({
+                nodeId: intent.nodeId,
+                action: intent.intent.action,
+                status: 'error',
+                detail,
+            });
+            errors.push({
+                code: 'LIVE_ORDER_FAILED',
+                message: `Kraken live order failed: ${detail}`,
+                nodeId: intent.nodeId,
+            });
+            fastify.log.warn({ err, intent }, 'Kraken live order failed');
+        }
+    }
+
+    return {
+        ...result,
+        errors,
+        success: errors.length === 0,
+        liveActions,
+    };
 }

@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, FormEvent } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { FlowCanvas } from './canvas/FlowCanvas';
 import { ReactFlowProvider } from '@xyflow/react';
-import { executeDryRun, ExecutionResult } from './api/executeDryRun';
+import { executeStrategy, ExecutionResult, ExecutionMode } from './api/executeStrategy';
 import { fetchMarketContext, MarketContextResponse } from './api/marketContext';
 import { fetchPairs, PairItem } from './api/pairs';
 import { toStrategyJSON } from './utils/toStrategyJSON';
@@ -12,6 +12,12 @@ import { formatPair } from './utils/format';
 import { NodeStatus } from './utils/status';
 import { useMarketStream } from './hooks/useMarketStream';
 import { PairSelector } from './components/PairSelector';
+import {
+    clearKrakenCredentials,
+    fetchKrakenCredentialsStatus,
+    KrakenCredentialsStatus,
+    saveKrakenCredentials,
+} from './api/krakenCredentials';
 
 const FEE_RATE = 0.0026;
 
@@ -35,6 +41,9 @@ const demoEdges: Edge[] = [];
 
 function friendlyError(err: unknown): string {
     const raw = err instanceof Error ? err.message : 'Unable to run strategy';
+    if (raw.toLowerCase().includes('kraken')) {
+        return raw;
+    }
     if (raw.toLowerCase().includes('schema')) {
         return 'Strategy definition looks out of date. Refresh and retry the dry-run.';
     }
@@ -85,6 +94,15 @@ function App() {
     const [result, setResult] = useState<ExecutionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [executionMode, setExecutionMode] = useState<ExecutionMode>('dry-run');
+    const [credentialsStatus, setCredentialsStatus] = useState<KrakenCredentialsStatus>({
+        configured: false,
+        source: 'none',
+    });
+    const [credentialsError, setCredentialsError] = useState<string | null>(null);
+    const [credentialsLoading, setCredentialsLoading] = useState(false);
+    const [apiKeyInput, setApiKeyInput] = useState('');
+    const [apiSecretInput, setApiSecretInput] = useState('');
     const [marketContext, setMarketContext] = useState<MarketContext | null>(null);
     const [marketError, setMarketError] = useState<string | null>(null);
     const [rightRailOpen, setRightRailOpen] = useState(true);
@@ -93,7 +111,7 @@ function App() {
     const [previousPair, setPreviousPair] = useState<string>('BTC/USD');
     const [pairCatalog, setPairCatalog] = useState<PairItem[]>([]);
     const [pairCatalogError, setPairCatalogError] = useState<string | null>(null);
-    const validateWithKraken = true;
+    const validateWithKraken = executionMode === 'dry-run';
 
     // Sync nodes when pair selection changes; only overwrite nodes using the previous selected pair.
     useEffect(() => {
@@ -121,6 +139,29 @@ function App() {
         setPreviousPair(selectedPair);
     }, [previousPair, selectedPair, setNodes]);
 
+    useEffect(() => {
+        let isMounted = true;
+        setCredentialsError(null);
+        fetchKrakenCredentialsStatus()
+            .then((status) => {
+                if (!isMounted) return;
+                setCredentialsStatus(status);
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setCredentialsError('Unable to load Kraken credential status.');
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!credentialsStatus.configured && executionMode === 'live') {
+            setExecutionMode('dry-run');
+        }
+    }, [credentialsStatus.configured, executionMode]);
+
     const handleNodesChange = useCallback((newNodes: Node[]) => {
         setNodes(newNodes);
     }, []);
@@ -129,7 +170,53 @@ function App() {
         setEdges(newEdges);
     }, []);
 
+    const handleSaveCredentials = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!apiKeyInput.trim() || !apiSecretInput.trim()) {
+            setCredentialsError('API key and secret are required.');
+            return;
+        }
+        setCredentialsLoading(true);
+        setCredentialsError(null);
+        try {
+            const status = await saveKrakenCredentials(apiKeyInput, apiSecretInput);
+            setCredentialsStatus(status);
+            setApiKeyInput('');
+            setApiSecretInput('');
+        } catch (err) {
+            setCredentialsError(err instanceof Error ? err.message : 'Unable to save credentials.');
+        } finally {
+            setCredentialsLoading(false);
+        }
+    };
+
+    const handleClearCredentials = async () => {
+        setCredentialsLoading(true);
+        setCredentialsError(null);
+        try {
+            const status = await clearKrakenCredentials();
+            setCredentialsStatus(status);
+        } catch (err) {
+            setCredentialsError(err instanceof Error ? err.message : 'Unable to clear credentials.');
+        } finally {
+            setCredentialsLoading(false);
+        }
+    };
+
+    const handleToggleLive = () => {
+        if (!credentialsStatus.configured) return;
+        setExecutionMode((current) => (current === 'live' ? 'dry-run' : 'live'));
+    };
+
     const handleExecute = async () => {
+        if (executionMode === 'live') {
+            const confirmed = window.confirm(
+                'Live mode places real Kraken orders. Confirm you want to execute live orders.'
+            );
+            if (!confirmed) {
+                return;
+            }
+        }
         setLoading(true);
         setError(null);
         setResult(null);
@@ -137,13 +224,19 @@ function App() {
 
         try {
             const strategy = toStrategyJSON(nodes, edges);
-            const executionResult = await executeDryRun(strategy, validateWithKraken);
+            const executionResult = await executeStrategy(strategy, {
+                mode: executionMode,
+                validate: validateWithKraken,
+            });
             const statusMap: Record<string, NodeStatus> = {};
             executionResult.log.forEach((entry) => {
                 statusMap[entry.nodeId] = mapLogToStatus(entry.status);
             });
             setNodeStatuses(statusMap);
             setResult(executionResult);
+            if (!executionResult.success && executionResult.errors.length > 0) {
+                setError(executionResult.errors[0].message);
+            }
         } catch (err) {
             setError(friendlyError(err));
         } finally {
@@ -241,6 +334,10 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const liveBlocked = executionMode === 'live' && !credentialsStatus.configured;
+    const modeLabel = executionMode === 'live' ? 'Live (real orders)' : 'Dry-run (no live orders)';
+    const executeLabel = executionMode === 'live' ? 'Execute live' : 'Execute workflow';
+    const canClearCredentials = credentialsStatus.source === 'runtime';
 
     return (
         <>
@@ -266,7 +363,9 @@ function App() {
                         Pair: {selectedPair}
                     </button>
                     {pairCatalogError && <span className="chip">{pairCatalogError}</span>}
-                    <span className="mode-pill">Mode: Dry-run (no live orders)</span>
+                    <span className={`mode-pill ${executionMode === 'live' ? 'mode-pill-live' : ''}`}>
+                        Mode: {modeLabel}
+                    </span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setRightRailOpen((v) => !v)}
@@ -276,8 +375,8 @@ function App() {
                     <button className="btn btn-ghost" onClick={handleExportJSON}>
                         Export Strategy Definition
                     </button>
-                    <button className="btn btn-primary" onClick={handleExecute} disabled={loading}>
-                        {loading ? 'Executing workflow...' : 'Execute workflow'}
+                    <button className="btn btn-primary" onClick={handleExecute} disabled={loading || liveBlocked}>
+                        {loading ? 'Executing workflow...' : executeLabel}
                     </button>
                 </div>
             </header>
@@ -303,6 +402,96 @@ function App() {
                 {rightRailOpen && (
                     <div className="right-rail-shell">
                         <div className="right-rail">
+                            <div className="panel">
+                                <div className="panel-title">Execution Mode</div>
+                                <div className="mode-panel">
+                                    <div className="mode-row">
+                                        <div>
+                                            <div className="mode-label">Live Orders</div>
+                                            <div className="mode-subtitle">Real Kraken orders (requires API key)</div>
+                                        </div>
+                                        <button
+                                            className={`btn ${executionMode === 'live' ? 'btn-live' : 'btn-ghost'}`}
+                                            onClick={handleToggleLive}
+                                            disabled={!credentialsStatus.configured || credentialsLoading}
+                                        >
+                                            {executionMode === 'live' ? 'Live On' : 'Live Off'}
+                                        </button>
+                                    </div>
+                                    <div className="mode-status">
+                                        <span
+                                            className={`status-dot ${
+                                                credentialsStatus.configured ? 'status-dot-live' : 'status-dot-muted'
+                                            }`}
+                                        />
+                                        <span>
+                                            Credentials {credentialsStatus.configured ? 'Configured' : 'Not configured'}
+                                        </span>
+                                        {credentialsStatus.configured && (
+                                            <span className="mode-source">Source: {credentialsStatus.source}</span>
+                                        )}
+                                    </div>
+                                    <div className="mode-warning">
+                                        Live mode sends real orders to Kraken. Start small and verify your workflow.
+                                    </div>
+                                    {credentialsError && <div className="chip">{credentialsError}</div>}
+                                    <form className="mode-form" onSubmit={handleSaveCredentials}>
+                                        <div className="field">
+                                            <label htmlFor="kraken-key">Kraken API Key</label>
+                                            <input
+                                                id="kraken-key"
+                                                type="password"
+                                                value={apiKeyInput}
+                                                onChange={(event) => setApiKeyInput(event.target.value)}
+                                                placeholder="Paste your Kraken API key"
+                                                autoComplete="new-password"
+                                                disabled={credentialsLoading}
+                                            />
+                                        </div>
+                                        <div className="field">
+                                            <label htmlFor="kraken-secret">Kraken API Secret</label>
+                                            <input
+                                                id="kraken-secret"
+                                                type="password"
+                                                value={apiSecretInput}
+                                                onChange={(event) => setApiSecretInput(event.target.value)}
+                                                placeholder="Paste your Kraken API secret"
+                                                autoComplete="new-password"
+                                                disabled={credentialsLoading}
+                                            />
+                                        </div>
+                                        <div className="mode-actions">
+                                            <button
+                                                className="btn btn-primary"
+                                                type="submit"
+                                                disabled={
+                                                    credentialsLoading ||
+                                                    !apiKeyInput.trim() ||
+                                                    !apiSecretInput.trim()
+                                                }
+                                            >
+                                                {credentialsLoading
+                                                    ? 'Saving...'
+                                                    : credentialsStatus.configured
+                                                    ? 'Update credentials'
+                                                    : 'Save credentials'}
+                                            </button>
+                                            <button
+                                                className="btn btn-ghost"
+                                                type="button"
+                                                onClick={handleClearCredentials}
+                                                disabled={!canClearCredentials || credentialsLoading}
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <div className="mode-hint">
+                                        Credentials are stored in-memory for this session only.
+                                        {credentialsStatus.source === 'env' && ' Clear env keys in backend config.'}
+                                    </div>
+                                </div>
+                            </div>
                             <div className="panel">
                                 <div className="panel-title">Market Context</div>
                                 {warningMessage && (
