@@ -1,17 +1,20 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 
 export interface RiskNodeData {
     status?: NodeStatus;
     maxSpread?: number;
     pair?: string;
+    disabled?: boolean;
 }
 
-export function RiskNode({ id, data }: NodeProps) {
+export function RiskNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as RiskNodeData) || {};
+    const isDisabled = nodeData.disabled;
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
     const [maxSpread, setMaxSpread] = useState(nodeData.maxSpread ?? 5);
@@ -31,6 +34,7 @@ export function RiskNode({ id, data }: NodeProps) {
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Orderbook Guard</span>

@@ -1,16 +1,20 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 
 export interface StartNodeData {
     status?: NodeStatus;
+    disabled?: boolean;
 }
 
-export function StartNode({ data }: NodeProps) {
+export function StartNode({ id, data, selected }: NodeProps) {
     const nodeData = (data as StartNodeData) || {};
+    const isDisabled = nodeData.disabled;
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Strategy Start</span>

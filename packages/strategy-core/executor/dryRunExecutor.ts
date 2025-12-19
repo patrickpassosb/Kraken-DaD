@@ -110,6 +110,11 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function isNodeDisabled(node: StrategyNode): boolean {
+    const config = node.config as Record<string, unknown>;
+    return Boolean(config?.disabled);
+}
+
 /**
  * control.start - Entry point for control flow
  */
@@ -700,6 +705,32 @@ function topologicalSort(
     return { order };
 }
 
+function collectDependencyNodes(
+    targetNodeId: string,
+    graph: GraphIndex
+): Set<string> {
+    const visited = new Set<string>();
+    const stack = [targetNodeId];
+
+    while (stack.length > 0) {
+        const nodeId = stack.pop()!;
+        if (visited.has(nodeId)) continue;
+        visited.add(nodeId);
+
+        const incoming = [
+            ...(graph.incomingControlEdges.get(nodeId) ?? []),
+            ...(graph.incomingDataEdges.get(nodeId) ?? []),
+        ];
+        for (const edge of incoming) {
+            if (!visited.has(edge.source)) {
+                stack.push(edge.source);
+            }
+        }
+    }
+
+    return visited;
+}
+
 // =============================================================================
 // DATA RESOLUTION
 // =============================================================================
@@ -726,6 +757,16 @@ function resolveInputs(
 
         // Check if TARGET input port is required and value is missing
         if ((value === undefined || value === null) && targetInputPort?.required) {
+            const sourceNode = graph.nodeMap.get(edge.source);
+            if (sourceNode && isNodeDisabled(sourceNode)) {
+                warnings.push({
+                    code: 'DISABLED_INPUT',
+                    message: `Input '${edge.targetPort}' on node '${nodeId}' is missing because source node '${edge.source}' is disabled`,
+                    nodeId,
+                });
+                inputs[edge.targetPort] = null;
+                continue;
+            }
             return {
                 inputs,
                 warnings,
@@ -810,10 +851,45 @@ export function executeDryRun(
     const dataCache = new Map<string, unknown>();
 
     // Step 1 & 2: Build graph index
-    const graph = buildGraphIndex(strategy);
+    const fullGraph = buildGraphIndex(strategy);
+    const targetNodeId = ctx.targetNodeId;
+
+    if (targetNodeId && !fullGraph.nodeMap.has(targetNodeId)) {
+        errors.push({
+            code: 'TARGET_NODE_NOT_FOUND',
+            message: `Target node not found: ${targetNodeId}`,
+            nodeId: targetNodeId,
+        });
+        return {
+            success: false,
+            mode: ctx.mode,
+            startedAt,
+            completedAt: new Date().toISOString(),
+            nodesExecuted: 0,
+            log,
+            errors,
+            warnings,
+            actionIntents,
+        };
+    }
+
+    const strategyToRun = targetNodeId
+        ? (() => {
+              const requiredNodes = collectDependencyNodes(targetNodeId, fullGraph);
+              return {
+                  ...strategy,
+                  nodes: strategy.nodes.filter((node) => requiredNodes.has(node.id)),
+                  edges: strategy.edges.filter(
+                      (edge) => requiredNodes.has(edge.source) && requiredNodes.has(edge.target)
+                  ),
+              };
+          })()
+        : strategy;
+
+    const graph = targetNodeId ? buildGraphIndex(strategyToRun) : fullGraph;
 
     // Step 3: Validate
-    const validation = validateStrategy(strategy, graph);
+    const validation = validateStrategy(strategyToRun, graph);
     errors.push(...validation.errors);
     warnings.push(...validation.warnings);
 
@@ -832,7 +908,7 @@ export function executeDryRun(
     }
 
     // Step 4 & 5: Compute execution order
-    const sortResult = topologicalSort(strategy, graph);
+    const sortResult = topologicalSort(strategyToRun, graph);
     if (sortResult.error) {
         errors.push(sortResult.error);
         return {
@@ -854,6 +930,18 @@ export function executeDryRun(
     for (const nodeId of executionOrder) {
         const node = graph.nodeMap.get(nodeId)!;
         const handler = blockHandlers.get(node.type);
+
+        if (isNodeDisabled(node)) {
+            log.push({
+                nodeId,
+                nodeType: node.type,
+                inputs: {},
+                outputs: {},
+                durationMs: 0,
+                status: 'skipped',
+            });
+            continue;
+        }
 
         if (!handler) {
             errors.push({

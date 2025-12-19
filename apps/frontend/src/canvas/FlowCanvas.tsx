@@ -10,12 +10,12 @@ import {
     Background,
     Controls,
     BackgroundVariant,
-    StepEdge,
-    SimpleBezierEdge,
     useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import FlowEdge from '../edges/FlowEdge';
+import { NodeActionProvider } from '../context/NodeActionContext';
 import { nodeTypes } from '../nodes/nodeTypes';
 import {
     buildTemplateEdges,
@@ -23,6 +23,7 @@ import {
     createNodeWithDefaults,
     nodeDefinitionMap,
     paletteGroups,
+    type NodeTypeId,
 } from '../nodes/nodeRegistry';
 import { NodeStatus } from '../utils/status';
 
@@ -33,6 +34,7 @@ interface FlowCanvasProps {
     initialEdges: Edge[];
     nodeStatuses?: Record<string, NodeStatus>;
     activePair?: string;
+    onRunNode?: (nodeId: string) => void;
 }
 
 const lanes = [
@@ -42,11 +44,43 @@ const lanes = [
     { id: 'execution', label: 'Execution' },
 ];
 
+type PendingInsert = {
+    edgeId: string;
+    position: { x: number; y: number };
+};
+
+type InsertHandles = { in: string; out: string };
+
+const EDGE_STYLE_CONTROL = { stroke: '#8f6bff', strokeWidth: 2 };
+const EDGE_STYLE_DATA = { stroke: '#3bc9db', strokeWidth: 2 };
+
+const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
+    'control.start': null,
+    'data.kraken.ticker': { in: 'control:in', out: 'control:out' },
+    'logic.if': { in: 'control:in', out: 'control:true' },
+    'risk.guard': { in: 'control:in', out: 'control:out' },
+    'action.placeOrder': null,
+    'action.cancelOrder': null,
+    'action.logIntent': null,
+};
+
+function edgeStyleForType(type?: string) {
+    return type === 'control' ? EDGE_STYLE_CONTROL : EDGE_STYLE_DATA;
+}
+
 function nodeHighlight(status?: NodeStatus): string {
     if (status === 'executed') return 'node-highlight-executed';
     if (status === 'running') return 'node-highlight-running';
     if (status === 'error') return 'node-highlight-error';
     return '';
+}
+
+function nodeClassName(status?: NodeStatus, disabled?: boolean): string {
+    const classes = [];
+    const highlight = nodeHighlight(status);
+    if (highlight) classes.push(highlight);
+    if (disabled) classes.push('node-disabled');
+    return classes.join(' ');
 }
 
 function laneIndexForType(type?: string): number {
@@ -68,19 +102,39 @@ export function FlowCanvas({
     initialEdges,
     nodeStatuses,
     activePair = 'BTC/USD',
+    onRunNode,
 }: FlowCanvasProps) {
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [paletteSearch, setPaletteSearch] = useState('');
+    const [pendingInsert, setPendingInsert] = useState<PendingInsert | null>(null);
     const [nodes, setNodes, handleNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, handleEdgesChange] = useEdgesState(initialEdges);
     const { fitView } = useReactFlow();
 
     const edgeTypes = useMemo(
         () => ({
-            control: StepEdge,
-            data: SimpleBezierEdge,
+            control: FlowEdge,
+            data: FlowEdge,
         }),
         []
+    );
+
+    const handleEdgeInsertRequest = useCallback(
+        (edgeId: string, position: { x: number; y: number }) => {
+            setPendingInsert({ edgeId, position });
+            setPaletteOpen(true);
+            setPaletteSearch('');
+        },
+        [setPaletteOpen, setPaletteSearch, setPendingInsert]
+    );
+
+    const edgesWithActions = useMemo(
+        () =>
+            edges.map((edge) => ({
+                ...edge,
+                data: { ...(edge.data as Record<string, unknown>), onInsert: handleEdgeInsertRequest },
+            })),
+        [edges, handleEdgeInsertRequest]
     );
 
     const isValidConnection = useCallback(
@@ -109,16 +163,13 @@ export function FlowCanvas({
         (connection: Connection) => {
             if (!isValidConnection(connection)) return;
 
+            const edgeType = connection.sourceHandle?.startsWith('control') ? 'control' : 'data';
             setEdges((eds) =>
                 addEdge(
                     {
                         ...connection,
-                        type: connection.sourceHandle?.startsWith('control')
-                            ? 'control'
-                            : 'data',
-                        style: connection.sourceHandle?.startsWith('control')
-                            ? { stroke: '#8f6bff', strokeWidth: 2 }
-                            : { stroke: '#3bc9db', strokeWidth: 2 },
+                        type: edgeType,
+                        style: edgeStyleForType(edgeType),
                     },
                     eds
                 )
@@ -145,8 +196,9 @@ export function FlowCanvas({
         setNodes(templateNodes);
         setEdges(buildTemplateEdges());
         setPaletteOpen(false);
+        setPendingInsert(null);
         fitView({ padding: 0.2, duration: 300 });
-    }, [activePair, fitView, setEdges, setNodes]);
+    }, [activePair, fitView, setEdges, setNodes, setPendingInsert]);
 
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
@@ -162,15 +214,58 @@ export function FlowCanvas({
             }
 
             const id = `${type}-${Date.now()}`;
-            const newNode = createNodeWithDefaults(meta.type, id, position);
+            const insertEdge = pendingInsert
+                ? edges.find((edge) => edge.id === pendingInsert.edgeId)
+                : undefined;
+            const insertHandles =
+                insertEdge && insertEdge.type === 'control'
+                    ? CONTROL_INSERT_HANDLES[type as NodeTypeId]
+                    : null;
+            const insertPosition = pendingInsert?.position
+                ? { x: pendingInsert.position.x - 140, y: pendingInsert.position.y - 80 }
+                : undefined;
+            if (pendingInsert && (!insertEdge || !insertHandles)) {
+                setPendingInsert(null);
+            }
+            const targetPosition = pendingInsert ? insertPosition : position;
+            const newNode = createNodeWithDefaults(meta.type, id, targetPosition);
             if (newNode.data && typeof newNode.data === 'object') {
                 if ('pair' in newNode.data) {
                     (newNode.data as Record<string, unknown>).pair = activePair;
                 }
             }
             setNodes((nds) => [...nds, newNode]);
+            if (pendingInsert && insertEdge && insertHandles) {
+                const edgeType = insertEdge.type ?? 'control';
+                const style = insertEdge.style ?? edgeStyleForType(edgeType);
+                setEdges((eds) => {
+                    const withoutEdge = eds.filter((edge) => edge.id !== insertEdge.id);
+                    const edgeIn: Edge = {
+                        id: `e-${insertEdge.source}-${id}-in`,
+                        source: insertEdge.source,
+                        sourceHandle: insertEdge.sourceHandle,
+                        target: id,
+                        targetHandle: insertHandles.in,
+                        type: edgeType,
+                        style,
+                    };
+                    const edgeOut: Edge = {
+                        id: `e-${id}-${insertEdge.target}-out`,
+                        source: id,
+                        sourceHandle: insertHandles.out,
+                        target: insertEdge.target,
+                        targetHandle: insertEdge.targetHandle,
+                        type: edgeType,
+                        style,
+                    };
+                    return [...withoutEdge, edgeIn, edgeOut];
+                });
+                setPendingInsert(null);
+                setPaletteOpen(false);
+                return;
+            }
         },
-        [activePair, nodes, setNodes]
+        [activePair, edges, nodes, pendingInsert, setEdges, setNodes, setPendingInsert]
     );
 
     useEffect(() => {
@@ -178,10 +273,14 @@ export function FlowCanvas({
         setNodes((nds) =>
             nds.map((node) => {
                 const status = nodeStatuses[node.id] || 'idle';
+                const disabled =
+                    node.data && typeof node.data === 'object'
+                        ? Boolean((node.data as Record<string, unknown>).disabled)
+                        : false;
                 return {
                     ...node,
                     data: { ...node.data, status },
-                    className: nodeHighlight(status),
+                    className: nodeClassName(status, disabled),
                 };
             })
         );
@@ -204,6 +303,43 @@ export function FlowCanvas({
             setEdges((eds) => eds.filter((e) => !deletedIds.has(e.id)));
         },
         [setEdges]
+    );
+
+    const handleRunNode = useCallback(
+        (nodeId: string) => {
+            onRunNode?.(nodeId);
+        },
+        [onRunNode]
+    );
+
+    const handleToggleNodeDisabled = useCallback(
+        (nodeId: string) => {
+            setNodes((nds) =>
+                nds.map((node) => {
+                    if (node.id !== nodeId) return node;
+                    const data =
+                        node.data && typeof node.data === 'object'
+                            ? (node.data as Record<string, unknown>)
+                            : {};
+                    const disabled = !Boolean(data.disabled);
+                    const status = data.status as NodeStatus | undefined;
+                    return {
+                        ...node,
+                        data: { ...data, disabled },
+                        className: nodeClassName(status, disabled),
+                    };
+                })
+            );
+        },
+        [setNodes]
+    );
+
+    const handleDeleteNode = useCallback(
+        (nodeId: string) => {
+            setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+            setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+        },
+        [setEdges, setNodes]
     );
 
     const handleFitView = useCallback(() => {
@@ -305,26 +441,49 @@ export function FlowCanvas({
         return () => window.removeEventListener('keydown', handler);
     }, [handleFitView, handleTidyLayout]);
 
+    const insertableTypes = useMemo(() => {
+        if (!pendingInsert) return null;
+        const edge = edges.find((item) => item.id === pendingInsert.edgeId);
+        if (!edge || edge.type !== 'control') return new Set<string>();
+        return new Set(
+            Object.entries(CONTROL_INSERT_HANDLES)
+                .filter(([, handles]) => handles)
+                .map(([type]) => type)
+        );
+    }, [edges, pendingInsert]);
+
     const filteredGroups = useMemo(() => {
         const term = paletteSearch.trim().toLowerCase();
-        if (!term) return paletteGroups;
+        const matchesInsert = (type: string) =>
+            !insertableTypes || insertableTypes.has(type);
         return paletteGroups
             .map((group) => ({
                 ...group,
-                items: group.items.filter(
-                    (item) =>
+                items: group.items.filter((item) => {
+                    if (!matchesInsert(item.type)) return false;
+                    if (!term) return true;
+                    return (
                         item.label.toLowerCase().includes(term) ||
                         item.role.toLowerCase().includes(term) ||
                         item.description.toLowerCase().includes(term)
-                ),
+                    );
+                }),
             }))
             .filter((g) => g.items.length > 0);
-    }, [paletteSearch]);
+    }, [insertableTypes, paletteSearch]);
 
     return (
         <div className="canvas-panel">
             <div className="canvas-shell">
-                <button className="palette-toggle btn btn-ghost" onClick={() => setPaletteOpen((v) => !v)}>
+                <button
+                    className="palette-toggle btn btn-ghost"
+                    onClick={() =>
+                        setPaletteOpen((v) => {
+                            if (v) setPendingInsert(null);
+                            return !v;
+                        })
+                    }
+                >
                     {paletteOpen ? 'Hide Strategy Blocks' : 'Show Strategy Blocks'}
                 </button>
                 <div className="canvas-controls">
@@ -347,6 +506,17 @@ export function FlowCanvas({
                 {paletteOpen && (
                     <div className="palette-floating panel">
                         <div className="panel-title">Strategy Blocks</div>
+                        {pendingInsert && (
+                            <div className="palette-insert-banner">
+                                <span>Insert into selected control line</span>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => setPendingInsert(null)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
                         <input
                             className="palette-search"
                             placeholder="Search blocks..."
@@ -401,28 +571,36 @@ export function FlowCanvas({
                         </div>
                     </div>
                 )}
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={handleEdgesChange}
-                    onConnect={onConnect}
-                    isValidConnection={isValidConnection}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    onNodesDelete={onNodesDelete}
-                    onEdgesDelete={onEdgesDelete}
-                    deleteKeyCode={['Backspace', 'Delete']}
-                    nodesDraggable
-                    nodesConnectable
-                    elementsSelectable
-                    fitView
-                    snapToGrid
-                    snapGrid={[20, 20]}
+                <NodeActionProvider
+                    value={{
+                        runNode: handleRunNode,
+                        toggleNodeDisabled: handleToggleNodeDisabled,
+                        deleteNode: handleDeleteNode,
+                    }}
                 >
-                    <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#20263a" />
-                    <Controls />
-                </ReactFlow>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edgesWithActions}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={handleEdgesChange}
+                        onConnect={onConnect}
+                        isValidConnection={isValidConnection}
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                        onNodesDelete={onNodesDelete}
+                        onEdgesDelete={onEdgesDelete}
+                        deleteKeyCode={['Backspace', 'Delete']}
+                        nodesDraggable
+                        nodesConnectable
+                        elementsSelectable
+                        fitView
+                        snapToGrid
+                        snapGrid={[20, 20]}
+                    >
+                        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#20263a" />
+                        <Controls />
+                    </ReactFlow>
+                </NodeActionProvider>
             </div>
         </div>
     );

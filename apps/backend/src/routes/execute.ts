@@ -37,6 +37,7 @@ interface ExecuteRequestBody {
     strategy: Strategy;
     validate?: boolean;
     mode?: ExecutionMode;
+    targetNodeId?: string;
 }
 
 interface ErrorResponseBody {
@@ -84,6 +85,7 @@ export async function executeRoute(fastify: FastifyInstance) {
                         },
                         validate: { type: 'boolean' },
                         mode: { type: 'string', enum: ['dry-run', 'live'] },
+                        targetNodeId: { type: 'string' },
                     },
                 },
                 response: {
@@ -115,9 +117,10 @@ export async function executeRoute(fastify: FastifyInstance) {
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
             const { strategy, validate } = request.body;
             const mode: ExecutionMode = request.body.mode ?? 'dry-run';
+            const targetNodeId = request.body.targetNodeId;
 
             try {
-                const result = await runExecution(strategy, fastify, mode, validate);
+                const result = await runExecution(strategy, fastify, mode, validate, targetNodeId);
                 return reply.status(200).send(result);
             } catch (err) {
                 const message = err instanceof Error ? err.message : 'Execution failed';
@@ -162,6 +165,7 @@ export async function executeRoute(fastify: FastifyInstance) {
                             },
                         },
                         validate: { type: 'boolean' },
+                        targetNodeId: { type: 'string' },
                     },
                 },
                 response: {
@@ -186,7 +190,8 @@ export async function executeRoute(fastify: FastifyInstance) {
         },
         async (request: FastifyRequest<{ Body: ExecuteRequestBody }>, reply: FastifyReply) => {
             const { strategy, validate } = request.body;
-            const result = await runExecution(strategy, fastify, 'dry-run', validate);
+            const targetNodeId = request.body.targetNodeId;
+            const result = await runExecution(strategy, fastify, 'dry-run', validate, targetNodeId);
             return reply.status(200).send(result);
         }
     );
@@ -299,13 +304,15 @@ async function runExecution(
     strategy: Strategy,
     fastify: FastifyInstance,
     mode: ExecutionMode,
-    validate?: boolean
+    validate?: boolean,
+    targetNodeId?: string
 ): Promise<ExecutionResult> {
     const { marketData, warnings: marketWarnings } = await buildMarketData(strategy, fastify);
 
     const ctx: ExecutionContext = {
         mode,
         marketData,
+        targetNodeId,
     };
 
     const result: ExecutionResult = executeDryRun(strategy, ctx);

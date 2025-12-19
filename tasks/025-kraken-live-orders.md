@@ -40,6 +40,7 @@ Users cannot enable real order execution because there is no credential storage 
 - [x] Execution uses live mode only when explicitly enabled; dry-run remains default
 - [x] README documents live-mode setup, safety notes, and rollback/disable steps
 - [x] Settings engine icon in bottom-left opens app settings with API credential + execution mode controls
+- [x] Execution amount input clamps to non-negative when using number spinner
 
 ---
 

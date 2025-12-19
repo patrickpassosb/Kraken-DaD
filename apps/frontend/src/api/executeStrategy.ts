@@ -77,7 +77,7 @@ export interface Strategy {
 
 export async function executeStrategy(
     strategy: Strategy,
-    options: { mode?: ExecutionMode; validate?: boolean } = {}
+    options: { mode?: ExecutionMode; validate?: boolean; targetNodeId?: string } = {}
 ): Promise<ExecutionResult> {
     const response = await fetch(`${API_BASE}/execute`, {
         method: 'POST',
@@ -88,6 +88,7 @@ export async function executeStrategy(
             strategy,
             validate: options.validate,
             mode: options.mode,
+            targetNodeId: options.targetNodeId,
         }),
     });
 

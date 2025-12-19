@@ -209,41 +209,57 @@ function App() {
         setExecutionMode((current) => (current === 'live' ? 'dry-run' : 'live'));
     };
 
-    const handleExecute = async () => {
-        if (executionMode === 'live') {
-            const confirmed = window.confirm(
-                'Live mode places real Kraken orders. Confirm you want to execute live orders.'
-            );
-            if (!confirmed) {
-                return;
+    const runStrategy = useCallback(
+        async (targetNodeId?: string) => {
+            if (executionMode === 'live') {
+                const message = targetNodeId
+                    ? 'Live mode places real Kraken orders. Confirm you want to execute this node live.'
+                    : 'Live mode places real Kraken orders. Confirm you want to execute live orders.';
+                const confirmed = window.confirm(message);
+                if (!confirmed) {
+                    return;
+                }
             }
-        }
-        setLoading(true);
-        setError(null);
-        setResult(null);
-        setNodeStatuses({});
+            setLoading(true);
+            setError(null);
+            setResult(null);
+            setNodeStatuses({});
 
-        try {
-            const strategy = toStrategyJSON(nodes, edges);
-            const executionResult = await executeStrategy(strategy, {
-                mode: executionMode,
-                validate: validateWithKraken,
-            });
-            const statusMap: Record<string, NodeStatus> = {};
-            executionResult.log.forEach((entry) => {
-                statusMap[entry.nodeId] = mapLogToStatus(entry.status);
-            });
-            setNodeStatuses(statusMap);
-            setResult(executionResult);
-            if (!executionResult.success && executionResult.errors.length > 0) {
-                setError(executionResult.errors[0].message);
+            try {
+                const strategy = toStrategyJSON(nodes, edges);
+                const executionResult = await executeStrategy(strategy, {
+                    mode: executionMode,
+                    validate: validateWithKraken,
+                    targetNodeId,
+                });
+                const statusMap: Record<string, NodeStatus> = {};
+                executionResult.log.forEach((entry) => {
+                    statusMap[entry.nodeId] = mapLogToStatus(entry.status);
+                });
+                setNodeStatuses(statusMap);
+                setResult(executionResult);
+                if (!executionResult.success && executionResult.errors.length > 0) {
+                    setError(executionResult.errors[0].message);
+                }
+            } catch (err) {
+                setError(friendlyError(err));
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            setError(friendlyError(err));
-        } finally {
-            setLoading(false);
-        }
+        },
+        [edges, executionMode, nodes, validateWithKraken]
+    );
+
+    const handleExecute = () => {
+        void runStrategy();
     };
+
+    const handleRunNode = useCallback(
+        (nodeId: string) => {
+            void runStrategy(nodeId);
+        },
+        [runStrategy]
+    );
 
     const handleExportJSON = () => {
         const strategy = toStrategyJSON(nodes, edges);
@@ -397,6 +413,7 @@ function App() {
                         onEdgesChange={handleEdgesChange}
                         nodeStatuses={nodeStatuses}
                         activePair={selectedPair}
+                        onRunNode={handleRunNode}
                     />
                 </ReactFlowProvider>
 

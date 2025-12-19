@@ -1,17 +1,21 @@
 import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatPair } from '../utils/format';
 import { NodeStatus } from '../utils/status';
 
 export interface KrakenTickerNodeData {
     pair?: string;
     status?: NodeStatus;
+    disabled?: boolean;
 }
 
-export function KrakenTickerNode({ id, data }: NodeProps) {
+export function KrakenTickerNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
-    const [pair, setPair] = useState((data as KrakenTickerNodeData)?.pair || 'BTC/USD');
+    const nodeData = (data as KrakenTickerNodeData) || {};
+    const [pair, setPair] = useState(nodeData?.pair || 'BTC/USD');
+    const isDisabled = nodeData.disabled;
 
     const handlePairChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +34,7 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
 
     return (
         <div className="node-card">
+            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
             <div className="node-head">
                 <div className="node-title">
                     <span>Market Data</span>
@@ -62,7 +67,7 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
                 </div>
             </div>
             <div className="node-footer">
-                <StatusPill status={(data as KrakenTickerNodeData)?.status} />
+                <StatusPill status={nodeData.status} />
                 <span>Waiting for market tick</span>
             </div>
             <Handle
