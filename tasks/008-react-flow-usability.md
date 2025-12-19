@@ -30,6 +30,7 @@
  - [ ] UI supports running a specific node and reflects node status updates from the response  
  - [ ] Template load and Tidy Up place nodes in clean lanes/columns without overlapping edges
 - [ ] Nodes show a single visible handle/edge per connection (data edges are implicit)
+- [x] If node has only one data handle (remove the second data handle)
 - [ ] Conditional nodes only allow actions on the chosen branch (false paths do not trigger live orders)
 - [ ] Settings panel warns that live mode is in test and not ready
 
