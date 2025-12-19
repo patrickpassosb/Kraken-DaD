@@ -356,6 +356,9 @@ function App() {
                     </div>
                 </div>
                 <div className="header-actions">
+                    <span className={`mode-pill ${executionMode === 'live' ? 'mode-pill-live' : ''}`}>
+                        Mode: {modeLabel}
+                    </span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setPairSelectorOpen(true)}
@@ -364,9 +367,6 @@ function App() {
                         Pair: {selectedPair}
                     </button>
                     {pairCatalogError && <span className="chip">{pairCatalogError}</span>}
-                    <span className={`mode-pill ${executionMode === 'live' ? 'mode-pill-live' : ''}`}>
-                        Mode: {modeLabel}
-                    </span>
                     <button
                         className="btn btn-ghost"
                         onClick={() => setRightRailOpen((v) => !v)}
@@ -488,7 +488,14 @@ function App() {
             title="Settings"
         >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9 3.5c0-.6-.1-1.2-.2-1.7l2.1-1.6-2-3.5-2.5 1c-.8-.7-1.6-1.2-2.6-1.6l-.4-2.6H8.6l-.4 2.6c-1 .4-1.8.9-2.6 1.6l-2.5-1-2 3.5 2.1 1.6c-.1.5-.2 1.1-.2 1.7s.1 1.2.2 1.7l-2.1 1.6 2 3.5 2.5-1c.8.7 1.6 1.2 2.6 1.6l.4 2.6h6.8l.4-2.6c1-.4 1.8-.9 2.6-1.6l2.5 1 2-3.5-2.1-1.6c.1-.5.2-1.1.2-1.7Z" />
+                <path
+                    className="gear-outer"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.11-.2-.36-.28-.57-.2l-2.39.96c-.5-.38-1.04-.69-1.63-.94l-.36-2.54a.47.47 0 0 0-.45-.38H9.13c-.23 0-.42.16-.45.38l-.36 2.54c-.59.25-1.13.56-1.63.94l-2.39-.96c-.21-.08-.46 0-.57.2l-1.92 3.32c-.11.2-.06.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.11.2.36.28.57.2l2.39-.96c.5.38 1.04.69 1.63.94l.36 2.54c.03.22.22.38.45.38h4.74c.23 0 .42-.16.45-.38l.36-2.54c.59-.25 1.13-.56 1.63-.94l2.39.96c.21.08.46 0 .57-.2l1.92-3.32c.11-.2.06-.47-.12-.61l-2.03-1.58ZM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2Z"
+                />
+                <circle className="gear-ring" cx="12" cy="12" r="3.2" />
+                <circle className="gear-core" cx="12" cy="12" r="2" />
             </svg>
         </button>
         {settingsOpen && (
