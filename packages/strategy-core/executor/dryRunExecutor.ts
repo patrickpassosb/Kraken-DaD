@@ -110,6 +110,19 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function normalizeOrderType(value: unknown): 'market' | 'limit' {
+    return value === 'limit' ? 'limit' : 'market';
+}
+
+function normalizePrice(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+}
+
 function isNodeDisabled(node: StrategyNode): boolean {
     const config = node.config as Record<string, unknown>;
     return Boolean(config?.disabled);
@@ -257,9 +270,13 @@ blockDefinitions.set('action.placeOrder', {
 blockHandlers.set('action.placeOrder', (node, inputs, _ctx) => {
     const pair = (node.config.pair as string) ?? 'XBT/USD';
     const side = (node.config.side as string) ?? 'buy';
-    const type = (node.config.type as string) ?? 'market';
+    const rawType = normalizeOrderType(node.config.type);
     const amount = (node.config.amount as number) ?? 0.1;
-    const price = (inputs.price as number) ?? node.config.price;
+    const inputPrice = normalizePrice(inputs.price);
+    const configPrice = normalizePrice(node.config.price);
+    const resolvedPrice = inputPrice ?? configPrice;
+    const hasLimitReference = resolvedPrice !== undefined;
+    const resolvedType: 'market' | 'limit' = hasLimitReference ? 'limit' : rawType;
 
     const actionIntent: ActionIntent = {
         nodeId: node.id,
@@ -269,9 +286,9 @@ blockHandlers.set('action.placeOrder', (node, inputs, _ctx) => {
             params: {
                 pair,
                 side,
-                type,
+                type: resolvedType,
                 amount,
-                ...(price !== undefined && { price }),
+                ...(resolvedType === 'limit' && hasLimitReference && { price: resolvedPrice }),
             },
         },
         executed: false,
