@@ -489,8 +489,10 @@ export function FlowCanvas({
 
         const controlEdges = edges.filter((e) => e.type === 'control');
         const incoming = new Map<string, string[]>();
+        const outgoing = new Map<string, string[]>();
         controlEdges.forEach(({ source, target }) => {
             incoming.set(target, [...(incoming.get(target) ?? []), source]);
+            outgoing.set(source, [...(outgoing.get(source) ?? []), target]);
         });
 
         const memo = new Map<string, number>();
@@ -508,37 +510,87 @@ export function FlowCanvas({
             return depth;
         };
 
-        const columns = new Map<number, Node[]>();
-        nodes.forEach((node) => {
-            const controlDepth = depthFor(node.id);
-            const bucket = columns.get(controlDepth) ?? [];
-            bucket.push(node);
-            columns.set(controlDepth, bucket);
-        });
+        const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+        const byNodeOrder = (aId: string, bId: string) => {
+            const a = nodeMap.get(aId);
+            const b = nodeMap.get(bId);
+            return (
+                laneIndexForType(a?.type) - laneIndexForType(b?.type) ||
+                (a?.position?.y ?? 0) - (b?.position?.y ?? 0) ||
+                aId.localeCompare(bId)
+            );
+        };
 
-        const layoutPositions = new Map<string, { x: number; y: number }>();
+        const rowById = new Map<string, number>();
+        let nextRow = 0;
+        const claimRow = () => nextRow++;
+        const rowVisit = new Set<string>();
+
+        const assignRows = (id: string) => {
+            if (rowVisit.has(id)) return;
+            rowVisit.add(id);
+            if (!rowById.has(id)) {
+                rowById.set(id, claimRow());
+            }
+            const baseRow = rowById.get(id) ?? 0;
+            const children = (outgoing.get(id) ?? []).slice().sort(byNodeOrder);
+            children.forEach((childId, index) => {
+                if (!rowById.has(childId)) {
+                    rowById.set(childId, index === 0 ? baseRow : claimRow());
+                }
+                assignRows(childId);
+            });
+            rowVisit.delete(id);
+        };
+
+        nodes
+            .filter((node) => !incoming.has(node.id))
+            .map((node) => node.id)
+            .sort(byNodeOrder)
+            .forEach((rootId) => assignRows(rootId));
+
+        nodes
+            .filter((node) => !rowById.has(node.id))
+            .map((node) => node.id)
+            .sort(byNodeOrder)
+            .forEach((nodeId) => {
+                rowById.set(nodeId, claimRow());
+            });
+
+        const NODE_HEIGHT_FALLBACK = 220;
+        const ROW_GAP = 120;
         const xStart = 240;
         const yStart = 220;
         const xSpacing = 300;
-        const stackSpacing = 170;
+        const rowHeights = new Map<number, number>();
+        rowById.forEach((row, nodeId) => {
+            const node = nodeMap.get(nodeId);
+            const height = node?.height ?? NODE_HEIGHT_FALLBACK;
+            rowHeights.set(row, Math.max(rowHeights.get(row) ?? 0, height));
+        });
 
-        Array.from(columns.entries())
-            .sort(([a], [b]) => a - b)
-            .forEach(([col, bucket]) => {
-                bucket
-                    .sort(
-                        (a, b) =>
-                            laneIndexForType(a.type) - laneIndexForType(b.type) ||
-                            (a.position?.y ?? 0) - (b.position?.y ?? 0) ||
-                            a.id.localeCompare(b.id)
-                    )
-                    .forEach((node, idx) => {
-                        layoutPositions.set(node.id, {
-                            x: snapToGrid(xStart + col * xSpacing),
-                            y: snapToGrid(yStart + idx * stackSpacing),
-                        });
-                    });
+        const rowCenters = new Map<number, number>();
+        let cursorY = yStart;
+        Array.from(rowHeights.keys())
+            .sort((a, b) => a - b)
+            .forEach((row) => {
+                const height = rowHeights.get(row) ?? NODE_HEIGHT_FALLBACK;
+                rowCenters.set(row, cursorY + height / 2);
+                cursorY += height + ROW_GAP;
             });
+
+        const layoutPositions = new Map<string, { x: number; y: number }>();
+
+        nodes.forEach((node) => {
+            const controlDepth = depthFor(node.id);
+            const row = rowById.get(node.id) ?? 0;
+            const height = node.height ?? NODE_HEIGHT_FALLBACK;
+            const rowCenter = rowCenters.get(row) ?? yStart;
+            layoutPositions.set(node.id, {
+                x: snapToGrid(xStart + controlDepth * xSpacing),
+                y: rowCenter - height / 2,
+            });
+        });
 
         setNodes((nds) =>
             nds.map((node) => {

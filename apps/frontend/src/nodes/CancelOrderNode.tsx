@@ -72,14 +72,14 @@ export function CancelOrderNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:trigger"
                 className="control"
-                style={{ top: '60%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="target"
                 position={Position.Left}
                 id="data:orderId"
                 className="data"
-                style={{ top: '80%' }}
+                style={{ top: '50%' }}
             />
         </div>
     );

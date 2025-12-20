@@ -75,21 +75,21 @@ export function KrakenTickerNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:in"
                 className="control"
-                style={{ top: '80%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="data:price"
                 className="data"
-                style={{ top: '60%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:out"
                 className="control"
-                style={{ top: '80%' }}
+                style={{ top: '50%' }}
             />
         </div>
     );

@@ -71,14 +71,14 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:in"
                 className="control"
-                style={{ top: '45%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="target"
                 position={Position.Left}
                 id="data:price"
                 className="data"
-                style={{ top: '70%' }}
+                style={{ top: '50%' }}
             />
         </div>
     );
