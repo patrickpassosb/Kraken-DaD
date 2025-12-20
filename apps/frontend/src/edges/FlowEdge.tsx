@@ -79,7 +79,7 @@ function FlowEdge({
     } else {
         const midX = (sourceX + targetX) / 2;
         const midY = sourceY + EDGE_PADDING_BOTTOM + offset;
-        const first = getSmoothStepPath({
+        const [firstPath] = getSmoothStepPath({
             sourceX,
             sourceY,
             targetX: midX,
@@ -89,7 +89,7 @@ function FlowEdge({
             borderRadius: EDGE_BORDER_RADIUS,
             offset: EDGE_PADDING_X,
         });
-        const second = getSmoothStepPath({
+        const [secondPath] = getSmoothStepPath({
             sourceX: midX,
             sourceY: midY,
             targetX,
@@ -99,7 +99,10 @@ function FlowEdge({
             borderRadius: EDGE_BORDER_RADIUS,
             offset: EDGE_PADDING_X,
         });
-        segments = [first, second];
+        segments = [
+            [firstPath, midX, midY],
+            [secondPath, midX, midY],
+        ];
         labelX = midX;
         labelY = midY;
     }
