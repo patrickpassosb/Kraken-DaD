@@ -2,6 +2,10 @@
 
 Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in **dry-run by default** with an **explicit live mode** for real orders. It pairs a React Flow UI with a Fastify backend and a shared TypeScript strategy core. The UI, blocks, and copy are aligned to Kraken Pro, and market data comes from Kraken’s public APIs.
 
+## Demo assets
+- Demo video: TODO (add link)
+- Live prototype (optional): TODO (add link)
+
 ## What’s Included (quick tour)
 - **Visual Strategy Canvas**: React Flow nodes/edges with type-safe handles (`control:*`, `data:*`), delete/selection support, one-start-node guard, and lane layout.
 - **Strategy Core**: Shared schema + dry-run executor that validates the graph, orders control flow, executes block handlers, and returns structured execution results.
@@ -12,13 +16,20 @@ Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in *
 - **Safety-first**: Dry-run enforced by default; private calls are gated and server-side; no credentials stored client-side.
 - **Open source (MIT License)**: See `LICENSE`.
 
-## Demo walkthrough (what judges should see)
+## Judge walkthrough
 1) Open the app (blank canvas).
 2) Use the empty-state CTA: **Add Strategy Start** or **Start with template** (drops Start → Market Data → Condition → Execution).
 3) Optionally open **Strategy Blocks** and drag blocks to tweak.
 4) Click **Execute workflow** (dry-run); see Order Preview and summary update.
 5) Pan/zoom then press **Recenter** or **R** to fit the flow.
 6) Export **Kraken Strategy Definition** (JSON).
+
+## Judge checklist
+- [ ] Demo video link works
+- [ ] Kraken API usage is visible in README
+- [ ] Dry-run vs live safety is clearly explained
+- [ ] Reusability docs and strategy JSON example included
+- [ ] Demo walkthrough steps match UI
 
 ## Features
 - Blank-start canvas with empty-state CTA and one-click template.
@@ -27,6 +38,11 @@ Kraken DaD is a **Kraken-native, drag-and-drop strategy builder** that runs in *
 - Recenter control + keyboard shortcut (**R**) to refit the canvas.
 - Live Market Context + Order Preview using Kraken data (fallback to mock with warning).
 - Export strategy JSON; optional live mode with server-side credentials.
+
+## Docs
+- Reuse the strategy builder: `docs/strategy-builder-reuse.md`
+- Strategy JSON example: `docs/strategy-json-example.md`
+- Add a new block: `docs/add-block-guide.md`
 
 ## Architecture snapshot
 - **apps/frontend**: React + React Flow, Kraken Pro styling, controls/rails/palette.
@@ -99,6 +115,7 @@ flowchart LR
 
 ## Kraken API Usage
 - **Public market data**: Backend fetches `/0/public/Ticker` and `/0/public/Depth` for strategy pairs, injects snapshots into `ExecutionContext.marketData`, and serves `GET /market/context` for the UI (Market Context dock + order preview). Dry-run execution now uses real Kraken prices where available (fallback to mock if unreachable).
+- **Streaming path**: Kraken WS → backend SSE `GET /market/stream` → frontend `useMarketStream` hook for live ticker updates.
 - **Private endpoints (safe by default)**: `packages/kraken-client` includes HMAC signing for `AddOrder`/`CancelOrder` with live order support gated by explicit UI opt-in. Credentials are stored server-side only (in-memory for runtime, or from env) and never returned to the frontend.
 - **UI transparency**: Mode controls call out dry-run vs live execution and warn about real trades.
 
@@ -117,6 +134,12 @@ Frontend
 cd apps/frontend
 npm install
 npm run dev  # http://127.0.0.1:3000
+```
+
+Tests
+```bash
+npm install
+npm test
 ```
 
 Frontend API base URL
@@ -138,6 +161,7 @@ Mode & Safety
 ## API Endpoints
 - `GET /health` — simple health check.
 - `GET /market/context?pair=BTC/USD` — Kraken Ticker + Depth snapshot (pair, lastPrice, bid/ask, spread, change24h).
+- `GET /market/stream?pair=BTC/USD` — SSE stream backed by Kraken WS ticker feed.
 - `POST /execute` — body `{ strategy: Strategy, mode?: 'dry-run' | 'live', validate?: boolean }`; returns `ExecutionResult`.
 - `POST /execute/dry-run` — body `{ strategy: Strategy }`; backward-compatible dry-run execution.
 - `GET /kraken/credentials/status` — credential status flag (configured + source).
@@ -172,10 +196,9 @@ Live mode only runs when explicitly enabled in the UI; dry-run remains the defau
 - [ ] README updated (this file) with Quickstart, architecture, safety, and usage.
 - [ ] MIT license present.
 - [ ] Demo video link added.
+- [ ] Live prototype URL added (optional).
 - [ ] Prototype runs locally (frontend + backend) with dry-run flow.
 - [ ] Strategy JSON export works.
 
 ## Next Steps (if extending)
-- Wire optional validate-only order intents into execution logs for deeper Kraken transparency.
-- Add WS market streams for lower-latency updates to the Market Data node.
 - Add more Kraken-native blocks (orderbook guard, OHLC-derived signals, spread guards) using the shared `kraken-client`.

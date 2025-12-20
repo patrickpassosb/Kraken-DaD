@@ -120,6 +120,39 @@ Extend existing state to carry execution mode/validate-only flags, WS status, an
 
 ---
 
+
+## 9.1 Improvement Impact Assessment
+
+- Presentation/Documentation (demo video link, optional live URL, judge walkthrough/checklist)
+  - Break risk: Low
+  - Structural depth: None (docs-only)
+  - Touches: `README.md`, `docs/` (new walkthrough/checklist)
+  - Mitigation: Use placeholders until assets are ready; keep links stable
+  - Hackathon value: High (documentation + presentation)
+- Reusability docs (component API, events, data model, example strategy JSON, add-block guide)
+  - Break risk: Low (docs-only); Medium if you extract a reusable package
+  - Structural depth: None for docs; Medium for extraction
+  - Touches: `docs/` (new guides), `README.md` (entry points)
+  - Mitigation: Start with docs-only; keep component API stable if later extracted
+  - Hackathon value: High (reusability criterion)
+- Technical execution (schema validation + unit tests in strategy-core)
+  - Break risk: Medium (validation can reject previously accepted graphs)
+  - Structural depth: Medium (shared core used by frontend/backend)
+  - Touches: `packages/strategy-core/*`, test files under `packages/strategy-core`, `package.json` scripts
+  - Mitigation: Add non-breaking validation paths first; cover fixtures; gate strict validation behind a flag
+  - Hackathon value: High (technical execution + correctness)
+- UX & clarity (Kraken API source badge/timestamp)
+  - Break risk: Low
+  - Structural depth: Low (UI + optional API field)
+  - Touches: `apps/frontend/src/components/MarketContextDock.tsx`, `apps/frontend/src/components/OrderPreviewPanel.tsx`, `apps/frontend/src/App.tsx`, `apps/frontend/src/styles/theme.css`; optional `apps/frontend/src/api/marketContext.ts`, `apps/backend/src/routes/market/context.ts`
+  - Mitigation: Make badge optional; fallback text when timestamp missing
+  - Hackathon value: Medium (Kraken integration visibility + UX clarity)
+- Innovation/depth (Kraken WS stream OR validate-only order intent visualization)
+  - WS stream: Break risk Medium-High; Structural depth High; touches `packages/kraken-client`, backend stream route/proxy, frontend stream hook/state
+  - Validate-only intent: Break risk Medium; Structural depth Medium; touches `packages/strategy-core`, backend execute/validate path, frontend execution summary
+  - Mitigation: Feature-flag both; fallback to REST/dry-run; show connection/status errors without blocking
+  - Hackathon value: High for innovation/technical execution, but higher complexity
+
 ## 10. Task Completion Tracking
 
 Track backlog items and criteria coverage in this file; mark success criteria checkboxes upon completion.

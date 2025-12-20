@@ -371,6 +371,8 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const validationSkipped = result?.warnings.find((warning) => warning.code === 'VALIDATE_SKIPPED');
+    const validationResults = result?.krakenValidations ?? [];
     const liveBlocked = executionMode === 'live' && !credentialsStatus.configured;
     const modeLabel = executionMode === 'live' ? 'Live (real orders)' : 'Dry-run (no live orders)';
     const executeLabel = executionMode === 'live' ? 'Execute live' : 'Execute workflow';
@@ -506,6 +508,35 @@ function App() {
                                         </>
                                     )}
                                 </div>
+                                {result && (
+                                    <div className="summary-card validation-card" style={{ marginTop: '12px' }}>
+                                        <h4>Kraken Validate</h4>
+                                        {result.mode === 'live' ? (
+                                            <div className="value muted">Validation runs in dry-run mode only.</div>
+                                        ) : validationSkipped ? (
+                                            <div className="value muted">{validationSkipped.message}</div>
+                                        ) : validationResults.length > 0 ? (
+                                            <div className="validation-list">
+                                                {validationResults.map((validation, index) => (
+                                                    <div key={`${validation.nodeId}-${validation.action}-${index}`} className="validation-row">
+                                                        <div className="validation-main">
+                                                            <div className="validation-action">{validation.action}</div>
+                                                            <div className="validation-node">{validation.nodeId}</div>
+                                                            {validation.detail && (
+                                                                <div className="validation-detail">{validation.detail}</div>
+                                                            )}
+                                                        </div>
+                                                        <span className={`validation-status status-${validation.status}`}>
+                                                            {validation.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="value muted">No validation results.</div>
+                                        )}
+                                    </div>
+                                )}
                                 {error && (
                                     <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
                                         <h4>Alert</h4>

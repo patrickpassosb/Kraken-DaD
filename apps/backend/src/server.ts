@@ -2,7 +2,7 @@
  * Kraken DaD - Backend Server
  *
  * Minimal Fastify HTTP API exposing the dry-run execution engine.
- * No auth, no database, no WebSockets.
+ * No auth, no database, no WebSocket server.
  *
  * @module backend/server
  */

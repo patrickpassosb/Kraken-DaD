@@ -2,7 +2,14 @@
     "name": "kraken-dad",
     "private": true,
     "type": "module",
+    "scripts": {
+        "test": "tsx --test"
+    },
     "engines": {
         "node": ">=18"
+    },
+    "devDependencies": {
+        "tsx": "^4.0.0",
+        "typescript": "^5.0.0"
     }
 }
