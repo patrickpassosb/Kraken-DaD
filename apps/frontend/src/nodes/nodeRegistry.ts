@@ -133,11 +133,13 @@ export function createNodeWithDefaults(
     const meta = nodeDefinitionMap[type];
     const targetPosition = position ?? meta?.defaultPosition ?? { x: 360, y: 260 };
     const data = meta?.defaultData ? { ...meta.defaultData } : {};
+    const className = type === 'logic.if' ? 'node-conditional' : '';
     return {
         id,
         type,
         position: targetPosition,
         data,
+        className,
     };
 }
 

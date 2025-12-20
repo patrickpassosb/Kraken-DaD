@@ -79,7 +79,7 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
             <Handle
                 type="target"
                 position={Position.Left}
-                id="control:in"
+                id="control:trigger"
                 className="control"
                 style={{ top: '50%' }}
             />

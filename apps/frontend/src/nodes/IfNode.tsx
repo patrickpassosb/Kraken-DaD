@@ -37,7 +37,7 @@ export function IfNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+        <div className="node-card node-card-conditional" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
@@ -95,6 +95,8 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 <StatusPill status={nodeData.status} />
                 <span>Routes true/false</span>
             </div>
+            <span className="if-branch-label if-branch-true">true</span>
+            <span className="if-branch-label if-branch-false">false</span>
             <Handle
                 type="target"
                 position={Position.Left}
@@ -121,14 +123,14 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 position={Position.Right}
                 id="control:true"
                 className="control"
-                style={{ top: '50%' }}
+                style={{ top: '46%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:false"
                 className="control"
-                style={{ top: '55%', opacity: 0, pointerEvents: 'none' }}
+                style={{ top: '62%' }}
             />
         </div>
     );

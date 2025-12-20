@@ -69,7 +69,7 @@ export function KrakenTickerNode({ id, data, selected }: NodeProps) {
                 </div>
                 <div className="field">
                     <label>Outputs</label>
-                    <div className="chip">Price • Pair</div>
+                    <div className="chip">Price • Pair • Bid • Ask • Spread</div>
                 </div>
                 <div className="field">
                     <label>Formatted</label>
@@ -92,7 +92,35 @@ export function KrakenTickerNode({ id, data, selected }: NodeProps) {
                 position={Position.Right}
                 id="data:price"
                 className="data"
-                style={{ top: '50%' }}
+                style={{ top: '34%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:bid"
+                className="data"
+                style={{ top: '42%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:ask"
+                className="data"
+                style={{ top: '58%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:spread"
+                className="data"
+                style={{ top: '66%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:pair"
+                className="data"
+                style={{ top: '74%' }}
             />
             <Handle
                 type="source"

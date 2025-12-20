@@ -154,15 +154,18 @@ blockDefinitions.set('data.constant', {
     category: 'data',
     name: 'Constant',
     description: 'Outputs a constant value from configuration',
-    inputs: [],
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
     outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
         { id: 'value', label: 'Value', dataType: 'any', required: true },
     ],
 });
 
 blockHandlers.set('data.constant', (node, _inputs, _ctx) => {
     const value = node.config.value ?? null;
-    return { outputs: { value } };
+    return { outputs: { out: true, value } };
 });
 
 /**
@@ -225,8 +228,11 @@ blockDefinitions.set('data.kraken.ticker', {
     category: 'data',
     name: 'Kraken Ticker',
     description: 'Fetches latest ticker price from Kraken (dry-run uses mock)',
-    inputs: [],
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
     outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
         { id: 'price', label: 'Price', dataType: 'number', required: true },
         { id: 'pair', label: 'Pair', dataType: 'string', required: true },
         { id: 'ask', label: 'Ask', dataType: 'number', required: false },
@@ -242,6 +248,7 @@ blockHandlers.set('data.kraken.ticker', (node, _inputs, ctx) => {
     const price = market?.last ?? 42000;
     return {
         outputs: {
+            out: true,
             price,
             pair: market?.pair ?? pair,
             ask: market?.ask,

@@ -851,6 +851,10 @@ body {
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.32);
 }
 
+.react-flow__node.node-conditional {
+    overflow: visible;
+}
+
 .react-flow__node.node-disabled {
     opacity: 0.55;
     filter: grayscale(0.2);
@@ -860,6 +864,32 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+}
+
+.node-card-conditional {
+    position: relative;
+}
+
+.if-branch-label {
+    position: absolute;
+    left: calc(100% + 4px);
+    right: auto;
+    transform: translateY(-50%);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: lowercase;
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+}
+
+.if-branch-true {
+    top: 46%;
+}
+
+.if-branch-false {
+    top: 62%;
 }
 
 .node-head {

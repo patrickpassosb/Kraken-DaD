@@ -191,11 +191,12 @@ function nodeHighlight(status?: NodeStatus): string {
     return '';
 }
 
-function nodeClassName(status?: NodeStatus, disabled?: boolean): string {
+function nodeClassName(status?: NodeStatus, disabled?: boolean, type?: string): string {
     const classes = [];
     const highlight = nodeHighlight(status);
     if (highlight) classes.push(highlight);
     if (disabled) classes.push('node-disabled');
+    if (type === 'logic.if') classes.push('node-conditional');
     return classes.join(' ');
 }
 
@@ -429,7 +430,7 @@ export function FlowCanvas({
                 return {
                     ...node,
                     data: { ...node.data, status },
-                    className: nodeClassName(status, disabled),
+                    className: nodeClassName(status, disabled, node.type),
                 };
             })
         );
@@ -488,7 +489,7 @@ export function FlowCanvas({
                     return {
                         ...node,
                         data: { ...data, disabled },
-                        className: nodeClassName(status, disabled),
+                        className: nodeClassName(status, disabled, node.type),
                     };
                 })
             );
