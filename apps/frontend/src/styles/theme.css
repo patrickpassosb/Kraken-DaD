@@ -508,11 +508,6 @@ body {
     flex-direction: column;
     gap: var(--space-4);
     height: 100%;
-    background: linear-gradient(180deg, rgba(15, 14, 22, 0.98), rgba(8, 7, 14, 0.98));
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    border: 1px solid var(--border-strong);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 .rail-toggle-row {

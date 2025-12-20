@@ -6,7 +6,7 @@
 **Title:** Hackathon readiness audit and improvement backlog
 
 ### Goal Statement
-**Goal:** Produce a concrete, prioritized improvement plan that aligns Kraken DAD with Kraken Forge Track #3 judging criteria (innovation, technical execution, reusability, UX, documentation, presentation) and the non-negotiable constraints in `context/context.md`, so the prototype, README, and demo clearly meet hackathon expectations.
+**Goal:** Produce a concrete, prioritized improvement plan and alignment assessment against Kraken Forge Track #3 requirements, judging criteria, and rules (`context/context.md`, `context/rules.md`, `context/takai-site.md`), so the prototype, README, and demo clearly meet hackathon expectations.
 
 ---
 
@@ -32,6 +32,7 @@
 Project must convincingly satisfy Kraken Forge requirements (Track #3) and judging criteria, but gaps remain in visible Kraken API coverage (WS/validate-only clarity), evidence of reusability, UX polish, and submission assets (demo video, README sections tailored to judges). Need a targeted backlog to close these before submission.
 
 ### Success Criteria
+- [ ] Alignment assessment against `context/context.md`, `context/rules.md`, and `context/takai-site.md` documented (pass/fail + gaps).
 - [ ] Prioritized improvement list mapped to each judging criterion and non-negotiable constraint from `context/context.md` with owners/effort notes.
 - [ ] Explicit coverage plan for Kraken API usage (public + private validate-only + WS roadmap) and dry-run safety surfaced in UI/docs.
 - [ ] Demo/readme checklist (architecture summary, API usage, safety, how to run, video plan) finalized.
@@ -111,7 +112,7 @@ Extend existing state to carry execution mode/validate-only flags, WS status, an
 
 ## 9. Implementation Plan
 
-1) Audit against judging criteria and non-negotiables: list gaps for API integration, UX, reusability, docs, presentation.  
+1) Audit against Track #3 requirements, judging criteria, and rules in `context/context.md`, `context/rules.md`, `context/takai-site.md`; list alignment + gaps for API integration, UX, reusability, docs, presentation.  
 2) Draft prioritized backlog with effort/impact tags; align each item to criteria and context doc constraints.  
 3) Define submission assets: README updates, demo video script/storyboard, run instructions, evidence of Kraken API usage.  
 4) Validate plan with dry-run safety: ensure any new API usage stays validate-only; note verification steps.  
