@@ -30,6 +30,7 @@ The canvas and shell need final convergence: header copy must drop “Dry-run on
 ### Success Criteria
 - [ ] Header shows exactly “Kraken DaD” and “Strategy Builder” (no “Dry-run only” in the title) while keeping dry-run status elsewhere.
 - [ ] Strategy Blocks panel groups blocks into CONTROL, MARKET, LOGIC & RISK, EXECUTION with distinct but subtle Kraken-native styling; each block shows label and role (Control/Data/Logic/Risk/Action/Audit).
+- [ ] Strategy Blocks palette uses a flat list style (no nested card per block) to reduce visual clutter.
 - [ ] Strategy Canvas lanes (Market → Logic → Risk → Execution) are visually clear with intentional node placement cues and lane labeling.
 - [ ] Order Preview and execution summary surfaces display fee rate (%) and computed fee value from that rate.
 - [ ] Kraken Pro dark theme, gradients, and contrast applied consistently; no off-brand accents.
@@ -94,7 +95,7 @@ The canvas and shell need final convergence: header copy must drop “Dry-run on
 ## 9. Implementation Plan
 
 1) Update shell/header and banners to final copy and Kraken Pro styling; ensure dry-run status moves out of title.  
-2) Rebuild Strategy Blocks panel with required categories and role chips; apply Kraken-native styling.  
+2) Rebuild Strategy Blocks panel with required categories and role chips; apply Kraken-native styling and a flat list layout.  
 3) Clarify canvas lanes (Market/Logic/Risk/Execution) with visuals and node layout cues.  
 4) Wire fee rate (%) + calculated fee display into Order Preview and any execution summary panels.  
 5) Sweep theme polish for Kraken Pro visuals and verify dry-run safeguards unaffected.
