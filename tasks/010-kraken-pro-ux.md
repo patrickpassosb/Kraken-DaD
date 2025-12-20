@@ -32,6 +32,7 @@ The canvas and shell need final convergence: header copy must drop “Dry-run on
 - [ ] Strategy Blocks panel groups blocks into CONTROL, MARKET, LOGIC & RISK, EXECUTION with distinct but subtle Kraken-native styling; each block shows label and role (Control/Data/Logic/Risk/Action/Audit).
 - [ ] Strategy Blocks palette uses a flat list style (no nested card per block) to reduce visual clutter.
 - [ ] Orderbook Guard max spread input uses a spinnerless decimal input.
+- [ ] Node action toolbar shows on hover (no click/selection required) and uses Kraken-aligned colors for Execute/Disable/Delete.
 - [ ] Strategy blocks logic is reviewed; key mismatches between UI handles, implied data edges, and strategy-core port definitions are fixed.
 - [ ] Add a reusable numeric/value block (constant) to the palette and wire implied data edges for common flows (e.g., limit price or threshold).
 - [ ] Strategy Blocks palette scrollbar matches Kraken UI (custom track/thumb styling, no default OS scrollbar chrome).

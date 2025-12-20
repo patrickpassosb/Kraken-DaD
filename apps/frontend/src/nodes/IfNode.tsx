@@ -4,6 +4,7 @@ import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatPrice } from '../utils/format';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface ConditionNodeData {
     status?: NodeStatus;
@@ -16,6 +17,8 @@ export function IfNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConditionNodeData) || {};
     const isDisabled = nodeData.disabled;
+    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+        useNodeToolbarHover();
 
     const [comparator, setComparator] = useState(nodeData.comparator || '>');
     const [threshold, setThreshold] = useState<number>(nodeData.threshold ?? 90135.6);
@@ -34,8 +37,15 @@ export function IfNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                selected={selected}
+                visible={visible}
+                onToolbarEnter={onToolbarEnter}
+                onToolbarLeave={onToolbarLeave}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Condition</span>

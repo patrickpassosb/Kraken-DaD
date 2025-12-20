@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 type ConstantValueType = 'number' | 'string' | 'boolean';
 
@@ -51,6 +52,8 @@ export function ConstantNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConstantNodeData) || {};
     const isDisabled = nodeData.disabled;
+    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+        useNodeToolbarHover();
 
     const initialType = resolveValueType(nodeData);
     const [valueType, setValueType] = useState<ConstantValueType>(initialType);
@@ -110,8 +113,15 @@ export function ConstantNode({ id, data, selected }: NodeProps) {
             : valueInput || DEFAULTS[valueType].input;
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                selected={selected}
+                visible={visible}
+                onToolbarEnter={onToolbarEnter}
+                onToolbarLeave={onToolbarLeave}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Constant</span>

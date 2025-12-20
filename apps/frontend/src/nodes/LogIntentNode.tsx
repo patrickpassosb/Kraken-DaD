@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface LogIntentNodeData {
     action?: string;
@@ -16,6 +17,8 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
     const nodeData = (data as LogIntentNodeData) || {};
     const isDisabled = nodeData.disabled;
     const [note, setNote] = useState(nodeData.note || 'Log execution intent for audit');
+    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+        useNodeToolbarHover();
 
     const updateData = useCallback(
         (updates: Partial<LogIntentNodeData>) => {
@@ -31,8 +34,15 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                selected={selected}
+                visible={visible}
+                onToolbarEnter={onToolbarEnter}
+                onToolbarLeave={onToolbarLeave}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Audit Log</span>

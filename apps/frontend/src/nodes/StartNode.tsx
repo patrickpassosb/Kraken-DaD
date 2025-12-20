@@ -2,6 +2,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface StartNodeData {
     status?: NodeStatus;
@@ -11,10 +12,19 @@ export interface StartNodeData {
 export function StartNode({ id, data, selected }: NodeProps) {
     const nodeData = (data as StartNodeData) || {};
     const isDisabled = nodeData.disabled;
+    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+        useNodeToolbarHover();
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                selected={selected}
+                visible={visible}
+                onToolbarEnter={onToolbarEnter}
+                onToolbarLeave={onToolbarLeave}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Strategy Start</span>
