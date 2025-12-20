@@ -93,6 +93,20 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 style={{ top: '50%' }}
             />
             <Handle
+                type="target"
+                position={Position.Left}
+                id="data:condition"
+                className="data"
+                style={{ top: '45%' }}
+            />
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="data:threshold"
+                className="data"
+                style={{ top: '55%' }}
+            />
+            <Handle
                 type="source"
                 position={Position.Right}
                 id="control:true"

@@ -69,9 +69,27 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
         targetPort: 'condition',
     },
     {
+        source: 'data.constant',
+        target: 'logic.if',
+        sourcePort: 'value',
+        targetPort: 'threshold',
+    },
+    {
         source: 'data.kraken.ticker',
         target: 'action.placeOrder',
         sourcePort: 'price',
+        targetPort: 'price',
+    },
+    {
+        source: 'data.constant',
+        target: 'action.placeOrder',
+        sourcePort: 'value',
+        targetPort: 'price',
+    },
+    {
+        source: 'data.constant',
+        target: 'action.logIntent',
+        sourcePort: 'value',
         targetPort: 'price',
     },
     {
@@ -85,6 +103,7 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
 const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
     'control.start': null,
     'data.kraken.ticker': { in: 'control:in', out: 'control:out' },
+    'data.constant': { in: 'control:in', out: 'control:out' },
     'logic.if': { in: 'control:in', out: 'control:true' },
     'risk.guard': { in: 'control:in', out: 'control:out' },
     'action.placeOrder': null,
@@ -142,11 +161,23 @@ function appendImpliedEdges(
                 `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`
         )
     );
+    const targetPorts = new Set(
+        baseEdges
+            .filter((edge) => edge.type === 'data')
+            .map((edge) => `${edge.target}:${edge.targetHandle ?? ''}`)
+    );
     const nextEdges = [...baseEdges];
     impliedEdges.forEach((edge) => {
         const key = `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`;
+        const targetKey = `${edge.target}:${edge.targetHandle ?? ''}`;
         if (!existing.has(key)) {
+            if (edge.type === 'data' && targetPorts.has(targetKey)) {
+                return;
+            }
             existing.add(key);
+            if (edge.type === 'data') {
+                targetPorts.add(targetKey);
+            }
             nextEdges.push(edge);
         }
     });

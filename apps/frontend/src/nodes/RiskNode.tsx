@@ -11,13 +11,24 @@ export interface RiskNodeData {
     disabled?: boolean;
 }
 
+function parseDecimalInput(raw: string): number | null {
+    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
+    if (normalized === '' || normalized === '.') return null;
+    const [whole, ...rest] = normalized.split('.');
+    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
+    const parsed = Number.parseFloat(cleaned);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(parsed, 0);
+}
+
 export function RiskNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as RiskNodeData) || {};
     const isDisabled = nodeData.disabled;
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
-    const [maxSpread, setMaxSpread] = useState(nodeData.maxSpread ?? 5);
+    const initialMaxSpread = nodeData.maxSpread ?? 5;
+    const [maxSpreadInput, setMaxSpreadInput] = useState(String(initialMaxSpread));
 
     const updateData = useCallback(
         (updates: Partial<RiskNodeData>) => {
@@ -62,13 +73,25 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 <div className="field">
                     <label>Max spread (USD)</label>
                     <input
-                        type="number"
-                        step="0.01"
-                        value={maxSpread}
+                        type="text"
+                        inputMode="decimal"
+                        value={maxSpreadInput}
                         onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            setMaxSpread(val);
-                            updateData({ maxSpread: val });
+                            const raw = e.target.value;
+                            setMaxSpreadInput(raw);
+                            const parsed = parseDecimalInput(raw);
+                            if (parsed === null) {
+                                if (raw.trim() === '') {
+                                    updateData({ maxSpread: 0 });
+                                }
+                                return;
+                            }
+                            updateData({ maxSpread: parsed });
+                        }}
+                        onBlur={() => {
+                            const parsed = parseDecimalInput(maxSpreadInput);
+                            if (parsed === null) return;
+                            setMaxSpreadInput(parsed.toString());
                         }}
                     />
                 </div>

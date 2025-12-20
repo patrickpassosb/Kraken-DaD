@@ -3,6 +3,7 @@ import { Edge, Node } from '@xyflow/react';
 export type NodeTypeId =
     | 'control.start'
     | 'data.kraken.ticker'
+    | 'data.constant'
     | 'logic.if'
     | 'risk.guard'
     | 'action.placeOrder'
@@ -42,6 +43,16 @@ export const nodeDefinitions: NodeDefinition[] = [
         paletteGroup: 'market',
         defaultPosition: { x: 560, y: 240 },
         defaultData: { pair: 'BTC/USD' },
+    },
+    {
+        type: 'data.constant',
+        label: 'Constant',
+        role: 'Data',
+        description: 'Static value output',
+        icon: 'C',
+        paletteGroup: 'market',
+        defaultPosition: { x: 520, y: 420 },
+        defaultData: { valueType: 'number', value: 90000 },
     },
     {
         type: 'logic.if',

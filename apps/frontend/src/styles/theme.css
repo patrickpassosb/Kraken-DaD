@@ -631,12 +631,36 @@ body {
     width: 280px;
     max-height: calc(100% - 120px);
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(86, 64, 143, 0.85) rgba(12, 10, 20, 0.6);
     z-index: 4;
     background: linear-gradient(180deg, rgba(18, 18, 30, 0.95), rgba(10, 8, 18, 0.98));
     border: 1px solid var(--border-strong);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(6px);
     border-radius: var(--radius-lg);
+    padding-right: var(--space-1);
+}
+
+.palette-floating::-webkit-scrollbar {
+    width: 8px;
+}
+
+.palette-floating::-webkit-scrollbar-track {
+    background: rgba(12, 10, 20, 0.6);
+    border-left: 1px solid rgba(61, 44, 105, 0.35);
+    border-radius: 10px;
+}
+
+.palette-floating::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(86, 64, 143, 0.9), rgba(61, 44, 105, 0.85));
+    border-radius: 10px;
+    border: 1px solid rgba(61, 44, 105, 0.6);
+}
+
+.palette-floating::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(101, 78, 168, 0.95), rgba(61, 44, 105, 0.9));
 }
 
 .palette-group {

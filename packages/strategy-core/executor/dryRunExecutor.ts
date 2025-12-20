@@ -199,6 +199,7 @@ blockDefinitions.set('action.logIntent', {
     description: 'Logs an action intent in dry-run mode',
     inputs: [
         { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'price', label: 'Price', dataType: 'number', required: false },
     ],
     outputs: [],
 });
@@ -378,6 +379,7 @@ blockDefinitions.set('logic.if', {
     inputs: [
         { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
         { id: 'condition', label: 'Value', dataType: 'number', required: true },
+        { id: 'threshold', label: 'Threshold', dataType: 'number', required: false },
     ],
     outputs: [
         { id: 'true', label: 'True', dataType: 'trigger', required: true },
@@ -387,35 +389,37 @@ blockDefinitions.set('logic.if', {
 
 blockHandlers.set('logic.if', (node, inputs, _ctx) => {
     const comparator = (node.config.comparator as string) ?? '>';
-    const thresholdRaw = node.config.threshold;
-    const value = (inputs.condition ?? inputs.value) as unknown;
+    const value = normalizePrice(inputs.condition ?? inputs.value);
+    const thresholdInput = normalizePrice(inputs.threshold);
+    const thresholdRaw = normalizePrice(node.config.threshold);
+    const threshold = thresholdInput ?? thresholdRaw;
 
-    if (typeof value !== 'number' || Number.isNaN(value)) {
+    if (value === undefined || Number.isNaN(value)) {
         throw new Error('Condition node requires a numeric input value');
     }
 
-    if (typeof thresholdRaw !== 'number' || Number.isNaN(thresholdRaw)) {
+    if (threshold === undefined || Number.isNaN(threshold)) {
         throw new Error('Condition node requires a numeric threshold');
     }
 
     let condition = false;
     switch (comparator) {
         case '>':
-            condition = value > thresholdRaw;
+            condition = value > threshold;
             break;
         case '<':
-            condition = value < thresholdRaw;
+            condition = value < threshold;
             break;
         case '>=':
         case '=>':
-            condition = value >= thresholdRaw;
+            condition = value >= threshold;
             break;
         case '<=':
-            condition = value <= thresholdRaw;
+            condition = value <= threshold;
             break;
         case '==':
         case '=':
-            condition = value === thresholdRaw;
+            condition = value === threshold;
             break;
         default:
             throw new Error(`Unsupported comparator: ${comparator}`);
