@@ -56,7 +56,7 @@ The builder needs real Kraken OHLC and spread data for richer strategy logic and
 
 ### Functional Requirements
 - OHLC block outputs recent candles + derived values for a pair/interval (default 1m x 120).
-- Moving Average block computes SMA/EMA from an input series (default SMA, period 14).
+- Moving Average block computes SMA/EMA from an input series (default SMA, period 14) and outputs only the latest value.
 - Recent Spreads block outputs latest + summary spread stats for last 50 entries.
 - AssetPairs Metadata block outputs tick size/lot/precision fields for a pair.
 - Time Window block gates control flow based on UTC day/time rules (no cross-run cooldown state).

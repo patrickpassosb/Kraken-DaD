@@ -628,7 +628,6 @@ blockDefinitions.set('logic.movingAverage', {
     outputs: [
         { id: 'out', label: 'Out', dataType: 'trigger', required: true },
         { id: 'value', label: 'Value', dataType: 'number', required: true },
-        { id: 'series', label: 'Series', dataType: 'any', required: true },
     ],
 });
 
@@ -647,7 +646,6 @@ blockHandlers.set('logic.movingAverage', (node, inputs, _ctx) => {
         outputs: {
             out: true,
             value,
-            series: computed,
         },
     };
 });

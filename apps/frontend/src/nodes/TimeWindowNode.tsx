@@ -104,7 +104,7 @@ export function TimeWindowNode({ id, data, selected }: NodeProps) {
                     />
                 </div>
                 <div className="field">
-                    <label>Days</label>
+                    <label>Days (UTC)</label>
                     <div className="day-toggle-grid">
                         {DAY_LABELS.map((day) => {
                             const active = daySet.has(day);
@@ -127,7 +127,7 @@ export function TimeWindowNode({ id, data, selected }: NodeProps) {
             </div>
             <div className="node-footer">
                 <StatusPill status={nodeData.status} />
-                <span>Gates control flow by time</span>
+                <span>Gates control flow by UTC time</span>
             </div>
             <Handle
                 type="target"

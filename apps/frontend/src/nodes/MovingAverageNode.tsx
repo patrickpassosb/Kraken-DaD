@@ -145,13 +145,6 @@ export function MovingAverageNode({ id, data, selected }: NodeProps) {
             <Handle
                 type="source"
                 position={Position.Right}
-                id="data:series"
-                className="data"
-                style={{ top: '62%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
                 id="control:out"
                 className="control"
                 style={{ top: '50%' }}
