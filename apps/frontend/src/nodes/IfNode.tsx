@@ -90,21 +90,21 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:in"
                 className="control"
-                style={{ top: '45%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:true"
                 className="control"
-                style={{ top: '45%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:false"
                 className="control"
-                style={{ top: '70%', opacity: 0, pointerEvents: 'none' }}
+                style={{ top: '55%', opacity: 0, pointerEvents: 'none' }}
             />
         </div>
     );

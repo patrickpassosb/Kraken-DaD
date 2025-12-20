@@ -134,21 +134,21 @@ export function PlaceOrderNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:trigger"
                 className="control"
-                style={{ top: '70%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="target"
                 position={Position.Left}
                 id="data:price"
                 className="data"
-                style={{ top: '85%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="data:orderId"
                 className="data"
-                style={{ top: '70%' }}
+                style={{ top: '50%' }}
             />
         </div>
     );

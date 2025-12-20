@@ -82,28 +82,28 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 position={Position.Left}
                 id="control:in"
                 className="control"
-                style={{ top: '40%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:out"
                 className="control"
-                style={{ top: '40%' }}
+                style={{ top: '50%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="data:spread"
                 className="data"
-                style={{ top: '65%' }}
+                style={{ top: '45%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="data:allowed"
                 className="data"
-                style={{ top: '80%' }}
+                style={{ top: '55%' }}
             />
         </div>
     );
