@@ -28,8 +28,12 @@
  - [ ] Deactivated nodes are visually distinct and skipped during execution (no action intents)  
  - [ ] Backend supports running a specific node via `targetNodeId` with upstream dependencies executed  
  - [ ] UI supports running a specific node and reflects node status updates from the response  
- - [ ] Template load and Tidy Up place nodes in clean lanes/columns without overlapping edges
+- [ ] Template load and Tidy Up place nodes in clean lanes/columns without overlapping edges
 - [ ] Data handles are vertically centered on node edges (N8n-style), with consistent offsets for multiple data handles
+- [ ] Edge paths use N8n-style rendering: bezier for forward edges, smooth-step detour for backward edges, straight when aligned
+- [ ] Tidy Up aligns nodes by control-flow rows so handle centers share Y without fixed node heights
+- [ ] Execution amount input accepts decimal comma/dot and removes number spinners
+- [ ] Limit reference input accepts decimal comma/dot and removes number spinners
 - [ ] Nodes show a single visible handle/edge per connection (data edges are implicit)
 - [x] If node has only one data handle (remove the second data handle)
 - [ ] Conditional nodes only allow actions on the chosen branch (false paths do not trigger live orders)

@@ -15,6 +15,16 @@ export interface PlaceOrderNodeData {
     disabled?: boolean;
 }
 
+function parseDecimalInput(raw: string): number | null {
+    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
+    if (normalized === '' || normalized === '.') return null;
+    const [whole, ...rest] = normalized.split('.');
+    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
+    const parsed = Number.parseFloat(cleaned);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(parsed, 0);
+}
+
 export function PlaceOrderNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as PlaceOrderNodeData;
@@ -22,8 +32,13 @@ export function PlaceOrderNode({ id, data, selected }: NodeProps) {
 
     const [pair, setPair] = useState(nodeData?.pair || 'BTC/USD');
     const [side, setSide] = useState<'buy' | 'sell'>(nodeData?.side || 'buy');
-    const [amount, setAmount] = useState(nodeData?.amount || 0.1);
+    const initialAmount = nodeData?.amount ?? 0.1;
+    const [amount, setAmount] = useState(initialAmount);
+    const [amountInput, setAmountInput] = useState(String(initialAmount));
     const [price, setPrice] = useState<number | undefined>(nodeData?.price);
+    const [priceInput, setPriceInput] = useState(
+        nodeData?.price !== undefined ? String(nodeData.price) : ''
+    );
 
     const updateData = useCallback(
         (updates: Partial<PlaceOrderNodeData>) => {
@@ -82,38 +97,54 @@ export function PlaceOrderNode({ id, data, selected }: NodeProps) {
                 <div className="field">
                     <label>Amount</label>
                     <input
-                        type="number"
-                        step="0.0001"
-                        min="0"
+                        type="text"
                         inputMode="decimal"
-                        value={amount}
+                        value={amountInput}
                         onChange={(e) => {
-                            const parsed = parseFloat(e.target.value);
-                            const val = Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
-                            setAmount(val);
-                            updateData({ amount: val });
+                            const raw = e.target.value;
+                            setAmountInput(raw);
+                            const parsed = parseDecimalInput(raw);
+                            if (parsed === null) {
+                                if (raw.trim() === '') {
+                                    setAmount(0);
+                                    updateData({ amount: 0 });
+                                }
+                                return;
+                            }
+                            setAmount(parsed);
+                            updateData({ amount: parsed });
+                        }}
+                        onBlur={() => {
+                            const parsed = parseDecimalInput(amountInput);
+                            if (parsed === null) return;
+                            setAmountInput(parsed.toString());
                         }}
                     />
                 </div>
                 <div className="field">
                     <label>Limit reference (optional)</label>
                     <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
                         inputMode="decimal"
-                        value={price ?? ''}
+                        value={priceInput}
                         placeholder="Market if empty"
                         onChange={(e) => {
-                            if (e.target.value === '') {
+                            const raw = e.target.value;
+                            setPriceInput(raw);
+                            if (raw.trim() === '') {
                                 setPrice(undefined);
                                 updateData({ price: undefined });
                                 return;
                             }
-                            const parsed = parseFloat(e.target.value);
-                            const val = Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
-                            setPrice(val);
-                            updateData({ price: val });
+                            const parsed = parseDecimalInput(raw);
+                            if (parsed === null) return;
+                            setPrice(parsed);
+                            updateData({ price: parsed });
+                        }}
+                        onBlur={() => {
+                            const parsed = parseDecimalInput(priceInput);
+                            if (parsed === null) return;
+                            setPriceInput(parsed.toString());
                         }}
                     />
                 </div>
