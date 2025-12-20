@@ -32,7 +32,8 @@
 The builder needs real Kraken OHLC and spread data for richer strategy logic and demos, metadata for tick size/min order risk checks, and a control block to gate execution by time/cooldown. These blocks must be fully wired across core, backend, and UI to stay consistent with the architecture-first goals.
 
 ### Success Criteria
-- [ ] `strategy-core` defines and handles: `data.kraken.ohlc`, `logic.movingAverage`, `data.kraken.spread`, `data.kraken.assetPairs`, `control.cooldown` (names TBD if adjusted).
+- [ ] `strategy-core` defines and handles: `data.kraken.ohlc`, `logic.movingAverage`, `data.kraken.spread`, `data.kraken.assetPairs`, `control.timeWindow`.
+- [ ] Defaults applied: OHLC interval `1` minute + `120` candles; spreads window `50` entries; MA supports `SMA` and `EMA` (default `SMA`); time window uses UTC day/time gating only.
 - [ ] Backend fetches Kraken OHLC/Spread/AssetPairs data and injects it into execution context for dry-run (with safe fallbacks).
 - [ ] Frontend has new node components, types, and palette entries with config fields and correct port/handle wiring.
 - [ ] Optional implied data edges added for common flows (e.g., OHLC → Moving Average).
@@ -54,11 +55,11 @@ The builder needs real Kraken OHLC and spread data for richer strategy logic and
 ## 5. Technical Requirements
 
 ### Functional Requirements
-- OHLC block outputs recent candles + derived values for a pair/interval.
-- Moving Average block computes SMA/EMA (final selection pending) using inputs or OHLC context.
-- Recent Spreads block outputs latest + summary spread stats from Kraken /Spread.
+- OHLC block outputs recent candles + derived values for a pair/interval (default 1m x 120).
+- Moving Average block computes SMA/EMA from an input series (default SMA, period 14).
+- Recent Spreads block outputs latest + summary spread stats for last 50 entries.
 - AssetPairs Metadata block outputs tick size/lot/precision fields for a pair.
-- Cooldown/Time Window block gates control flow based on time rules.
+- Time Window block gates control flow based on UTC day/time rules (no cross-run cooldown state).
 
 ### Non-Functional Requirements
 - **Performance:** Kraken calls should be bounded and cached per execution; timeouts/fallbacks retained.

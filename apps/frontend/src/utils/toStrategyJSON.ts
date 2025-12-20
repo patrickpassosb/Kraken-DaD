@@ -31,12 +31,40 @@ export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
             config.maxSpread = config.maxSpread ?? 5;
         }
 
+        if (node.type === 'data.kraken.ohlc') {
+            config.pair = config.pair ?? 'BTC/USD';
+            config.interval = config.interval ?? 1;
+            config.count = config.count ?? 120;
+        }
+
+        if (node.type === 'data.kraken.spread') {
+            config.pair = config.pair ?? 'BTC/USD';
+            config.count = config.count ?? 50;
+        }
+
+        if (node.type === 'data.kraken.assetPairs') {
+            config.pair = config.pair ?? 'BTC/USD';
+        }
+
+        if (node.type === 'logic.movingAverage') {
+            config.method = config.method ?? 'SMA';
+            config.period = typeof config.period === 'number' && !Number.isNaN(config.period)
+                ? config.period
+                : 14;
+        }
+
         if (node.type === 'logic.if') {
             config.comparator = config.comparator ?? '>';
             config.threshold =
                 typeof config.threshold === 'number' && !Number.isNaN(config.threshold)
                     ? config.threshold
                     : 0;
+        }
+
+        if (node.type === 'control.timeWindow') {
+            config.startTime = config.startTime ?? '00:00';
+            config.endTime = config.endTime ?? '23:59';
+            config.days = config.days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         }
 
         return {

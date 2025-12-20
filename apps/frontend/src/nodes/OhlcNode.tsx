@@ -5,41 +5,51 @@ import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 import { useNodeToolbarHover } from './useNodeToolbarHover';
 
-export interface RiskNodeData {
-    status?: NodeStatus;
-    maxSpread?: number;
+const INTERVAL_OPTIONS = [1, 5, 15, 30, 60, 240, 1440, 10080, 21600];
+const INTERVAL_LABELS: Record<number, string> = {
+    1: '1m',
+    5: '5m',
+    15: '15m',
+    30: '30m',
+    60: '1h',
+    240: '4h',
+    1440: '1d',
+    10080: '1w',
+    21600: '15d',
+};
+
+export interface OhlcNodeData {
     pair?: string;
+    interval?: number;
+    count?: number;
+    status?: NodeStatus;
     disabled?: boolean;
 }
 
-function parseDecimalInput(raw: string): number | null {
-    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
-    if (normalized === '' || normalized === '.') return null;
-    const [whole, ...rest] = normalized.split('.');
-    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
-    const parsed = Number.parseFloat(cleaned);
+function parseCountInput(raw: string): number | null {
+    const cleaned = raw.trim().replace(/[^0-9]/g, '');
+    if (!cleaned) return null;
+    const parsed = Number.parseInt(cleaned, 10);
     if (!Number.isFinite(parsed)) return null;
-    return Math.max(parsed, 0);
+    return Math.max(parsed, 1);
 }
 
-export function RiskNode({ id, data, selected }: NodeProps) {
+export function OhlcNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
-    const nodeData = (data as RiskNodeData) || {};
+    const nodeData = (data as OhlcNodeData) || {};
     const isDisabled = nodeData.disabled;
     const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
         useNodeToolbarHover();
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
-    const initialMaxSpread = nodeData.maxSpread ?? 5;
-    const [maxSpreadInput, setMaxSpreadInput] = useState(String(initialMaxSpread));
+    const [interval, setInterval] = useState(nodeData.interval ?? 1);
+    const [countInput, setCountInput] = useState(String(nodeData.count ?? 120));
 
     const updateData = useCallback(
-        (updates: Partial<RiskNodeData>) => {
+        (updates: Partial<OhlcNodeData>) => {
             setNodes((nodes) =>
                 nodes.map((node) =>
-                    node.id === id
-                        ? { ...node, data: { ...node.data, ...updates } }
-                        : node
+                    node.id === id ? { ...node, data: { ...node.data, ...updates } } : node
                 )
             );
         },
@@ -58,14 +68,14 @@ export function RiskNode({ id, data, selected }: NodeProps) {
             />
             <div className="node-head">
                 <div className="node-title">
-                    <span>Orderbook Guard</span>
-                    <span>Blocks if spread too wide</span>
+                    <span>OHLC Candles</span>
+                    <span>Kraken public OHLC snapshot</span>
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #3b82f6)' }}
                 >
-                    ⚑
+                    O
                 </div>
             </div>
             <div className="node-body">
@@ -75,44 +85,62 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                         type="text"
                         value={pair}
                         onChange={(e) => {
-                            setPair(e.target.value);
-                            updateData({ pair: e.target.value });
+                            const value = e.target.value;
+                            setPair(value);
+                            updateData({ pair: value });
                         }}
                     />
                 </div>
                 <div className="field">
-                    <label>Max spread (USD)</label>
+                    <label>Interval</label>
+                    <select
+                        value={interval}
+                        onChange={(e) => {
+                            const next = Number.parseInt(e.target.value, 10);
+                            setInterval(next);
+                            updateData({ interval: next });
+                        }}
+                    >
+                        {INTERVAL_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                                {INTERVAL_LABELS[option] ?? `${option}m`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="field">
+                    <label>Candles</label>
                     <input
                         type="text"
-                        inputMode="decimal"
-                        value={maxSpreadInput}
+                        inputMode="numeric"
+                        value={countInput}
                         onChange={(e) => {
                             const raw = e.target.value;
-                            setMaxSpreadInput(raw);
-                            const parsed = parseDecimalInput(raw);
+                            setCountInput(raw);
+                            const parsed = parseCountInput(raw);
                             if (parsed === null) {
                                 if (raw.trim() === '') {
-                                    updateData({ maxSpread: 0 });
+                                    updateData({ count: 0 });
                                 }
                                 return;
                             }
-                            updateData({ maxSpread: parsed });
+                            updateData({ count: parsed });
                         }}
                         onBlur={() => {
-                            const parsed = parseDecimalInput(maxSpreadInput);
+                            const parsed = parseCountInput(countInput);
                             if (parsed === null) return;
-                            setMaxSpreadInput(parsed.toString());
+                            setCountInput(parsed.toString());
                         }}
                     />
                 </div>
                 <div className="field">
-                    <label>Input</label>
-                    <div className="chip">Optional spread override</div>
+                    <label>Outputs</label>
+                    <div className="chip">Candles · Close Series · Last Candle</div>
                 </div>
             </div>
             <div className="node-footer">
                 <StatusPill status={nodeData.status} />
-                <span>Reads Kraken orderbook spread</span>
+                <span>Snapshots Kraken OHLC data</span>
             </div>
             <Handle
                 type="target"
@@ -122,11 +150,25 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 style={{ top: '50%' }}
             />
             <Handle
-                type="target"
-                position={Position.Left}
-                id="data:spreadOverride"
+                type="source"
+                position={Position.Right}
+                id="data:candles"
                 className="data"
-                style={{ top: '62%' }}
+                style={{ top: '34%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:closeSeries"
+                className="data"
+                style={{ top: '58%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:lastCandle"
+                className="data"
+                style={{ top: '74%' }}
             />
             <Handle
                 type="source"
@@ -134,20 +176,6 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 id="control:out"
                 className="control"
                 style={{ top: '50%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:spread"
-                className="data"
-                style={{ top: '45%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:allowed"
-                className="data"
-                style={{ top: '55%' }}
             />
         </div>
     );

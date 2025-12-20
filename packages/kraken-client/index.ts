@@ -33,6 +33,39 @@ export interface KrakenDepthSnapshot {
     bids: Array<{ price: number; volume: number }>;
 }
 
+export interface KrakenOhlcCandle {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    vwap: number;
+    volume: number;
+    count: number;
+}
+
+export interface KrakenOhlcSnapshot {
+    pair: string;
+    interval: number;
+    candles: KrakenOhlcCandle[];
+    last: number;
+    timestamp: number;
+}
+
+export interface KrakenSpreadEntry {
+    time: number;
+    bid: number;
+    ask: number;
+    spread: number;
+}
+
+export interface KrakenSpreadSnapshot {
+    pair: string;
+    entries: KrakenSpreadEntry[];
+    last: number;
+    timestamp: number;
+}
+
 export interface KrakenAsset {
     altname: string;
     aclass: string;
@@ -46,6 +79,11 @@ export interface KrakenAssetPair {
     base: string;
     quote: string;
     status?: string;
+    pair_decimals?: number;
+    lot_decimals?: number;
+    ordermin?: string;
+    costmin?: string;
+    tick_size?: string;
 }
 
 export interface KrakenCredentials {
@@ -244,6 +282,106 @@ export async function fetchDepth(pair: string, count = 10, options: FetchOptions
         spread: bestAsk !== undefined && bestBid !== undefined ? bestAsk - bestBid : undefined,
         asks,
         bids,
+    };
+}
+
+export async function fetchOHLC(
+    pair: string,
+    interval = 1,
+    options: FetchOptions = {}
+): Promise<KrakenOhlcSnapshot> {
+    const { krakenPair, display } = normalizePair(pair);
+    const url = `${API_BASE}/0/public/OHLC?pair=${encodeURIComponent(krakenPair)}&interval=${interval}`;
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
+    ensureFetchResponse(response);
+    const payload = (await response.json()) as {
+        error?: string[];
+        result?: Record<string, unknown>;
+    };
+    if (payload.error?.length) {
+        throw new Error(`Kraken API error: ${payload.error.join(',')}`);
+    }
+    const result = payload.result ?? {};
+    const resultKey = Object.keys(result).find((key) => key !== 'last');
+    if (!resultKey) {
+        throw new Error('Kraken API error: empty OHLC result');
+    }
+    const candlesRaw = result[resultKey] as unknown[];
+    const lastRaw = typeof result.last === 'string' ? Number.parseInt(result.last, 10) : Number(result.last);
+    const last = Number.isFinite(lastRaw) ? lastRaw : 0;
+    const candles = Array.isArray(candlesRaw)
+        ? candlesRaw.map((row) => {
+              const entry = row as unknown[];
+              const time = toNumber(entry[0]) ?? 0;
+              const open = toNumber(entry[1]) ?? 0;
+              const high = toNumber(entry[2]) ?? 0;
+              const low = toNumber(entry[3]) ?? 0;
+              const close = toNumber(entry[4]) ?? 0;
+              const vwap = toNumber(entry[5]) ?? 0;
+              const volume = toNumber(entry[6]) ?? 0;
+              const count = toNumber(entry[7]) ?? 0;
+              return {
+                  time: time * 1000,
+                  open,
+                  high,
+                  low,
+                  close,
+                  vwap,
+                  volume,
+                  count,
+              };
+          })
+        : [];
+
+    return {
+        pair: display,
+        interval,
+        candles,
+        last,
+        timestamp: Date.now(),
+    };
+}
+
+export async function fetchSpread(pair: string, options: FetchOptions = {}): Promise<KrakenSpreadSnapshot> {
+    const { krakenPair, display } = normalizePair(pair);
+    const url = `${API_BASE}/0/public/Spread?pair=${encodeURIComponent(krakenPair)}`;
+    const response = await fetch(url, { method: 'GET', signal: options.signal });
+    ensureFetchResponse(response);
+    const payload = (await response.json()) as {
+        error?: string[];
+        result?: Record<string, unknown>;
+    };
+    if (payload.error?.length) {
+        throw new Error(`Kraken API error: ${payload.error.join(',')}`);
+    }
+    const result = payload.result ?? {};
+    const resultKey = Object.keys(result).find((key) => key !== 'last');
+    if (!resultKey) {
+        throw new Error('Kraken API error: empty spread result');
+    }
+    const spreadRaw = result[resultKey] as unknown[];
+    const lastRaw = typeof result.last === 'string' ? Number.parseInt(result.last, 10) : Number(result.last);
+    const last = Number.isFinite(lastRaw) ? lastRaw : 0;
+    const entries = Array.isArray(spreadRaw)
+        ? spreadRaw.map((row) => {
+              const entry = row as unknown[];
+              const time = toNumber(entry[0]) ?? 0;
+              const bid = toNumber(entry[1]) ?? 0;
+              const ask = toNumber(entry[2]) ?? 0;
+              return {
+                  time: time * 1000,
+                  bid,
+                  ask,
+                  spread: Number.isFinite(ask - bid) ? ask - bid : 0,
+              };
+          })
+        : [];
+
+    return {
+        pair: display,
+        entries,
+        last,
+        timestamp: Date.now(),
     };
 }
 

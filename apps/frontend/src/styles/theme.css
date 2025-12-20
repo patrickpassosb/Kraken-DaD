@@ -966,6 +966,35 @@ body {
     box-shadow: 0 0 0 2px rgba(121, 80, 242, 0.2);
 }
 
+.day-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.day-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-muted);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.day-toggle input {
+    accent-color: var(--kraken-purple);
+}
+
+.day-toggle-active {
+    border-color: rgba(121, 80, 242, 0.6);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px rgba(121, 80, 242, 0.35);
+}
+
 .node-footer {
     padding: var(--space-3);
     border-top: 1px solid var(--border-subtle);

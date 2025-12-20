@@ -69,6 +69,12 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
         targetPort: 'condition',
     },
     {
+        source: 'data.kraken.ohlc',
+        target: 'logic.movingAverage',
+        sourcePort: 'closeSeries',
+        targetPort: 'series',
+    },
+    {
         source: 'data.constant',
         target: 'logic.if',
         sourcePort: 'value',
@@ -102,8 +108,13 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
 
 const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
     'control.start': null,
+    'control.timeWindow': { in: 'control:in', out: 'control:out' },
     'data.kraken.ticker': { in: 'control:in', out: 'control:out' },
+    'data.kraken.ohlc': { in: 'control:in', out: 'control:out' },
+    'data.kraken.spread': { in: 'control:in', out: 'control:out' },
+    'data.kraken.assetPairs': { in: 'control:in', out: 'control:out' },
     'data.constant': { in: 'control:in', out: 'control:out' },
+    'logic.movingAverage': { in: 'control:in', out: 'control:out' },
     'logic.if': { in: 'control:in', out: 'control:true' },
     'risk.guard': { in: 'control:in', out: 'control:out' },
     'action.placeOrder': null,

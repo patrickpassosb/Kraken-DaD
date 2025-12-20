@@ -5,41 +5,38 @@ import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 import { useNodeToolbarHover } from './useNodeToolbarHover';
 
-export interface RiskNodeData {
+export type MovingAverageMethod = 'SMA' | 'EMA';
+
+export interface MovingAverageNodeData {
+    method?: MovingAverageMethod;
+    period?: number;
     status?: NodeStatus;
-    maxSpread?: number;
-    pair?: string;
     disabled?: boolean;
 }
 
-function parseDecimalInput(raw: string): number | null {
-    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
-    if (normalized === '' || normalized === '.') return null;
-    const [whole, ...rest] = normalized.split('.');
-    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
-    const parsed = Number.parseFloat(cleaned);
+function parsePeriod(raw: string): number | null {
+    const cleaned = raw.trim().replace(/[^0-9]/g, '');
+    if (!cleaned) return null;
+    const parsed = Number.parseInt(cleaned, 10);
     if (!Number.isFinite(parsed)) return null;
-    return Math.max(parsed, 0);
+    return Math.max(parsed, 1);
 }
 
-export function RiskNode({ id, data, selected }: NodeProps) {
+export function MovingAverageNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
-    const nodeData = (data as RiskNodeData) || {};
+    const nodeData = (data as MovingAverageNodeData) || {};
     const isDisabled = nodeData.disabled;
     const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
         useNodeToolbarHover();
 
-    const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
-    const initialMaxSpread = nodeData.maxSpread ?? 5;
-    const [maxSpreadInput, setMaxSpreadInput] = useState(String(initialMaxSpread));
+    const [method, setMethod] = useState<MovingAverageMethod>(nodeData.method ?? 'SMA');
+    const [periodInput, setPeriodInput] = useState(String(nodeData.period ?? 14));
 
     const updateData = useCallback(
-        (updates: Partial<RiskNodeData>) => {
+        (updates: Partial<MovingAverageNodeData>) => {
             setNodes((nodes) =>
                 nodes.map((node) =>
-                    node.id === id
-                        ? { ...node, data: { ...node.data, ...updates } }
-                        : node
+                    node.id === id ? { ...node, data: { ...node.data, ...updates } } : node
                 )
             );
         },
@@ -58,61 +55,64 @@ export function RiskNode({ id, data, selected }: NodeProps) {
             />
             <div className="node-head">
                 <div className="node-title">
-                    <span>Orderbook Guard</span>
-                    <span>Blocks if spread too wide</span>
+                    <span>Moving Average</span>
+                    <span>Compute SMA or EMA from series</span>
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), #f59e0b)' }}
                 >
-                    ⚑
+                    M
                 </div>
             </div>
             <div className="node-body">
                 <div className="field">
-                    <label>Pair</label>
-                    <input
-                        type="text"
-                        value={pair}
+                    <label>Method</label>
+                    <select
+                        value={method}
                         onChange={(e) => {
-                            setPair(e.target.value);
-                            updateData({ pair: e.target.value });
+                            const next = (e.target.value as MovingAverageMethod) || 'SMA';
+                            setMethod(next);
+                            updateData({ method: next });
                         }}
-                    />
+                    >
+                        <option value="SMA">SMA</option>
+                        <option value="EMA">EMA</option>
+                    </select>
                 </div>
                 <div className="field">
-                    <label>Max spread (USD)</label>
+                    <label>Period</label>
                     <input
                         type="text"
-                        inputMode="decimal"
-                        value={maxSpreadInput}
+                        inputMode="numeric"
+                        value={periodInput}
                         onChange={(e) => {
                             const raw = e.target.value;
-                            setMaxSpreadInput(raw);
-                            const parsed = parseDecimalInput(raw);
+                            setPeriodInput(raw);
+                            const parsed = parsePeriod(raw);
                             if (parsed === null) {
                                 if (raw.trim() === '') {
-                                    updateData({ maxSpread: 0 });
+                                    updateData({ period: 0 });
                                 }
                                 return;
                             }
-                            updateData({ maxSpread: parsed });
+                            updateData({ period: parsed });
                         }}
                         onBlur={() => {
-                            const parsed = parseDecimalInput(maxSpreadInput);
+                            const parsed = parsePeriod(periodInput);
                             if (parsed === null) return;
-                            setMaxSpreadInput(parsed.toString());
+                            setPeriodInput(parsed.toString());
                         }}
                     />
                 </div>
                 <div className="field">
-                    <label>Input</label>
-                    <div className="chip">Optional spread override</div>
+                    <label>Inputs</label>
+                    <div className="chip">Series required · Period optional</div>
                 </div>
             </div>
             <div className="node-footer">
                 <StatusPill status={nodeData.status} />
-                <span>Reads Kraken orderbook spread</span>
+                <span>Outputs latest MA value</span>
             </div>
             <Handle
                 type="target"
@@ -124,7 +124,28 @@ export function RiskNode({ id, data, selected }: NodeProps) {
             <Handle
                 type="target"
                 position={Position.Left}
-                id="data:spreadOverride"
+                id="data:series"
+                className="data"
+                style={{ top: '62%' }}
+            />
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="data:period"
+                className="data"
+                style={{ top: '46%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:value"
+                className="data"
+                style={{ top: '46%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:series"
                 className="data"
                 style={{ top: '62%' }}
             />
@@ -134,20 +155,6 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 id="control:out"
                 className="control"
                 style={{ top: '50%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:spread"
-                className="data"
-                style={{ top: '45%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:allowed"
-                className="data"
-                style={{ top: '55%' }}
             />
         </div>
     );

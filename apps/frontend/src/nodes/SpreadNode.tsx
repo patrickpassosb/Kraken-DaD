@@ -5,41 +5,36 @@ import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
 import { useNodeToolbarHover } from './useNodeToolbarHover';
 
-export interface RiskNodeData {
-    status?: NodeStatus;
-    maxSpread?: number;
+export interface SpreadNodeData {
     pair?: string;
+    count?: number;
+    status?: NodeStatus;
     disabled?: boolean;
 }
 
-function parseDecimalInput(raw: string): number | null {
-    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
-    if (normalized === '' || normalized === '.') return null;
-    const [whole, ...rest] = normalized.split('.');
-    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
-    const parsed = Number.parseFloat(cleaned);
+function parseCount(raw: string): number | null {
+    const cleaned = raw.trim().replace(/[^0-9]/g, '');
+    if (!cleaned) return null;
+    const parsed = Number.parseInt(cleaned, 10);
     if (!Number.isFinite(parsed)) return null;
-    return Math.max(parsed, 0);
+    return Math.max(parsed, 1);
 }
 
-export function RiskNode({ id, data, selected }: NodeProps) {
+export function SpreadNode({ id, data, selected }: NodeProps) {
     const { setNodes } = useReactFlow();
-    const nodeData = (data as RiskNodeData) || {};
+    const nodeData = (data as SpreadNodeData) || {};
     const isDisabled = nodeData.disabled;
     const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
         useNodeToolbarHover();
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
-    const initialMaxSpread = nodeData.maxSpread ?? 5;
-    const [maxSpreadInput, setMaxSpreadInput] = useState(String(initialMaxSpread));
+    const [countInput, setCountInput] = useState(String(nodeData.count ?? 50));
 
     const updateData = useCallback(
-        (updates: Partial<RiskNodeData>) => {
+        (updates: Partial<SpreadNodeData>) => {
             setNodes((nodes) =>
                 nodes.map((node) =>
-                    node.id === id
-                        ? { ...node, data: { ...node.data, ...updates } }
-                        : node
+                    node.id === id ? { ...node, data: { ...node.data, ...updates } } : node
                 )
             );
         },
@@ -58,14 +53,14 @@ export function RiskNode({ id, data, selected }: NodeProps) {
             />
             <div className="node-head">
                 <div className="node-title">
-                    <span>Orderbook Guard</span>
-                    <span>Blocks if spread too wide</span>
+                    <span>Recent Spreads</span>
+                    <span>Kraken bid/ask spread history</span>
                 </div>
                 <div
                     className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
+                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple-strong), #38bdf8)' }}
                 >
-                    ⚑
+                    S
                 </div>
             </div>
             <div className="node-body">
@@ -75,44 +70,45 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                         type="text"
                         value={pair}
                         onChange={(e) => {
-                            setPair(e.target.value);
-                            updateData({ pair: e.target.value });
+                            const value = e.target.value;
+                            setPair(value);
+                            updateData({ pair: value });
                         }}
                     />
                 </div>
                 <div className="field">
-                    <label>Max spread (USD)</label>
+                    <label>Window (entries)</label>
                     <input
                         type="text"
-                        inputMode="decimal"
-                        value={maxSpreadInput}
+                        inputMode="numeric"
+                        value={countInput}
                         onChange={(e) => {
                             const raw = e.target.value;
-                            setMaxSpreadInput(raw);
-                            const parsed = parseDecimalInput(raw);
+                            setCountInput(raw);
+                            const parsed = parseCount(raw);
                             if (parsed === null) {
                                 if (raw.trim() === '') {
-                                    updateData({ maxSpread: 0 });
+                                    updateData({ count: 0 });
                                 }
                                 return;
                             }
-                            updateData({ maxSpread: parsed });
+                            updateData({ count: parsed });
                         }}
                         onBlur={() => {
-                            const parsed = parseDecimalInput(maxSpreadInput);
+                            const parsed = parseCount(countInput);
                             if (parsed === null) return;
-                            setMaxSpreadInput(parsed.toString());
+                            setCountInput(parsed.toString());
                         }}
                     />
                 </div>
                 <div className="field">
-                    <label>Input</label>
-                    <div className="chip">Optional spread override</div>
+                    <label>Outputs</label>
+                    <div className="chip">Latest · Avg · Median · Min/Max</div>
                 </div>
             </div>
             <div className="node-footer">
                 <StatusPill status={nodeData.status} />
-                <span>Reads Kraken orderbook spread</span>
+                <span>Tracks spread conditions</span>
             </div>
             <Handle
                 type="target"
@@ -122,11 +118,46 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 style={{ top: '50%' }}
             />
             <Handle
-                type="target"
-                position={Position.Left}
-                id="data:spreadOverride"
+                type="source"
+                position={Position.Right}
+                id="data:latest"
                 className="data"
-                style={{ top: '62%' }}
+                style={{ top: '24%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:average"
+                className="data"
+                style={{ top: '36%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:median"
+                className="data"
+                style={{ top: '58%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:min"
+                className="data"
+                style={{ top: '70%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:max"
+                className="data"
+                style={{ top: '82%' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="data:series"
+                className="data"
+                style={{ top: '94%' }}
             />
             <Handle
                 type="source"
@@ -134,20 +165,6 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 id="control:out"
                 className="control"
                 style={{ top: '50%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:spread"
-                className="data"
-                style={{ top: '45%' }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="data:allowed"
-                className="data"
-                style={{ top: '55%' }}
             />
         </div>
     );

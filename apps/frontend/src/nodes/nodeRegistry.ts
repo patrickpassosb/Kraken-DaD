@@ -2,9 +2,14 @@ import { Edge, Node } from '@xyflow/react';
 
 export type NodeTypeId =
     | 'control.start'
+    | 'control.timeWindow'
     | 'data.kraken.ticker'
+    | 'data.kraken.ohlc'
+    | 'data.kraken.spread'
+    | 'data.kraken.assetPairs'
     | 'data.constant'
     | 'logic.if'
+    | 'logic.movingAverage'
     | 'risk.guard'
     | 'action.placeOrder'
     | 'action.cancelOrder'
@@ -35,6 +40,20 @@ export const nodeDefinitions: NodeDefinition[] = [
         defaultData: {},
     },
     {
+        type: 'control.timeWindow',
+        label: 'Time Window',
+        role: 'Control',
+        description: 'Gate execution by UTC time window',
+        icon: 'T',
+        paletteGroup: 'control',
+        defaultPosition: { x: 360, y: 380 },
+        defaultData: {
+            startTime: '00:00',
+            endTime: '23:59',
+            days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        },
+    },
+    {
         type: 'data.kraken.ticker',
         label: 'Market Data',
         role: 'Data',
@@ -45,6 +64,16 @@ export const nodeDefinitions: NodeDefinition[] = [
         defaultData: { pair: 'BTC/USD' },
     },
     {
+        type: 'data.kraken.ohlc',
+        label: 'OHLC Candles',
+        role: 'Data',
+        description: 'Kraken OHLC snapshot',
+        icon: 'O',
+        paletteGroup: 'market',
+        defaultPosition: { x: 560, y: 340 },
+        defaultData: { pair: 'BTC/USD', interval: 1, count: 120 },
+    },
+    {
         type: 'data.constant',
         label: 'Constant',
         role: 'Data',
@@ -53,6 +82,36 @@ export const nodeDefinitions: NodeDefinition[] = [
         paletteGroup: 'market',
         defaultPosition: { x: 520, y: 420 },
         defaultData: { valueType: 'number', value: 90000 },
+    },
+    {
+        type: 'data.kraken.spread',
+        label: 'Recent Spreads',
+        role: 'Data',
+        description: 'Kraken spread history',
+        icon: 'S',
+        paletteGroup: 'market',
+        defaultPosition: { x: 560, y: 520 },
+        defaultData: { pair: 'BTC/USD', count: 50 },
+    },
+    {
+        type: 'data.kraken.assetPairs',
+        label: 'AssetPairs Metadata',
+        role: 'Data',
+        description: 'Tick size + min order data',
+        icon: 'P',
+        paletteGroup: 'market',
+        defaultPosition: { x: 560, y: 640 },
+        defaultData: { pair: 'BTC/USD' },
+    },
+    {
+        type: 'logic.movingAverage',
+        label: 'Moving Average',
+        role: 'Logic',
+        description: 'SMA/EMA computed from series',
+        icon: 'M',
+        paletteGroup: 'logic',
+        defaultPosition: { x: 800, y: 420 },
+        defaultData: { method: 'SMA', period: 14 },
     },
     {
         type: 'logic.if',

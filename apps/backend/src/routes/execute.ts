@@ -11,6 +11,10 @@ import {
     Strategy,
     ExecutionContext,
     ExecutionMode,
+    MarketDataSnapshot,
+    OhlcSnapshot,
+    SpreadSnapshot,
+    AssetPairMetadata,
 } from '../../../../packages/strategy-core/schema.ts';
 import {
     executeDryRun,
@@ -22,12 +26,17 @@ import {
     fetchTicker,
     fetchDepth,
     fetchTickerWsOnce,
+    fetchOHLC,
+    fetchSpread,
+    fetchAssetPairs,
+    normalizePair,
     hasPrivateCreds,
     validateAddOrder,
     validateCancelOrder,
     placeOrder,
     cancelOrder,
 } from '@kraken-dad/kraken-client';
+import type { KrakenAssetPair } from '@kraken-dad/kraken-client';
 
 // =============================================================================
 // REQUEST/RESPONSE TYPES
@@ -201,6 +210,90 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function ohlcKey(pair: string, interval: number): string {
+    return `${pairKey(pair)}::${interval}`;
+}
+
+const SUPPORTED_OHLC_INTERVALS = new Set([1, 5, 15, 30, 60, 240, 1440, 10080, 21600]);
+
+function normalizeInterval(value: unknown): number {
+    if (typeof value === 'number' && SUPPORTED_OHLC_INTERVALS.has(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed) && SUPPORTED_OHLC_INTERVALS.has(parsed)) {
+            return parsed;
+        }
+    }
+    return 1;
+}
+
+function normalizeCount(value: unknown, fallback: number, min: number, max: number): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return Math.min(Math.max(Math.round(value), min), max);
+    }
+    if (typeof value === 'string') {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed)) {
+            return Math.min(Math.max(parsed, min), max);
+        }
+    }
+    return fallback;
+}
+
+function parseNumber(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+}
+
+function resolveAssetPairMetadata(
+    pair: string,
+    assetPairs: Record<string, KrakenAssetPair>
+): AssetPairMetadata | null {
+    const { krakenPair, display } = normalizePair(pair);
+    const displayUpper = display.toUpperCase();
+    const displayNoSlash = displayUpper.replace('/', '');
+    const displayXbt = displayUpper.replace('BTC', 'XBT');
+    const displayXbtNoSlash = displayXbt.replace('/', '');
+    const candidates = new Set([
+        krakenPair.toUpperCase(),
+        displayUpper,
+        displayNoSlash,
+        displayXbt,
+        displayXbtNoSlash,
+    ]);
+
+    const match = Object.entries(assetPairs).find(([key, value]) => {
+        const alt = value.altname?.toUpperCase();
+        const wsname = value.wsname?.toUpperCase();
+        return (
+            candidates.has(key.toUpperCase()) ||
+            (alt && candidates.has(alt)) ||
+            (wsname && candidates.has(wsname))
+        );
+    });
+
+    if (!match) return null;
+
+    const [, meta] = match;
+    const [base, quote] = displayUpper.split('/');
+    return {
+        pair: displayUpper,
+        base: base ?? '',
+        quote: quote ?? '',
+        status: meta.status,
+        pairDecimals: meta.pair_decimals,
+        lotDecimals: meta.lot_decimals,
+        orderMin: parseNumber(meta.ordermin),
+        costMin: parseNumber(meta.costmin),
+        tickSize: parseNumber(meta.tick_size),
+        timestamp: Date.now(),
+    };
+}
+
 function normalizeOrderType(value: unknown): 'market' | 'limit' {
     return value === 'limit' ? 'limit' : 'market';
 }
@@ -250,30 +343,64 @@ const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: numbe
     'ETH/USD': { last: 3450.12, ask: 3450.6, bid: 3449.5, spread: 1.1 },
 };
 
-async function buildMarketData(
+async function buildExecutionData(
     strategy: Strategy,
     fastify: FastifyInstance
 ): Promise<{
-    marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number; timestamp?: number }>;
+    marketData: Record<string, MarketDataSnapshot>;
+    ohlcData: Record<string, OhlcSnapshot>;
+    spreadData: Record<string, SpreadSnapshot>;
+    assetPairData: Record<string, AssetPairMetadata>;
     warnings: ExecutionWarning[];
 }> {
-    const pairs = new Set<string>();
+    const marketPairs = new Set<string>();
+    const ohlcRequests = new Map<string, { pair: string; interval: number; count: number }>();
+    const spreadRequests = new Map<string, { pair: string; count: number }>();
+    const assetPairRequests = new Set<string>();
+
     for (const node of strategy.nodes) {
         if (node.type === 'data.kraken.ticker' || node.type === 'action.placeOrder' || node.type === 'risk.guard') {
             const pair = (node.config as { pair?: string }).pair ?? 'BTC/USD';
-            if (pair) {
-                pairs.add(pair);
+            marketPairs.add(pair);
+        }
+        if (node.type === 'data.kraken.ohlc') {
+            const config = node.config as { pair?: string; interval?: unknown; count?: unknown };
+            const pair = config.pair ?? 'BTC/USD';
+            const interval = normalizeInterval(config.interval);
+            const count = normalizeCount(config.count, 120, 1, 720);
+            const key = ohlcKey(pair, interval);
+            const existing = ohlcRequests.get(key);
+            if (!existing || count > existing.count) {
+                ohlcRequests.set(key, { pair, interval, count });
             }
         }
-    }
-    if (pairs.size === 0) {
-        pairs.add('BTC/USD');
+        if (node.type === 'data.kraken.spread') {
+            const config = node.config as { pair?: string; count?: unknown };
+            const pair = config.pair ?? 'BTC/USD';
+            const count = normalizeCount(config.count, 50, 1, 500);
+            const key = pairKey(pair);
+            const existing = spreadRequests.get(key);
+            if (!existing || count > existing.count) {
+                spreadRequests.set(key, { pair, count });
+            }
+        }
+        if (node.type === 'data.kraken.assetPairs') {
+            const pair = (node.config as { pair?: string }).pair ?? 'BTC/USD';
+            assetPairRequests.add(pair);
+        }
     }
 
-    const marketData: Record<string, { pair: string; last: number; ask?: number; bid?: number; spread?: number; timestamp?: number }> = {};
+    if (marketPairs.size === 0) {
+        marketPairs.add('BTC/USD');
+    }
+
+    const marketData: Record<string, MarketDataSnapshot> = {};
+    const ohlcData: Record<string, OhlcSnapshot> = {};
+    const spreadData: Record<string, SpreadSnapshot> = {};
+    const assetPairData: Record<string, AssetPairMetadata> = {};
     const warnings: ExecutionWarning[] = [];
 
-    const pairResults = Array.from(pairs).map(async (pair) => {
+    const marketResults = Array.from(marketPairs).map(async (pair) => {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 2500);
 
@@ -339,9 +466,83 @@ async function buildMarketData(
         }
     });
 
-    await Promise.all(pairResults);
+    const ohlcResults = Array.from(ohlcRequests.values()).map(async (request) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        try {
+            const snapshot = await fetchOHLC(request.pair, request.interval, { signal: controller.signal });
+            ohlcData[ohlcKey(request.pair, request.interval)] = {
+                ...snapshot,
+                candles: snapshot.candles.slice(-request.count),
+            };
+        } catch (err) {
+            if ((err as Error)?.name !== 'AbortError') {
+                fastify.log.warn({ err, pair: request.pair }, 'Failed to fetch Kraken OHLC');
+            }
+            warnings.push({
+                code: 'OHLC_FALLBACK',
+                message: `OHLC data unavailable for ${pairKey(request.pair)}; using dry-run fallback.`,
+            });
+        } finally {
+            clearTimeout(timeout);
+        }
+    });
 
-    return { marketData, warnings };
+    const spreadResults = Array.from(spreadRequests.values()).map(async (request) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        try {
+            const snapshot = await fetchSpread(request.pair, { signal: controller.signal });
+            spreadData[pairKey(request.pair)] = {
+                ...snapshot,
+                entries: snapshot.entries.slice(-request.count),
+            };
+        } catch (err) {
+            if ((err as Error)?.name !== 'AbortError') {
+                fastify.log.warn({ err, pair: request.pair }, 'Failed to fetch Kraken spreads');
+            }
+            warnings.push({
+                code: 'SPREAD_FALLBACK',
+                message: `Spread data unavailable for ${pairKey(request.pair)}; using dry-run fallback.`,
+            });
+        } finally {
+            clearTimeout(timeout);
+        }
+    });
+
+    const assetPairResults = async () => {
+        if (assetPairRequests.size === 0) return;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        try {
+            const pairs = await fetchAssetPairs({ signal: controller.signal });
+            for (const pair of assetPairRequests) {
+                const metadata = resolveAssetPairMetadata(pair, pairs);
+                if (metadata) {
+                    assetPairData[pairKey(pair)] = metadata;
+                } else {
+                    warnings.push({
+                        code: 'ASSET_PAIR_NOT_FOUND',
+                        message: `AssetPairs metadata not found for ${pairKey(pair)}.`,
+                    });
+                }
+            }
+        } catch (err) {
+            if ((err as Error)?.name !== 'AbortError') {
+                fastify.log.warn({ err }, 'Failed to fetch Kraken asset pairs');
+            }
+            warnings.push({
+                code: 'ASSET_PAIR_FALLBACK',
+                message: 'AssetPairs metadata unavailable; using dry-run fallback.',
+            });
+        } finally {
+            clearTimeout(timeout);
+        }
+    };
+
+    await Promise.all([Promise.all(marketResults), Promise.all(ohlcResults), Promise.all(spreadResults), assetPairResults()]);
+
+    return { marketData, ohlcData, spreadData, assetPairData, warnings };
 }
 
 async function runExecution(
@@ -351,11 +552,20 @@ async function runExecution(
     validate?: boolean,
     targetNodeId?: string
 ): Promise<ExecutionResult> {
-    const { marketData, warnings: marketWarnings } = await buildMarketData(strategy, fastify);
+    const {
+        marketData,
+        ohlcData,
+        spreadData,
+        assetPairData,
+        warnings: marketWarnings,
+    } = await buildExecutionData(strategy, fastify);
 
     const ctx: ExecutionContext = {
         mode,
         marketData,
+        ohlcData,
+        spreadData,
+        assetPairData,
         targetNodeId,
     };
 
