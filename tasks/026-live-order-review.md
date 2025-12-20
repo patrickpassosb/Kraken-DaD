@@ -40,6 +40,7 @@ Limit reference should force limit orders with a required price, while market or
 ### Success Criteria
 <!-- Define exactly how you'll know when this task is complete and successful -->
 - [ ] Limit reference always resolves to `ordertype=limit` with a price in dry-run intents and live/validate requests
+- [ ] Limit reference overrides any connected price input
 - [ ] Market orders never include a price in live or validation payloads
 - [ ] Preview type/price inference matches the live payload resolution
 - [ ] Live/validate paths block limit orders that lack a price

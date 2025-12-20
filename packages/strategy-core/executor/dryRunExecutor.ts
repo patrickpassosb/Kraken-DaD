@@ -274,7 +274,7 @@ blockHandlers.set('action.placeOrder', (node, inputs, _ctx) => {
     const amount = (node.config.amount as number) ?? 0.1;
     const inputPrice = normalizePrice(inputs.price);
     const configPrice = normalizePrice(node.config.price);
-    const resolvedPrice = inputPrice ?? configPrice;
+    const resolvedPrice = configPrice ?? inputPrice;
     const hasLimitReference = resolvedPrice !== undefined;
     const resolvedType: 'market' | 'limit' = hasLimitReference ? 'limit' : rawType;
 
