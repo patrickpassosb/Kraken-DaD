@@ -373,6 +373,13 @@ function App() {
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
     const validationSkipped = result?.warnings.find((warning) => warning.code === 'VALIDATE_SKIPPED');
     const validationResults = result?.krakenValidations ?? [];
+    const auditNotes = (result?.actionIntents ?? [])
+        .filter((intent) => intent.type === 'action.logIntent' || intent.intent.action === 'LOG')
+        .map((intent) => {
+            const params = intent.intent.params as Record<string, unknown>;
+            const note = typeof params.note === 'string' ? params.note.trim() : '';
+            return { nodeId: intent.nodeId, note: note || 'Log intent' };
+        });
     const liveBlocked = executionMode === 'live' && !credentialsStatus.configured;
     const modeLabel = executionMode === 'live' ? 'Live (real orders)' : 'Dry-run (no live orders)';
     const executeLabel = executionMode === 'live' ? 'Execute live' : 'Execute workflow';
@@ -535,6 +542,21 @@ function App() {
                                         ) : (
                                             <div className="value muted">No validation results.</div>
                                         )}
+                                    </div>
+                                )}
+                                {auditNotes.length > 0 && (
+                                    <div className="summary-card validation-card" style={{ marginTop: '12px' }}>
+                                        <h4>Audit Notes</h4>
+                                        <div className="validation-list">
+                                            {auditNotes.map((note, index) => (
+                                                <div key={`${note.nodeId}-${index}`} className="validation-row">
+                                                    <div className="validation-main">
+                                                        <div className="validation-action">{note.note}</div>
+                                                        <div className="validation-node">{note.nodeId}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                                 {error && (

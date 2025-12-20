@@ -39,6 +39,7 @@ The canvas and shell need final convergence: header copy must drop “Dry-run on
 - [x] Each current strategy block is assessed for necessity (keep/remove/merge) with rationale.
 - [x] Expansion shortlist of new strategy blocks is proposed with scope notes (data/logic/risk/action) and required backend/API support.
 - [x] IF node outputs are labeled true/false (n8n-style) to remove ambiguity.
+- [x] Log Intent notes appear in the right-rail audit summary for clarity.
 - [ ] Strategy Blocks palette scrollbar matches Kraken UI (custom track/thumb styling, no default OS scrollbar chrome).
 - [ ] Strategy Canvas lanes (Market → Logic → Risk → Execution) are visually clear with intentional node placement cues and lane labeling.
 - [ ] Order Preview and execution summary surfaces display fee rate (%) and computed fee value from that rate.
