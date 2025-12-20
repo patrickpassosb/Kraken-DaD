@@ -201,6 +201,50 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function normalizeOrderType(value: unknown): 'market' | 'limit' {
+    return value === 'limit' ? 'limit' : 'market';
+}
+
+function normalizeSide(value: unknown): 'buy' | 'sell' {
+    return value === 'sell' ? 'sell' : 'buy';
+}
+
+function normalizePrice(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+}
+
+function resolveOrderParams(params: Record<string, unknown>): {
+    order?: { pair: string; type: 'buy' | 'sell'; ordertype: 'market' | 'limit'; volume: string; price?: string };
+    error?: string;
+} {
+    const pair = (params.pair as string) ?? 'BTC/USD';
+    const side = normalizeSide(params.side);
+    const rawType = normalizeOrderType(params.type);
+    const volume = String(params.amount ?? 0.1);
+    const priceValue = normalizePrice(params.price);
+    const hasLimitReference = priceValue !== undefined;
+    const ordertype: 'market' | 'limit' = hasLimitReference ? 'limit' : rawType;
+
+    if (ordertype === 'limit' && !hasLimitReference) {
+        return { error: 'Limit orders require a price.' };
+    }
+
+    return {
+        order: {
+            pair,
+            type: side,
+            ordertype,
+            volume,
+            ...(ordertype === 'limit' && hasLimitReference && { price: String(priceValue) }),
+        },
+    };
+}
+
 const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: number; spread?: number }> = {
     'BTC/USD': { last: 90135.6, ask: 90136.4, bid: 90134.8, spread: 1.6 },
     'ETH/USD': { last: 3450.12, ask: 3450.6, bid: 3449.5, spread: 1.1 },
@@ -315,11 +359,14 @@ async function runExecution(
         targetNodeId,
     };
 
-    const result: ExecutionResult = executeDryRun(strategy, ctx);
+    let result: ExecutionResult = executeDryRun(strategy, ctx);
     result.warnings.push(...marketWarnings);
 
     if (mode === 'dry-run' && validate) {
         await applyKrakenValidation(result, fastify);
+        if (result.errors.length > 0) {
+            result = { ...result, success: false };
+        }
     }
 
     if (mode === 'live') {
@@ -345,18 +392,23 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
         try {
             if (intent.intent.action === 'PLACE_ORDER') {
                 const params = intent.intent.params;
-                const pair = (params.pair as string) ?? 'BTC/USD';
-                const side = (params.side as 'buy' | 'sell') ?? 'buy';
-                const type = (params.type as 'market' | 'limit') ?? 'market';
-                const volume = String(params.amount ?? 0.1);
-                const price = params.price !== undefined ? String(params.price) : undefined;
-                const validateResp = await validateAddOrder({
-                    pair,
-                    type: side,
-                    ordertype: type,
-                    volume,
-                    price,
-                });
+                const resolved = resolveOrderParams(params);
+                if (!resolved.order) {
+                    const detail = resolved.error ?? 'Invalid order parameters.';
+                    validations.push({
+                        nodeId: intent.nodeId,
+                        action: intent.intent.action,
+                        status: 'error',
+                        detail,
+                    });
+                    result.errors.push({
+                        code: 'ORDER_PRICE_REQUIRED',
+                        message: detail,
+                        nodeId: intent.nodeId,
+                    });
+                    continue;
+                }
+                const validateResp = await validateAddOrder(resolved.order);
                 validations.push({
                     nodeId: intent.nodeId,
                     action: intent.intent.action,
@@ -422,18 +474,23 @@ async function applyKrakenLive(result: ExecutionResult, fastify: FastifyInstance
         try {
             if (intent.intent.action === 'PLACE_ORDER') {
                 const params = intent.intent.params;
-                const pair = (params.pair as string) ?? 'BTC/USD';
-                const side = (params.side as 'buy' | 'sell') ?? 'buy';
-                const type = (params.type as 'market' | 'limit') ?? 'market';
-                const volume = String(params.amount ?? 0.1);
-                const price = params.price !== undefined ? String(params.price) : undefined;
-                const response = await placeOrder({
-                    pair,
-                    type: side,
-                    ordertype: type,
-                    volume,
-                    price,
-                });
+                const resolved = resolveOrderParams(params);
+                if (!resolved.order) {
+                    const detail = resolved.error ?? 'Invalid order parameters.';
+                    liveActions.push({
+                        nodeId: intent.nodeId,
+                        action: intent.intent.action,
+                        status: 'error',
+                        detail,
+                    });
+                    errors.push({
+                        code: 'LIVE_ORDER_INVALID',
+                        message: detail,
+                        nodeId: intent.nodeId,
+                    });
+                    continue;
+                }
+                const response = await placeOrder(resolved.order);
                 liveActions.push({
                     nodeId: intent.nodeId,
                     action: intent.intent.action,

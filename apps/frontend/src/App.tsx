@@ -63,13 +63,33 @@ function mockMarketContext(pair: string): MarketContext {
     return { pair: normalized, ...context };
 }
 
-function deriveOrderPreview(nodes: Node[], context: MarketContext, fallbackPair: string) {
+function normalizePrice(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+}
+
+function deriveOrderPreview(nodes: Node[], edges: Edge[], context: MarketContext, fallbackPair: string) {
     const orderNode = nodes.find((n) => n.type === 'action.placeOrder');
     const data = (orderNode?.data as Record<string, unknown>) || {};
     const side = (data.side as 'buy' | 'sell') || 'buy';
     const amount = (data.amount as number) ?? 0.1;
-    const type = (data.type as 'market' | 'limit') || 'market';
-    const price = (data.price as number | undefined) ?? context.lastPrice;
+    const rawType = data.type === 'limit' ? 'limit' : 'market';
+    const price = normalizePrice(data.price);
+    const hasInputPrice =
+        !!orderNode &&
+        edges.some(
+            (edge) =>
+                edge.target === orderNode.id &&
+                edge.targetHandle === 'data:price'
+        );
+    const type: 'market' | 'limit' =
+        price !== undefined ? 'limit' : hasInputPrice ? 'limit' : rawType;
+    const estimatedPrice =
+        type === 'limit' ? price ?? context.lastPrice : context.lastPrice;
     const pairValue = (data.pair as string) || fallbackPair || context.pair;
 
     return {
@@ -77,7 +97,7 @@ function deriveOrderPreview(nodes: Node[], context: MarketContext, fallbackPair:
         side,
         amount,
         type,
-        estimatedPrice: price,
+        estimatedPrice,
     };
 }
 
@@ -275,8 +295,8 @@ function App() {
 
     const activePair = selectedPair;
     const orderPreview = useMemo(
-        () => deriveOrderPreview(nodes, marketContext ?? mockMarketContext(activePair), activePair),
-        [nodes, marketContext, activePair]
+        () => deriveOrderPreview(nodes, edges, marketContext ?? mockMarketContext(activePair), activePair),
+        [nodes, edges, marketContext, activePair]
     );
     const orderNotional =
         orderPreview.estimatedPrice !== undefined
