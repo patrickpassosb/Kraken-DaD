@@ -1444,6 +1444,29 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(86, 64, 143, 0.85) rgba(12, 10, 20, 0.6);
+}
+
+.pair-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.pair-list::-webkit-scrollbar-track {
+    background: rgba(12, 10, 20, 0.6);
+    border-left: 1px solid rgba(61, 44, 105, 0.35);
+    border-radius: 10px;
+}
+
+.pair-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(86, 64, 143, 0.9), rgba(61, 44, 105, 0.85));
+    border-radius: 10px;
+    border: 1px solid rgba(61, 44, 105, 0.6);
+}
+
+.pair-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(101, 78, 168, 0.95), rgba(61, 44, 105, 0.9));
 }
 
 .pair-row {
