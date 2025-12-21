@@ -3,13 +3,16 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install dependencies for the shared Kraken client (file dependency).
-COPY packages/kraken-client/package*.json packages/kraken-client/
-RUN npm ci --prefix packages/kraken-client --omit=dev
+# Copy root manifests
+COPY package.json package-lock.json ./
 
-# Install backend deps (dev deps kept for tsx loader runtime).
-COPY apps/backend/package*.json apps/backend/
-RUN npm ci --prefix apps/backend
+# Copy workspace component manifests (to allow npm ci to link them)
+COPY apps/backend/package.json apps/backend/
+COPY apps/frontend/package.json apps/frontend/
+COPY packages/kraken-client/package.json packages/kraken-client/
+
+# Install dependencies from root (hoist strategy)
+RUN npm ci
 
 # Copy source after installs to leverage Docker layer cache.
 COPY apps/backend apps/backend
