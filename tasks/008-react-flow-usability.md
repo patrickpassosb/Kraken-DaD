@@ -24,8 +24,9 @@
   - [ ] Edges render with smooth curved paths (no sharp step corners) and preserve control/data coloring  
   - [ ] Edge actions allow deleting a selected edge and inserting a node into a control edge  
 - [ ] Edge insertion opens the palette and inserts a compatible node between the two endpoints  
- - [ ] Nodes expose actions to run a single node, deactivate/reactivate it, and delete it  
- - [ ] Deactivated nodes are visually distinct and skipped during execution (no action intents)  
+- [ ] Nodes expose actions to run a single node, deactivate/reactivate it, and delete it  
+- [ ] Node action toolbar only appears on hover (not on selection) and hides when the cursor leaves the node/toolbar  
+- [ ] Deactivated nodes are visually distinct and skipped during execution (no action intents)  
  - [ ] Backend supports running a specific node via `targetNodeId` with upstream dependencies executed  
  - [ ] UI supports running a specific node and reflects node status updates from the response  
 - [ ] Template load and Tidy Up place nodes in clean lanes/columns without overlapping edges

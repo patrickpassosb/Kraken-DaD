@@ -12,12 +12,12 @@ export interface KrakenTickerNodeData {
     disabled?: boolean;
 }
 
-export function KrakenTickerNode({ id, data, selected }: NodeProps) {
+export function KrakenTickerNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as KrakenTickerNodeData) || {};
     const [pair, setPair] = useState(nodeData?.pair || 'BTC/USD');
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const handlePairChange = useCallback(
@@ -40,10 +40,7 @@ export function KrakenTickerNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

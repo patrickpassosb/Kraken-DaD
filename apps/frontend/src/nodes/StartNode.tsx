@@ -9,10 +9,10 @@ export interface StartNodeData {
     disabled?: boolean;
 }
 
-export function StartNode({ id, data, selected }: NodeProps) {
+export function StartNode({ id, data }: NodeProps) {
     const nodeData = (data as StartNodeData) || {};
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     return (
@@ -20,10 +20,7 @@ export function StartNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

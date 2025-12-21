@@ -11,11 +11,11 @@ export interface CancelOrderNodeData {
     disabled?: boolean;
 }
 
-export function CancelOrderNode({ id, data, selected }: NodeProps) {
+export function CancelOrderNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as CancelOrderNodeData;
     const isDisabled = nodeData?.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [orderId, setOrderId] = useState(nodeData?.orderId || '');
@@ -38,10 +38,7 @@ export function CancelOrderNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

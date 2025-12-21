@@ -4,36 +4,26 @@ import { useNodeActions } from '../context/NodeActionContext';
 interface NodeActionToolbarProps {
     nodeId: string;
     disabled?: boolean;
-    selected?: boolean;
     visible?: boolean;
-    onToolbarEnter?: () => void;
-    onToolbarLeave?: () => void;
 }
 
 export function NodeActionToolbar({
     nodeId,
     disabled,
-    selected,
     visible,
-    onToolbarEnter,
-    onToolbarLeave,
 }: NodeActionToolbarProps) {
     const { runNode, toggleNodeDisabled, deleteNode } = useNodeActions();
     const toggleLabel = disabled ? 'Enable' : 'Disable';
-    const isVisible = Boolean(selected || visible);
+    const isVisible = Boolean(visible);
     const visibilityClass = isVisible ? 'node-toolbar-visible' : '';
 
     return (
         <NodeToolbar
-            isVisible
+            isVisible={isVisible}
             position={Position.Top}
             className={`node-toolbar nodrag nopan ${visibilityClass}`.trim()}
         >
-            <div
-                className="node-toolbar-actions"
-                onMouseEnter={onToolbarEnter}
-                onMouseLeave={onToolbarLeave}
-            >
+            <div className="node-toolbar-actions">
                 <button className="node-action-btn node-action-run nodrag" onClick={() => runNode(nodeId)}>
                     Execute
                 </button>

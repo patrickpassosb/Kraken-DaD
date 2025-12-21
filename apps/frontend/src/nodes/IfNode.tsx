@@ -13,11 +13,11 @@ export interface ConditionNodeData {
     disabled?: boolean;
 }
 
-export function IfNode({ id, data, selected }: NodeProps) {
+export function IfNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConditionNodeData) || {};
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [comparator, setComparator] = useState(nodeData.comparator || '>');
@@ -41,10 +41,7 @@ export function IfNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

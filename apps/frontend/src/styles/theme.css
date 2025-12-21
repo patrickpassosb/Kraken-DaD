@@ -1033,7 +1033,7 @@ body {
     opacity: 0;
     transform: translateY(4px);
     pointer-events: none;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity 0.28s ease, transform 0.28s ease;
 }
 
 .node-toolbar-visible {

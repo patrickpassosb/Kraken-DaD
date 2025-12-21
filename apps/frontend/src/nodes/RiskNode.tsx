@@ -22,11 +22,11 @@ function parseDecimalInput(raw: string): number | null {
     return Math.max(parsed, 0);
 }
 
-export function RiskNode({ id, data, selected }: NodeProps) {
+export function RiskNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as RiskNodeData) || {};
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
@@ -51,10 +51,7 @@ export function RiskNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

@@ -15,11 +15,11 @@ export interface TimeWindowNodeData {
     disabled?: boolean;
 }
 
-export function TimeWindowNode({ id, data, selected }: NodeProps) {
+export function TimeWindowNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as TimeWindowNodeData) || {};
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [startTime, setStartTime] = useState(nodeData.startTime ?? '00:00');
@@ -61,10 +61,7 @@ export function TimeWindowNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function useNodeToolbarHover(delay: number = 140) {
+export function useNodeToolbarHover(delay: number = 240) {
     const [nodeHover, setNodeHover] = useState(false);
-    const [toolbarHover, setToolbarHover] = useState(false);
     const timeoutRef = useRef<number | null>(null);
 
     const clearTimer = useCallback(() => {
@@ -29,22 +28,11 @@ export function useNodeToolbarHover(delay: number = 140) {
         schedule(() => setNodeHover(false));
     }, [schedule]);
 
-    const onToolbarEnter = useCallback(() => {
-        clearTimer();
-        setToolbarHover(true);
-    }, [clearTimer]);
-
-    const onToolbarLeave = useCallback(() => {
-        schedule(() => setToolbarHover(false));
-    }, [schedule]);
-
     useEffect(() => () => clearTimer(), [clearTimer]);
 
     return {
-        visible: nodeHover || toolbarHover,
+        visible: nodeHover,
         onNodeEnter,
         onNodeLeave,
-        onToolbarEnter,
-        onToolbarLeave,
     };
 }

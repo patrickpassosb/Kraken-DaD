@@ -12,12 +12,12 @@ export interface LogIntentNodeData {
     disabled?: boolean;
 }
 
-export function LogIntentNode({ id, data, selected }: NodeProps) {
+export function LogIntentNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as LogIntentNodeData) || {};
     const isDisabled = nodeData.disabled;
     const [note, setNote] = useState(nodeData.note || 'Log execution intent for audit');
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const updateData = useCallback(
@@ -38,10 +38,7 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">

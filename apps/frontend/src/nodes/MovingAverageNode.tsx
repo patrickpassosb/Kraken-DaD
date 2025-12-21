@@ -22,11 +22,11 @@ function parsePeriod(raw: string): number | null {
     return Math.max(parsed, 1);
 }
 
-export function MovingAverageNode({ id, data, selected }: NodeProps) {
+export function MovingAverageNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as MovingAverageNodeData) || {};
     const isDisabled = nodeData.disabled;
-    const { visible, onNodeEnter, onNodeLeave, onToolbarEnter, onToolbarLeave } =
+    const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [method, setMethod] = useState<MovingAverageMethod>(nodeData.method ?? 'SMA');
@@ -48,10 +48,7 @@ export function MovingAverageNode({ id, data, selected }: NodeProps) {
             <NodeActionToolbar
                 nodeId={id}
                 disabled={isDisabled}
-                selected={selected}
                 visible={visible}
-                onToolbarEnter={onToolbarEnter}
-                onToolbarLeave={onToolbarLeave}
             />
             <div className="node-head">
                 <div className="node-title">
