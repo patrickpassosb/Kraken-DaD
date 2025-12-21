@@ -29,7 +29,7 @@ export function StartNode({ id, data }: NodeProps) {
                     <span>Strategy Start</span>
                     <span>Entry control signal</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="control.start" size={20} />
                 </div>
             </div>

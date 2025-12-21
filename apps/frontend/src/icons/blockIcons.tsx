@@ -72,12 +72,12 @@ export const IconPaths: Record<string, React.ReactNode> = {
     ),
     'logic.movingAverage': (
         <>
-            {/* Moving Average - Price + Indicator (Standard Financial) */}
-            {/* Price Line (Jagged, Thinner, Background) */}
-            <polyline points="3 14 7 10 11 13 15 9 21 5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+            {/* Moving Average - Intertwined Curves (Crossover/Golden Cross) */}
+            {/* Slow Average (Broader curve) */}
+            <path d="M3 15C8 15 13 12 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
 
-            {/* MA Line (Smooth, Thicker, Foreground) */}
-            <path d="M3 16C7 15 11 11 15 11C18 11 21 6 21 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Fast Average (Steeper curve, intersecting) */}
+            <path d="M3 18C8 18 12 9 21 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>
     ),
     'logic.if': (

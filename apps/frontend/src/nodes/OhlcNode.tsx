@@ -70,7 +70,7 @@ export function OhlcNode({ id, data }: NodeProps) {
                     <span>OHLC Candles</span>
                     <span>Kraken public OHLC snapshot</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="data.kraken.ohlc" size={20} />
                 </div>
             </div>

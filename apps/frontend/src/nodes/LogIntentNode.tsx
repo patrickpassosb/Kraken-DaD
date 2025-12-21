@@ -47,7 +47,7 @@ export function LogIntentNode({ id, data }: NodeProps) {
                     <span>Audit Log</span>
                     <span>Record intent without execution</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="action.logIntent" size={20} />
                 </div>
             </div>

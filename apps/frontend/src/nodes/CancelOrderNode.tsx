@@ -47,7 +47,7 @@ export function CancelOrderNode({ id, data }: NodeProps) {
                     <span>Order Control</span>
                     <span>Cancel prepared order</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="action.cancelOrder" size={20} />
                 </div>
             </div>

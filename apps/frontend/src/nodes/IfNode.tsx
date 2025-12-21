@@ -50,7 +50,7 @@ export function IfNode({ id, data }: NodeProps) {
                     <span>Condition</span>
                     <span>Human-readable logic</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="logic.if" size={20} />
                 </div>
             </div>

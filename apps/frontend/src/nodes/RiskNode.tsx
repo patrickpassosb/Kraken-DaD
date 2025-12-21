@@ -60,7 +60,7 @@ export function RiskNode({ id, data }: NodeProps) {
                     <span>Orderbook Guard</span>
                     <span>Blocks if spread too wide</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="risk.guard" size={20} />
                 </div>
             </div>

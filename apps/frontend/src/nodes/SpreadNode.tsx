@@ -55,7 +55,7 @@ export function SpreadNode({ id, data }: NodeProps) {
                     <span>Recent Spreads</span>
                     <span>Kraken bid/ask spread history</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="data.kraken.spread" size={20} />
                 </div>
             </div>

@@ -70,7 +70,7 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
                     <span>Execution</span>
                     <span>Prepare Kraken order intent</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="action.placeOrder" size={20} />
                 </div>
             </div>

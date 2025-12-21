@@ -70,7 +70,7 @@ export function TimeWindowNode({ id, data }: NodeProps) {
                     <span>Time Window</span>
                     <span>UTC control gating</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="control.timeWindow" size={20} />
                 </div>
             </div>

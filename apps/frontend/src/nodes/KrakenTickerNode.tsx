@@ -49,7 +49,7 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
                     <span>Market Data</span>
                     <span>Kraken public ticker</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="data.kraken.ticker" size={20} />
                 </div>
             </div>

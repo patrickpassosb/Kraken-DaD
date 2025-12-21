@@ -45,7 +45,7 @@ export function AssetPairsNode({ id, data }: NodeProps) {
                     <span>AssetPairs Metadata</span>
                     <span>Tick size + min order constraints</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="data.kraken.assetPairs" size={20} />
                 </div>
             </div>

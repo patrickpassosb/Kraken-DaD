@@ -88,7 +88,7 @@ export const MovingAverageNode = memo(function MovingAverageNode({
                     <span>Moving Average</span>
                     <span>Compute SMA or EMA from series</span>
                 </div>
-                <div className="node-icon">
+                <div className="node-icon" style={{ color: '#ffffff' }}>
                     <BlockIcon type="logic.movingAverage" size={20} />
                 </div>
             </div>
