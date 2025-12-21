@@ -26,6 +26,7 @@ import {
     type NodeTypeId,
 } from '../nodes/nodeRegistry';
 import { NodeStatus } from '../utils/status';
+import { BlockIcon } from '../components/BlockIcon';
 
 interface FlowCanvasProps {
     onNodesChange: (nodes: Node[]) => void;
@@ -69,9 +70,33 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
         targetPort: 'condition',
     },
     {
+        source: 'data.kraken.ohlc',
+        target: 'logic.movingAverage',
+        sourcePort: 'closeSeries',
+        targetPort: 'series',
+    },
+    {
+        source: 'data.constant',
+        target: 'logic.if',
+        sourcePort: 'value',
+        targetPort: 'threshold',
+    },
+    {
         source: 'data.kraken.ticker',
         target: 'action.placeOrder',
         sourcePort: 'price',
+        targetPort: 'price',
+    },
+    {
+        source: 'data.constant',
+        target: 'action.placeOrder',
+        sourcePort: 'value',
+        targetPort: 'price',
+    },
+    {
+        source: 'data.constant',
+        target: 'action.logIntent',
+        sourcePort: 'value',
         targetPort: 'price',
     },
     {
@@ -84,7 +109,13 @@ const IMPLIED_DATA_EDGES: ImpliedDataEdge[] = [
 
 const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
     'control.start': null,
+    'control.timeWindow': { in: 'control:in', out: 'control:out' },
     'data.kraken.ticker': { in: 'control:in', out: 'control:out' },
+    'data.kraken.ohlc': { in: 'control:in', out: 'control:out' },
+    'data.kraken.spread': { in: 'control:in', out: 'control:out' },
+    'data.kraken.assetPairs': { in: 'control:in', out: 'control:out' },
+    'data.constant': { in: 'control:in', out: 'control:out' },
+    'logic.movingAverage': { in: 'control:in', out: 'control:out' },
     'logic.if': { in: 'control:in', out: 'control:true' },
     'risk.guard': { in: 'control:in', out: 'control:out' },
     'action.placeOrder': null,
@@ -142,11 +173,23 @@ function appendImpliedEdges(
                 `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`
         )
     );
+    const targetPorts = new Set(
+        baseEdges
+            .filter((edge) => edge.type === 'data')
+            .map((edge) => `${edge.target}:${edge.targetHandle ?? ''}`)
+    );
     const nextEdges = [...baseEdges];
     impliedEdges.forEach((edge) => {
         const key = `${edge.source}:${edge.sourceHandle ?? ''}->${edge.target}:${edge.targetHandle ?? ''}`;
+        const targetKey = `${edge.target}:${edge.targetHandle ?? ''}`;
         if (!existing.has(key)) {
+            if (edge.type === 'data' && targetPorts.has(targetKey)) {
+                return;
+            }
             existing.add(key);
+            if (edge.type === 'data') {
+                targetPorts.add(targetKey);
+            }
             nextEdges.push(edge);
         }
     });
@@ -160,11 +203,12 @@ function nodeHighlight(status?: NodeStatus): string {
     return '';
 }
 
-function nodeClassName(status?: NodeStatus, disabled?: boolean): string {
+function nodeClassName(status?: NodeStatus, disabled?: boolean, type?: string): string {
     const classes = [];
     const highlight = nodeHighlight(status);
     if (highlight) classes.push(highlight);
     if (disabled) classes.push('node-disabled');
+    if (type === 'logic.if') classes.push('node-conditional');
     return classes.join(' ');
 }
 
@@ -180,6 +224,10 @@ function laneIndexForType(type?: string): number {
 const GRID_SIZE = 20;
 const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
+/**
+ * Hosts the React Flow canvas, palette, and layout helpers.
+ * Handles implied data edges, tidy layout, keyboard shortcuts, and node actions.
+ */
 export function FlowCanvas({
     onNodesChange,
     onEdgesChange,
@@ -270,22 +318,21 @@ export function FlowCanvas({
             if (!isValidConnection(connection)) return;
 
             const edgeType = connection.sourceHandle?.startsWith('control') ? 'control' : 'data';
-            setEdges((eds) =>
-                {
-                    const nextEdges = addEdge(
-                        {
-                            ...connection,
-                            type: edgeType,
-                            style: edgeStyleForType(edgeType),
-                        },
-                        eds
-                    );
-                    if (edgeType !== 'control') return nextEdges;
-                    const sourceId = connection.source ?? '';
-                    const targetId = connection.target ?? '';
-                    const impliedEdges = findImpliedDataEdges(sourceId, targetId, nodes);
-                    return appendImpliedEdges(nextEdges, impliedEdges);
-                }
+            setEdges((eds) => {
+                const nextEdges = addEdge(
+                    {
+                        ...connection,
+                        type: edgeType,
+                        style: edgeStyleForType(edgeType),
+                    },
+                    eds
+                );
+                if (edgeType !== 'control') return nextEdges;
+                const sourceId = connection.source ?? '';
+                const targetId = connection.target ?? '';
+                const impliedEdges = findImpliedDataEdges(sourceId, targetId, nodes);
+                return appendImpliedEdges(nextEdges, impliedEdges);
+            }
             );
         },
         [isValidConnection, nodes, setEdges]
@@ -398,7 +445,7 @@ export function FlowCanvas({
                 return {
                     ...node,
                     data: { ...node.data, status },
-                    className: nodeClassName(status, disabled),
+                    className: nodeClassName(status, disabled, node.type),
                 };
             })
         );
@@ -457,7 +504,7 @@ export function FlowCanvas({
                     return {
                         ...node,
                         data: { ...data, disabled },
-                        className: nodeClassName(status, disabled),
+                        className: nodeClassName(status, disabled, node.type),
                     };
                 })
             );
@@ -719,17 +766,28 @@ export function FlowCanvas({
                                     <div className="palette-group-title">{group.label}</div>
                                     {group.items.map((item) => (
                                         <div
-                                        key={item.type + item.label}
-                                        className="palette-item"
-                                        onClick={() => handleAddNode(item.type, item.defaultPosition)}
-                                        title={`${item.label} — ${item.description}`}
-                                    >
-                                        <div className="palette-icon">{item.icon}</div>
-                                        <div className="palette-text">
-                                            <div className="palette-label">{item.label}</div>
-                                            <div className="palette-subtext">{item.description}</div>
-                                        </div>
-                                        <span className={`palette-role role-${item.role.toLowerCase()}`}>
+                                            key={item.type + item.label}
+                                            className="palette-item"
+                                            onClick={() => handleAddNode(item.type, item.defaultPosition)}
+                                            title={`${item.label} — ${item.description}`}
+                                        >
+                                            <div
+                                                className="palette-icon"
+                                                style={
+                                                    item.type === 'action.placeOrder'
+                                                        ? { color: '#2bd27f' }
+                                                        : item.type === 'action.cancelOrder'
+                                                            ? { color: '#ff5f6d' }
+                                                            : undefined
+                                                }
+                                            >
+                                                <BlockIcon type={item.type} size={22} />
+                                            </div>
+                                            <div className="palette-text">
+                                                <div className="palette-label">{item.label}</div>
+                                                <div className="palette-subtext">{item.description}</div>
+                                            </div>
+                                            <span className={`palette-role role-${item.role.toLowerCase()}`}>
                                                 {item.role}
                                             </span>
                                         </div>

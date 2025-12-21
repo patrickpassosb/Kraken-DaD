@@ -2,7 +2,21 @@
     "name": "kraken-dad",
     "private": true,
     "type": "module",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "test": "tsx --test",
+        "dev:backend": "npm run dev -w @kraken-dad/backend",
+        "dev:frontend": "npm run dev -w @kraken-dad/frontend",
+        "typecheck:shared": "tsc -p tsconfig.shared.json"
+    },
     "engines": {
         "node": ">=18"
+    },
+    "devDependencies": {
+        "tsx": "^4.0.0",
+        "typescript": "^5.0.0"
     }
 }

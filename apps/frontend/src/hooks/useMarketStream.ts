@@ -11,6 +11,10 @@ type StreamPayload = {
     source: 'kraken-ws' | 'kraken-rest' | 'fallback';
 };
 
+/**
+ * Subscribes to the backend SSE ticker stream for a trading pair.
+ * Emits the freshest payload only to avoid UI churn from stale events.
+ */
 export function useMarketStream(pair: string) {
     const [data, setData] = useState<StreamPayload | null>(null);
     const [warning, setWarning] = useState<string | null>(null);

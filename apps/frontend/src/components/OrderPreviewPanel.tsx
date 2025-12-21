@@ -12,6 +12,7 @@ interface OrderPreviewProps {
     feeValue?: number;
 }
 
+/** Renders a static order preview using latest market context and configured node data. */
 export function OrderPreviewPanel({
     pair,
     side,

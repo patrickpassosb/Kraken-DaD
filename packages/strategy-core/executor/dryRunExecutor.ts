@@ -20,6 +20,11 @@ import {
     NodeConfig,
     Port,
     PortDataType,
+    OhlcSnapshot,
+    OhlcCandle,
+    SpreadSnapshot,
+    SpreadEntry,
+    AssetPairMetadata,
     SCHEMA_VERSION,
 } from '../schema.js';
 
@@ -110,6 +115,36 @@ function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+function ohlcKey(pair: string, interval: number): string {
+    return `${pairKey(pair)}::${interval}`;
+}
+
+const SUPPORTED_OHLC_INTERVALS = new Set([1, 5, 15, 30, 60, 240, 1440, 10080, 21600]);
+
+function normalizeInterval(value: unknown): number {
+    if (typeof value === 'number' && SUPPORTED_OHLC_INTERVALS.has(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed) && SUPPORTED_OHLC_INTERVALS.has(parsed)) {
+            return parsed;
+        }
+    }
+    return 1;
+}
+
+function normalizeCount(value: unknown, fallback: number, min: number, max: number): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return Math.min(Math.max(Math.round(value), min), max);
+    }
+    if (typeof value === 'string') {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed)) {
+            return Math.min(Math.max(parsed, min), max);
+        }
+    }
+    return fallback;
+}
+
 function normalizeOrderType(value: unknown): 'market' | 'limit' {
     return value === 'limit' ? 'limit' : 'market';
 }
@@ -121,6 +156,207 @@ function normalizePrice(value: unknown): number | undefined {
         return Number.isFinite(parsed) ? parsed : undefined;
     }
     return undefined;
+}
+
+function extractSeriesValues(raw: unknown): number[] {
+    if (!Array.isArray(raw)) return [];
+    const values: number[] = [];
+    for (const entry of raw) {
+        const resolved =
+            typeof entry === 'number'
+                ? entry
+                : typeof entry === 'string'
+                ? Number.parseFloat(entry)
+                : typeof entry === 'object' && entry !== null
+                ? normalizePrice((entry as Record<string, unknown>).close ?? (entry as Record<string, unknown>).value)
+                : undefined;
+        if (!Number.isFinite(resolved ?? NaN)) {
+            throw new Error('Moving Average requires a numeric series');
+        }
+        values.push(resolved as number);
+    }
+    return values;
+}
+
+/**
+ * Computes a simple moving average for each index in the series.
+ */
+function computeSma(series: number[], period: number): number[] {
+    const result: number[] = [];
+    let sum = 0;
+    for (let i = 0; i < series.length; i += 1) {
+        sum += series[i];
+        if (i >= period) {
+            sum -= series[i - period];
+        }
+        const windowSize = Math.min(i + 1, period);
+        result.push(sum / windowSize);
+    }
+    return result;
+}
+
+/**
+ * Computes an exponential moving average for each index in the series.
+ */
+function computeEma(series: number[], period: number): number[] {
+    if (series.length === 0) return [];
+    const alpha = 2 / (period + 1);
+    const result: number[] = [];
+    let prev = series[0];
+    result.push(prev);
+    for (let i = 1; i < series.length; i += 1) {
+        prev = alpha * series[i] + (1 - alpha) * prev;
+        result.push(prev);
+    }
+    return result;
+}
+
+/**
+ * Derives summary statistics from a spread series for guard blocks.
+ */
+function computeSpreadStats(series: number[]): {
+    latest: number;
+    average: number;
+    min: number;
+    max: number;
+    median: number;
+} {
+    if (series.length === 0) {
+        return { latest: 0, average: 0, min: 0, max: 0, median: 0 };
+    }
+    const latest = series[series.length - 1];
+    let sum = 0;
+    let min = series[0];
+    let max = series[0];
+    for (const value of series) {
+        sum += value;
+        if (value < min) min = value;
+        if (value > max) max = value;
+    }
+    const sorted = [...series].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median =
+        sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+    return { latest, average: sum / series.length, min, max, median };
+}
+
+/**
+ * Reads market price from context, falling back to a deterministic mock.
+ */
+function resolveMarketPrice(pair: string, ctx: ExecutionContext, fallback: number): number {
+    const market = ctx.marketData?.[pairKey(pair)];
+    return market?.last ?? fallback;
+}
+
+function buildMockOhlcCandles(basePrice: number, count: number, interval: number): OhlcCandle[] {
+    const candles: OhlcCandle[] = [];
+    const stepMs = interval * 60_000;
+    const start = Date.now() - (count - 1) * stepMs;
+    for (let i = 0; i < count; i += 1) {
+        const drift = i * 0.35;
+        const open = basePrice + drift;
+        const close = open + (i % 2 === 0 ? 0.25 : -0.15);
+        const high = Math.max(open, close) + 0.4;
+        const low = Math.min(open, close) - 0.4;
+        candles.push({
+            time: start + i * stepMs,
+            open,
+            high,
+            low,
+            close,
+            vwap: (open + close) / 2,
+            volume: 0.5 + i * 0.01,
+            count: 10 + i,
+        });
+    }
+    return candles;
+}
+
+function buildMockSpreadEntries(
+    basePrice: number,
+    spread: number,
+    count: number
+): SpreadEntry[] {
+    const entries: SpreadEntry[] = [];
+    const start = Date.now() - (count - 1) * 1000;
+    for (let i = 0; i < count; i += 1) {
+        entries.push({
+            time: start + i * 1000,
+            bid: basePrice,
+            ask: basePrice + spread,
+            spread,
+        });
+    }
+    return entries;
+}
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function parseTimeToMinutes(value: unknown, fallback: number): number {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    const match = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
+    if (!match) return fallback;
+    const hours = Number.parseInt(match[1], 10);
+    const minutes = Number.parseInt(match[2], 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes) || hours > 23 || minutes > 59) {
+        return fallback;
+    }
+    return hours * 60 + minutes;
+}
+
+function resolveAllowedDays(value: unknown): number[] {
+    if (!Array.isArray(value)) {
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+    if (value.length === 0) {
+        return [];
+    }
+    const allowed = new Set<number>();
+    for (const entry of value) {
+        if (typeof entry === 'number' && entry >= 0 && entry <= 6) {
+            allowed.add(entry);
+            continue;
+        }
+        if (typeof entry === 'string') {
+            const normalized = entry.trim().slice(0, 3).toLowerCase();
+            const index = DAY_LABELS.findIndex(
+                (label) => label.toLowerCase() === normalized
+            );
+            if (index >= 0) {
+                allowed.add(index);
+            }
+        }
+    }
+    if (allowed.size === 0) {
+        return [];
+    }
+    return Array.from(allowed.values()).sort((a, b) => a - b);
+}
+
+function nextAllowedAt(
+    now: Date,
+    allowedDays: number[],
+    startMinutes: number
+): Date | null {
+    if (allowedDays.length === 0) return null;
+    const nowDay = now.getUTCDay();
+    const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    for (let offset = 0; offset <= 7; offset += 1) {
+        const candidateDay = (nowDay + offset) % 7;
+        if (!allowedDays.includes(candidateDay)) {
+            continue;
+        }
+        const base = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset, 0, 0, 0));
+        const candidate = new Date(base.getTime() + startMinutes * 60_000);
+        if (offset === 0 && startMinutes <= nowMinutes) {
+            continue;
+        }
+        return candidate;
+    }
+    return null;
 }
 
 function isNodeDisabled(node: StrategyNode): boolean {
@@ -154,15 +390,18 @@ blockDefinitions.set('data.constant', {
     category: 'data',
     name: 'Constant',
     description: 'Outputs a constant value from configuration',
-    inputs: [],
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
     outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
         { id: 'value', label: 'Value', dataType: 'any', required: true },
     ],
 });
 
 blockHandlers.set('data.constant', (node, _inputs, _ctx) => {
     const value = node.config.value ?? null;
-    return { outputs: { value } };
+    return { outputs: { out: true, value } };
 });
 
 /**
@@ -199,6 +438,7 @@ blockDefinitions.set('action.logIntent', {
     description: 'Logs an action intent in dry-run mode',
     inputs: [
         { id: 'trigger', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'price', label: 'Price', dataType: 'number', required: false },
     ],
     outputs: [],
 });
@@ -224,8 +464,11 @@ blockDefinitions.set('data.kraken.ticker', {
     category: 'data',
     name: 'Kraken Ticker',
     description: 'Fetches latest ticker price from Kraken (dry-run uses mock)',
-    inputs: [],
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
     outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
         { id: 'price', label: 'Price', dataType: 'number', required: true },
         { id: 'pair', label: 'Pair', dataType: 'string', required: true },
         { id: 'ask', label: 'Ask', dataType: 'number', required: false },
@@ -241,11 +484,227 @@ blockHandlers.set('data.kraken.ticker', (node, _inputs, ctx) => {
     const price = market?.last ?? 42000;
     return {
         outputs: {
+            out: true,
             price,
             pair: market?.pair ?? pair,
             ask: market?.ask,
             bid: market?.bid,
             spread: market?.spread,
+        },
+    };
+});
+
+/**
+ * data.kraken.ohlc - Fetches OHLC candles from Kraken (mock in dry-run if missing)
+ */
+blockDefinitions.set('data.kraken.ohlc', {
+    type: 'data.kraken.ohlc',
+    category: 'data',
+    name: 'Kraken OHLC',
+    description: 'Fetches OHLC candles from Kraken (dry-run uses snapshot)',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+        { id: 'candles', label: 'Candles', dataType: 'any', required: true },
+        { id: 'closeSeries', label: 'Close Series', dataType: 'any', required: true },
+        { id: 'lastCandle', label: 'Last Candle', dataType: 'any', required: true },
+    ],
+});
+
+blockHandlers.set('data.kraken.ohlc', (node, _inputs, ctx) => {
+    const pair = (node.config.pair as string) || 'BTC/USD';
+    const interval = normalizeInterval(node.config.interval);
+    const count = normalizeCount(node.config.count, 120, 1, 720);
+    const snapshot: OhlcSnapshot | undefined = ctx.ohlcData?.[ohlcKey(pair, interval)];
+    const candles = snapshot?.candles?.length
+        ? snapshot.candles.slice(-count)
+        : buildMockOhlcCandles(resolveMarketPrice(pair, ctx, 42000), count, interval);
+    const closeSeries = candles.map((candle) => candle.close);
+    const lastCandle = candles[candles.length - 1] ?? null;
+
+    return {
+        outputs: {
+            out: true,
+            candles,
+            closeSeries,
+            lastCandle,
+        },
+    };
+});
+
+/**
+ * data.kraken.spread - Fetches recent spreads from Kraken (mock in dry-run if missing)
+ */
+blockDefinitions.set('data.kraken.spread', {
+    type: 'data.kraken.spread',
+    category: 'data',
+    name: 'Kraken Spreads',
+    description: 'Fetches recent bid/ask spreads from Kraken',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+        { id: 'latest', label: 'Latest', dataType: 'number', required: true },
+        { id: 'average', label: 'Average', dataType: 'number', required: true },
+        { id: 'min', label: 'Min', dataType: 'number', required: true },
+        { id: 'max', label: 'Max', dataType: 'number', required: true },
+        { id: 'median', label: 'Median', dataType: 'number', required: true },
+        { id: 'series', label: 'Series', dataType: 'any', required: true },
+    ],
+});
+
+blockHandlers.set('data.kraken.spread', (node, _inputs, ctx) => {
+    const pair = (node.config.pair as string) || 'BTC/USD';
+    const count = normalizeCount(node.config.count, 50, 1, 500);
+    const snapshot: SpreadSnapshot | undefined = ctx.spreadData?.[pairKey(pair)];
+    const entries: SpreadEntry[] =
+        snapshot?.entries?.length
+            ? [...snapshot.entries].slice(-count)
+            : buildMockSpreadEntries(
+                  resolveMarketPrice(pair, ctx, 42000),
+                  ctx.marketData?.[pairKey(pair)]?.spread ?? 2.5,
+                  count
+              );
+    const series = entries.map((entry) => entry.spread);
+    const stats = computeSpreadStats(series);
+
+    return {
+        outputs: {
+            out: true,
+            latest: stats.latest,
+            average: stats.average,
+            min: stats.min,
+            max: stats.max,
+            median: stats.median,
+            series,
+        },
+    };
+});
+
+/**
+ * data.kraken.assetPairs - Reads asset pair metadata (tick size, min size)
+ */
+blockDefinitions.set('data.kraken.assetPairs', {
+    type: 'data.kraken.assetPairs',
+    category: 'data',
+    name: 'Kraken AssetPairs',
+    description: 'Reads AssetPairs metadata for precision and min size checks',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+        { id: 'found', label: 'Found', dataType: 'boolean', required: true },
+        { id: 'status', label: 'Status', dataType: 'string', required: false },
+        { id: 'pairDecimals', label: 'Pair Decimals', dataType: 'number', required: false },
+        { id: 'lotDecimals', label: 'Lot Decimals', dataType: 'number', required: false },
+        { id: 'orderMin', label: 'Order Min', dataType: 'number', required: false },
+        { id: 'costMin', label: 'Cost Min', dataType: 'number', required: false },
+        { id: 'tickSize', label: 'Tick Size', dataType: 'number', required: false },
+    ],
+});
+
+blockHandlers.set('data.kraken.assetPairs', (node, _inputs, ctx) => {
+    const pair = (node.config.pair as string) || 'BTC/USD';
+    const metadata: AssetPairMetadata | undefined = ctx.assetPairData?.[pairKey(pair)];
+    return {
+        outputs: {
+            out: true,
+            found: Boolean(metadata),
+            status: metadata?.status ?? null,
+            pairDecimals: metadata?.pairDecimals ?? null,
+            lotDecimals: metadata?.lotDecimals ?? null,
+            orderMin: metadata?.orderMin ?? null,
+            costMin: metadata?.costMin ?? null,
+            tickSize: metadata?.tickSize ?? null,
+        },
+    };
+});
+
+/**
+ * logic.movingAverage - Computes SMA/EMA from a series
+ */
+blockDefinitions.set('logic.movingAverage', {
+    type: 'logic.movingAverage',
+    category: 'logic',
+    name: 'Moving Average',
+    description: 'Computes SMA or EMA from a numeric series',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'series', label: 'Series', dataType: 'any', required: true },
+        { id: 'period', label: 'Period', dataType: 'number', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+        { id: 'value', label: 'Value', dataType: 'number', required: true },
+    ],
+});
+
+blockHandlers.set('logic.movingAverage', (node, inputs, _ctx) => {
+    const methodRaw = (node.config.method as string) ?? 'SMA';
+    const method = methodRaw.toUpperCase() === 'EMA' ? 'EMA' : 'SMA';
+    const period = normalizeCount(inputs.period ?? node.config.period, 14, 1, 500);
+    const values = extractSeriesValues(inputs.series);
+    if (values.length === 0) {
+        throw new Error('Moving Average requires a numeric series');
+    }
+    const computed = method === 'EMA' ? computeEma(values, period) : computeSma(values, period);
+    const value = computed[computed.length - 1] ?? values[values.length - 1];
+
+    return {
+        outputs: {
+            out: true,
+            value,
+        },
+    };
+});
+
+/**
+ * control.timeWindow - Gates execution based on UTC time window
+ */
+blockDefinitions.set('control.timeWindow', {
+    type: 'control.timeWindow',
+    category: 'control',
+    name: 'Time Window',
+    description: 'Gates control flow based on UTC day/time window',
+    inputs: [
+        { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+    ],
+    outputs: [
+        { id: 'out', label: 'Out', dataType: 'trigger', required: true },
+        { id: 'allowed', label: 'Allowed', dataType: 'boolean', required: true },
+        { id: 'now', label: 'Now', dataType: 'string', required: false },
+        { id: 'nextAllowedAt', label: 'Next Allowed', dataType: 'string', required: false },
+    ],
+});
+
+blockHandlers.set('control.timeWindow', (node, _inputs, _ctx) => {
+    const startRaw = (node.config.startTime as string) ?? '00:00';
+    const endRaw = (node.config.endTime as string) ?? '23:59';
+    const daysRaw = node.config.days ?? DAY_LABELS;
+    const startMinutes = parseTimeToMinutes(startRaw, 0);
+    const endMinutes = parseTimeToMinutes(endRaw, 23 * 60 + 59);
+    const allowedDays = resolveAllowedDays(daysRaw);
+    const now = new Date();
+    const nowDay = now.getUTCDay();
+    const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const dayAllowed = allowedDays.length > 0 && allowedDays.includes(nowDay);
+    const timeAllowed =
+        startMinutes <= endMinutes
+            ? nowMinutes >= startMinutes && nowMinutes <= endMinutes
+            : nowMinutes >= startMinutes || nowMinutes <= endMinutes;
+    const allowed = dayAllowed && timeAllowed;
+    const next = allowed ? now : nextAllowedAt(now, allowedDays, startMinutes);
+
+    return {
+        outputs: {
+            out: allowed,
+            allowed,
+            now: now.toISOString(),
+            nextAllowedAt: next ? next.toISOString() : null,
         },
     };
 });
@@ -344,6 +803,7 @@ blockDefinitions.set('risk.guard', {
     description: 'Blocks execution if spread exceeds threshold',
     inputs: [
         { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
+        { id: 'spreadOverride', label: 'Spread Override', dataType: 'number', required: false },
     ],
     outputs: [
         { id: 'out', label: 'Pass', dataType: 'trigger', required: true },
@@ -352,11 +812,12 @@ blockDefinitions.set('risk.guard', {
     ],
 });
 
-blockHandlers.set('risk.guard', (node, _inputs, ctx) => {
+blockHandlers.set('risk.guard', (node, inputs, ctx) => {
     const pair = (node.config.pair as string) || 'BTC/USD';
     const maxSpread = (node.config.maxSpread as number) ?? 5;
     const market = ctx.marketData?.[pairKey(pair)];
-    const spread = market?.spread ?? 0;
+    const inputSpread = normalizePrice(inputs.spreadOverride);
+    const spread = inputSpread ?? market?.spread ?? 0;
     const allowed = spread <= maxSpread;
     return {
         outputs: {
@@ -378,6 +839,7 @@ blockDefinitions.set('logic.if', {
     inputs: [
         { id: 'in', label: 'Trigger', dataType: 'trigger', required: false },
         { id: 'condition', label: 'Value', dataType: 'number', required: true },
+        { id: 'threshold', label: 'Threshold', dataType: 'number', required: false },
     ],
     outputs: [
         { id: 'true', label: 'True', dataType: 'trigger', required: true },
@@ -387,35 +849,37 @@ blockDefinitions.set('logic.if', {
 
 blockHandlers.set('logic.if', (node, inputs, _ctx) => {
     const comparator = (node.config.comparator as string) ?? '>';
-    const thresholdRaw = node.config.threshold;
-    const value = (inputs.condition ?? inputs.value) as unknown;
+    const value = normalizePrice(inputs.condition ?? inputs.value);
+    const thresholdInput = normalizePrice(inputs.threshold);
+    const thresholdRaw = normalizePrice(node.config.threshold);
+    const threshold = thresholdInput ?? thresholdRaw;
 
-    if (typeof value !== 'number' || Number.isNaN(value)) {
+    if (value === undefined || Number.isNaN(value)) {
         throw new Error('Condition node requires a numeric input value');
     }
 
-    if (typeof thresholdRaw !== 'number' || Number.isNaN(thresholdRaw)) {
+    if (threshold === undefined || Number.isNaN(threshold)) {
         throw new Error('Condition node requires a numeric threshold');
     }
 
     let condition = false;
     switch (comparator) {
         case '>':
-            condition = value > thresholdRaw;
+            condition = value > threshold;
             break;
         case '<':
-            condition = value < thresholdRaw;
+            condition = value < threshold;
             break;
         case '>=':
         case '=>':
-            condition = value >= thresholdRaw;
+            condition = value >= threshold;
             break;
         case '<=':
-            condition = value <= thresholdRaw;
+            condition = value <= threshold;
             break;
         case '==':
         case '=':
-            condition = value === thresholdRaw;
+            condition = value === threshold;
             break;
         default:
             throw new Error(`Unsupported comparator: ${comparator}`);
@@ -443,6 +907,9 @@ interface GraphIndex {
     outgoingDataEdges: Map<string, StrategyEdge[]>;
 }
 
+/**
+ * Precomputes adjacency lists for control/data edges to speed up validation and execution.
+ */
 function buildGraphIndex(strategy: Strategy): GraphIndex {
     const nodeMap = new Map<string, StrategyNode>();
     const controlEdges: StrategyEdge[] = [];
@@ -487,6 +954,10 @@ function buildGraphIndex(strategy: Strategy): GraphIndex {
 // VALIDATION
 // =============================================================================
 
+/**
+ * Performs static validation before execution to prevent runtime errors (cycles,
+ * missing ports, unknown blocks, ambiguous data edges).
+ */
 function validateStrategy(
     strategy: Strategy,
     graph: GraphIndex
@@ -663,6 +1134,9 @@ function validateStrategy(
 // TOPOLOGICAL SORT
 // =============================================================================
 
+/**
+ * Orders nodes by control/data dependencies; detects cycles that would deadlock execution.
+ */
 function topologicalSort(
     strategy: Strategy,
     graph: GraphIndex
@@ -722,6 +1196,9 @@ function topologicalSort(
     return { order };
 }
 
+/**
+ * Collects the subgraph needed to run a specific node (used for partial execution).
+ */
 function collectDependencyNodes(
     targetNodeId: string,
     graph: GraphIndex
@@ -752,6 +1229,10 @@ function collectDependencyNodes(
 // DATA RESOLUTION
 // =============================================================================
 
+/**
+ * Resolves incoming data for a node from the cache, emitting warnings for disabled inputs
+ * and errors for missing required ports.
+ */
 function resolveInputs(
     nodeId: string,
     graph: GraphIndex,
@@ -856,6 +1337,10 @@ function validatePortType(
 // MAIN EXECUTOR
 // =============================================================================
 
+/**
+ * Main entry point for dry-run execution. Validates the graph, determines execution
+ * order, runs block handlers, and returns structured logs/warnings/errors.
+ */
 export function executeDryRun(
     strategy: Strategy,
     ctx: ExecutionContext

@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface RiskNodeData {
     status?: NodeStatus;
@@ -11,13 +13,27 @@ export interface RiskNodeData {
     disabled?: boolean;
 }
 
-export function RiskNode({ id, data, selected }: NodeProps) {
+function parseDecimalInput(raw: string): number | null {
+    const normalized = raw.trim().replace(',', '.').replace(/[^0-9.]/g, '');
+    if (normalized === '' || normalized === '.') return null;
+    const [whole, ...rest] = normalized.split('.');
+    const cleaned = rest.length ? `${whole}.${rest.join('')}` : whole;
+    const parsed = Number.parseFloat(cleaned);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(parsed, 0);
+}
+
+/** Risk node that blocks control flow when spreads exceed a configured threshold. */
+export function RiskNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as RiskNodeData) || {};
     const isDisabled = nodeData.disabled;
+    const { visible, onNodeEnter, onNodeLeave } =
+        useNodeToolbarHover();
 
     const [pair, setPair] = useState(nodeData.pair ?? 'BTC/USD');
-    const [maxSpread, setMaxSpread] = useState(nodeData.maxSpread ?? 5);
+    const initialMaxSpread = nodeData.maxSpread ?? 5;
+    const [maxSpreadInput, setMaxSpreadInput] = useState(String(initialMaxSpread));
 
     const updateData = useCallback(
         (updates: Partial<RiskNodeData>) => {
@@ -33,18 +49,19 @@ export function RiskNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                visible={visible}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Orderbook Guard</span>
                     <span>Blocks if spread too wide</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
-                >
-                    ⚑
+                <div className="node-icon" style={{ color: '#ffffff' }}>
+                    <BlockIcon type="risk.guard" size={20} />
                 </div>
             </div>
             <div className="node-body">
@@ -62,15 +79,31 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 <div className="field">
                     <label>Max spread (USD)</label>
                     <input
-                        type="number"
-                        step="0.01"
-                        value={maxSpread}
+                        type="text"
+                        inputMode="decimal"
+                        value={maxSpreadInput}
                         onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            setMaxSpread(val);
-                            updateData({ maxSpread: val });
+                            const raw = e.target.value;
+                            setMaxSpreadInput(raw);
+                            const parsed = parseDecimalInput(raw);
+                            if (parsed === null) {
+                                if (raw.trim() === '') {
+                                    updateData({ maxSpread: 0 });
+                                }
+                                return;
+                            }
+                            updateData({ maxSpread: parsed });
+                        }}
+                        onBlur={() => {
+                            const parsed = parseDecimalInput(maxSpreadInput);
+                            if (parsed === null) return;
+                            setMaxSpreadInput(parsed.toString());
                         }}
                     />
+                </div>
+                <div className="field">
+                    <label>Input</label>
+                    <div className="chip">Optional spread override</div>
                 </div>
             </div>
             <div className="node-footer">
@@ -83,6 +116,13 @@ export function RiskNode({ id, data, selected }: NodeProps) {
                 id="control:in"
                 className="control"
                 style={{ top: '50%' }}
+            />
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="data:spreadOverride"
+                className="data"
+                style={{ top: '62%' }}
             />
             <Handle
                 type="source"

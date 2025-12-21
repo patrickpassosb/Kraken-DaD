@@ -39,6 +39,7 @@ const demoNodes: Node[] = [];
 
 const demoEdges: Edge[] = [];
 
+/** Normalizes execution errors into user-friendly messages. */
 function friendlyError(err: unknown): string {
     const raw = err instanceof Error ? err.message : 'Unable to run strategy';
     if (raw.toLowerCase().includes('kraken')) {
@@ -53,6 +54,7 @@ function friendlyError(err: unknown): string {
     return 'Strategy needs valid connections and a start trigger. Please review the canvas.';
 }
 
+/** Local fallback when the backend or Kraken API is unreachable. */
 function mockMarketContext(pair: string): MarketContext {
     const defaults: Record<string, Omit<MarketContext, 'pair'>> = {
         'BTC/USD': { lastPrice: 90135.6, spread: 0.8, changePct: 0.5, status: 'Open' },
@@ -72,6 +74,7 @@ function normalizePrice(value: unknown): number | undefined {
     return undefined;
 }
 
+/** Extracts key order fields from the canvas graph for the preview panel. */
 function deriveOrderPreview(nodes: Node[], edges: Edge[], context: MarketContext, fallbackPair: string) {
     const orderNode = nodes.find((n) => n.type === 'action.placeOrder');
     const data = (orderNode?.data as Record<string, unknown>) || {};
@@ -101,12 +104,17 @@ function deriveOrderPreview(nodes: Node[], edges: Edge[], context: MarketContext
     };
 }
 
+/** Translates executor log status to canvas coloring. */
 function mapLogToStatus(logStatus: string): NodeStatus {
     if (logStatus === 'error') return 'error';
     if (logStatus === 'skipped') return 'skipped';
     return 'executed';
 }
 
+/**
+ * Top-level shell orchestrating the strategy canvas, market context, order preview,
+ * execution controls, and credential management.
+ */
 function App() {
     const [nodes, setNodes] = useState<Node[]>(demoNodes);
     const [edges, setEdges] = useState<Edge[]>(demoEdges);
@@ -371,6 +379,15 @@ function App() {
     const displayMarketContext = marketContext ?? mockMarketContext(activePair);
     const marketSourceLabel = warningMessage ? 'Backup market snapshot' : 'Kraken Live Ticker (WS)';
     const orderSourceLabel = warningMessage ? 'Preview uses backup price' : 'Preview uses Kraken price snapshot';
+    const validationSkipped = result?.warnings.find((warning) => warning.code === 'VALIDATE_SKIPPED');
+    const validationResults = result?.krakenValidations ?? [];
+    const auditNotes = (result?.actionIntents ?? [])
+        .filter((intent) => intent.type === 'action.logIntent' || intent.intent.action === 'LOG')
+        .map((intent) => {
+            const params = intent.intent.params as Record<string, unknown>;
+            const note = typeof params.note === 'string' ? params.note.trim() : '';
+            return { nodeId: intent.nodeId, note: note || 'Log intent' };
+        });
     const liveBlocked = executionMode === 'live' && !credentialsStatus.configured;
     const modeLabel = executionMode === 'live' ? 'Live (real orders)' : 'Dry-run (no live orders)';
     const executeLabel = executionMode === 'live' ? 'Execute live' : 'Execute workflow';
@@ -506,6 +523,50 @@ function App() {
                                         </>
                                     )}
                                 </div>
+                                {result && (
+                                    <div className="summary-card validation-card" style={{ marginTop: '12px' }}>
+                                        <h4>Kraken Validate</h4>
+                                        {result.mode === 'live' ? (
+                                            <div className="value muted">Validation runs in dry-run mode only.</div>
+                                        ) : validationSkipped ? (
+                                            <div className="value muted">{validationSkipped.message}</div>
+                                        ) : validationResults.length > 0 ? (
+                                            <div className="validation-list">
+                                                {validationResults.map((validation, index) => (
+                                                    <div key={`${validation.nodeId}-${validation.action}-${index}`} className="validation-row">
+                                                        <div className="validation-main">
+                                                            <div className="validation-action">{validation.action}</div>
+                                                            <div className="validation-node">{validation.nodeId}</div>
+                                                            {validation.detail && (
+                                                                <div className="validation-detail">{validation.detail}</div>
+                                                            )}
+                                                        </div>
+                                                        <span className={`validation-status status-${validation.status}`}>
+                                                            {validation.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="value muted">No validation results.</div>
+                                        )}
+                                    </div>
+                                )}
+                                {auditNotes.length > 0 && (
+                                    <div className="summary-card validation-card" style={{ marginTop: '12px' }}>
+                                        <h4>Audit Notes</h4>
+                                        <div className="validation-list">
+                                            {auditNotes.map((note, index) => (
+                                                <div key={`${note.nodeId}-${index}`} className="validation-row">
+                                                    <div className="validation-main">
+                                                        <div className="validation-action">{note.note}</div>
+                                                        <div className="validation-node">{note.nodeId}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {error && (
                                     <div className="summary-card" style={{ marginTop: '12px', borderColor: 'var(--kraken-red)' }}>
                                         <h4>Alert</h4>

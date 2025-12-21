@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface LogIntentNodeData {
     action?: string;
@@ -11,11 +13,14 @@ export interface LogIntentNodeData {
     disabled?: boolean;
 }
 
-export function LogIntentNode({ id, data, selected }: NodeProps) {
+/** Audit node that records an intent without performing side effects. */
+export function LogIntentNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as LogIntentNodeData) || {};
     const isDisabled = nodeData.disabled;
     const [note, setNote] = useState(nodeData.note || 'Log execution intent for audit');
+    const { visible, onNodeEnter, onNodeLeave } =
+        useNodeToolbarHover();
 
     const updateData = useCallback(
         (updates: Partial<LogIntentNodeData>) => {
@@ -31,18 +36,19 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                visible={visible}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Audit Log</span>
                     <span>Record intent without execution</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong))' }}
-                >
-                    ℹ
+                <div className="node-icon" style={{ color: '#ffffff' }}>
+                    <BlockIcon type="action.logIntent" size={20} />
                 </div>
             </div>
             <div className="node-body">
@@ -69,7 +75,7 @@ export function LogIntentNode({ id, data, selected }: NodeProps) {
             <Handle
                 type="target"
                 position={Position.Left}
-                id="control:in"
+                id="control:trigger"
                 className="control"
                 style={{ top: '50%' }}
             />

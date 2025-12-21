@@ -4,9 +4,16 @@
         "noEmit": true,
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        "lib": ["ES2022", "DOM"],
-        "types": ["node", "ws"],
+        "lib": [
+            "ES2022",
+            "DOM"
+        ],
+        "types": [
+            "node",
+            "ws"
+        ],
         "typeRoots": [
+            "./node_modules/@types",
             "./apps/backend/node_modules/@types",
             "./packages/kraken-client/node_modules/@types"
         ],

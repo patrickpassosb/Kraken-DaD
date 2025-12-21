@@ -36,6 +36,7 @@ function AssetBadge({ symbol }: { symbol: string }) {
     );
 }
 
+/** Modal-like selector for choosing a Kraken trading pair (uses live list when available). */
 export function PairSelector({ value, onSelect, onClose, pairs }: PairSelectorProps) {
     const [term, setTerm] = useState('');
     const displaySymbol = (sym: string) => {

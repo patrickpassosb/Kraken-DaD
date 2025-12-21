@@ -28,6 +28,7 @@ function markerColor(status: NodeStatus): string {
     }
 }
 
+/** Vertical list rendering execution status for each node in order. */
 export function ExecutionTimeline({ items }: ExecutionTimelineProps) {
     return (
         <div className="timeline">

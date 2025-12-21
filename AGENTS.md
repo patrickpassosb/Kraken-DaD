@@ -1,4 +1,4 @@
-## Codex Operating Rules
+## Agent Operating Rules
 
 ### Purpose
 
@@ -8,7 +8,7 @@ Non-optional rules to ensure: documented assumptions, structured planning, corre
 
 ## 1) Mandatory Context7
 
-Codex MUST use Context7 MCP for:
+Agent MUST use Context7 MCP for:
 
 * Code generation
 * Setup/config steps
@@ -27,7 +27,7 @@ Rules:
 
 ## 2) Mandatory Tasks (Based on `ai_task_template_skeleton.md`)
 
-For any work beyond trivial Q&A, Codex MUST operate from a task file created **from** `ai_task_template_skeleton.md`.
+For any work beyond trivial Q&A, Agent MUST operate from a task file created **from** `ai_task_template_skeleton.md`.
 
 Rules:
 
@@ -61,7 +61,7 @@ Prefer durable fixes over symptom-masking:
 
 ## 5) Token Discipline (Hard Rule)
 
-Codex MUST minimize tokens:
+Agent MUST minimize tokens:
 
 * Be concise; avoid repetition, filler, or long explanations unless requested.
 * Prefer checklists, diffs, and direct steps.
@@ -71,14 +71,14 @@ Codex MUST minimize tokens:
 
 ## 6) Task Reuse & Modification Policy
 
-- If an existing task fully or partially covers the current request, Codex MUST reuse it.
-- If the task is mostly correct but incomplete or outdated, Codex MUST update the existing task.
+- If an existing task fully or partially covers the current request, Agent MUST reuse it.
+- If the task is mostly correct but incomplete or outdated, Agent- MUST update the existing task.
 - Create a new task ONLY when:
   - The goal is materially different, or
   - Success criteria no longer overlap, or
   - The scope would cause confusion if merged.
 
-Codex must prefer task modification over task duplication to conserve tokens and maintain continuity.
+Agent must prefer task modification over task duplication to conserve tokens and maintain continuity.
 
 
 ---

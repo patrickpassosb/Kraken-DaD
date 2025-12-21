@@ -15,6 +15,7 @@
 - [x] Use Kraken public `/0/public/Ticker` endpoint
 - [x] Return normalized `KrakenTicker` object
 - [x] No side effects beyond HTTP calls
+- [x] Superseded by `packages/kraken-client` and removed from repo
 
 ---
 
@@ -32,8 +33,10 @@
 
 | File | Purpose |
 |------|---------|
-| `packages/strategy-core/kraken/krakenAdapter.ts` | Interface + `KrakenTicker` type |
-| `packages/strategy-core/kraken/krakenRestAdapter.ts` | REST implementation |
+| `packages/strategy-core/kraken/krakenAdapter.ts` | Deprecated; replaced by `packages/kraken-client` |
+| `packages/strategy-core/kraken/krakenRestAdapter.ts` | Deprecated; replaced by `packages/kraken-client` |
+
+Note: These adapter files were removed after consolidating Kraken API logic in `packages/kraken-client`.
 
 ---
 

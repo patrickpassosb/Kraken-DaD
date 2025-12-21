@@ -3,7 +3,7 @@
 ## 1. Task Overview
 
 **Title:** Final Kraken Pro-grade UI pass  
-**Goal:** Deliver the final demo-ready Kraken DaD UI with Kraken-native styling, aligned header copy, lane-first canvas, categorized strategy blocks, and explicit fee rate display in previews and execution summaries.
+**Goal:** Deliver the final demo-ready Kraken DaD UI with Kraken-native styling, a verified strategy block system (logic + wiring + configuration alignment), a smoother workflow, explicit fee rate display in previews and execution summaries, and a documented expansion shortlist of additional strategy blocks.
 
 ---
 
@@ -25,12 +25,22 @@
 ## 3. Context & Problem Definition
 
 ### Problem Statement
-The canvas and shell need final convergence: header copy must drop “Dry-run only,” the strategy block palette must be categorized and labeled per Kraken references, lanes need clearer Market→Logic→Risk→Execution flow, and fees must show both rate (%) and computed value wherever execution is previewed.
+The canvas and shell need final convergence: header copy must drop “Dry-run only,” the strategy block palette must be categorized and labeled per Kraken references, lanes need clearer Market→Logic→Risk→Execution flow, fees must show both rate (%) and computed value wherever execution is previewed, and the strategy blocks logic/ports must be audited for UI ↔ core alignment.
 
 ### Success Criteria
 - [ ] Header shows exactly “Kraken DaD” and “Strategy Builder” (no “Dry-run only” in the title) while keeping dry-run status elsewhere.
 - [ ] Strategy Blocks panel groups blocks into CONTROL, MARKET, LOGIC & RISK, EXECUTION with distinct but subtle Kraken-native styling; each block shows label and role (Control/Data/Logic/Risk/Action/Audit).
 - [ ] Strategy Blocks palette uses a flat list style (no nested card per block) to reduce visual clutter.
+- [ ] Orderbook Guard max spread input uses a spinnerless decimal input.
+- [ ] Node action toolbar shows on hover (no click/selection required) and uses Kraken-aligned colors for Execute/Disable/Delete.
+- [x] Strategy blocks logic is reviewed; key mismatches between UI handles, implied data edges, and strategy-core port definitions are fixed.
+- [ ] Add a reusable numeric/value block (constant) to the palette and wire implied data edges for common flows (e.g., limit price or threshold).
+- [x] Strategy block inventory is documented with UI ↔ core alignment (block presence, ports, config fields) and functional status (dry-run/validation).
+- [x] Each current strategy block is assessed for necessity (keep/remove/merge) with rationale.
+- [x] Expansion shortlist of new strategy blocks is proposed with scope notes (data/logic/risk/action) and required backend/API support.
+- [x] IF node outputs are labeled true/false (n8n-style) to remove ambiguity.
+- [x] Log Intent notes appear in the right-rail audit summary for clarity.
+- [ ] Strategy Blocks palette scrollbar matches Kraken UI (custom track/thumb styling, no default OS scrollbar chrome).
 - [ ] Strategy Canvas lanes (Market → Logic → Risk → Execution) are visually clear with intentional node placement cues and lane labeling.
 - [ ] Order Preview and execution summary surfaces display fee rate (%) and computed fee value from that rate.
 - [ ] Kraken Pro dark theme, gradients, and contrast applied consistently; no off-brand accents.
@@ -97,8 +107,11 @@ The canvas and shell need final convergence: header copy must drop “Dry-run on
 1) Update shell/header and banners to final copy and Kraken Pro styling; ensure dry-run status moves out of title.  
 2) Rebuild Strategy Blocks panel with required categories and role chips; apply Kraken-native styling and a flat list layout.  
 3) Clarify canvas lanes (Market/Logic/Risk/Execution) with visuals and node layout cues.  
-4) Wire fee rate (%) + calculated fee display into Order Preview and any execution summary panels.  
-5) Sweep theme polish for Kraken Pro visuals and verify dry-run safeguards unaffected.
+4) Review strategy blocks wiring/ports; fix mismatches and add the constant block with implied data edges.  
+5) Produce strategy block inventory + necessity review + functional audit (UI ↔ core ↔ executor).  
+6) Propose additional strategy blocks with API/dependency notes and effort tiers.  
+7) Wire fee rate (%) + calculated fee display into Order Preview and any execution summary panels.  
+8) Sweep theme polish (including palette scrollbar) for Kraken Pro visuals and verify dry-run safeguards unaffected.
 
 ---
 

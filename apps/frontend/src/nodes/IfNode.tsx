@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatPrice } from '../utils/format';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface ConditionNodeData {
     status?: NodeStatus;
@@ -12,10 +14,13 @@ export interface ConditionNodeData {
     disabled?: boolean;
 }
 
-export function IfNode({ id, data, selected }: NodeProps) {
+/** Logic node that branches control flow based on a numeric comparison. */
+export function IfNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConditionNodeData) || {};
     const isDisabled = nodeData.disabled;
+    const { visible, onNodeEnter, onNodeLeave } =
+        useNodeToolbarHover();
 
     const [comparator, setComparator] = useState(nodeData.comparator || '>');
     const [threshold, setThreshold] = useState<number>(nodeData.threshold ?? 90135.6);
@@ -34,18 +39,19 @@ export function IfNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card node-card-conditional" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                visible={visible}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Condition</span>
                     <span>Human-readable logic</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), #ffd166)' }}
-                >
-                    ?
+                <div className="node-icon" style={{ color: '#ffffff' }}>
+                    <BlockIcon type="logic.if" size={20} />
                 </div>
             </div>
             <div className="node-body">
@@ -85,6 +91,8 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 <StatusPill status={nodeData.status} />
                 <span>Routes true/false</span>
             </div>
+            <span className="if-branch-label if-branch-true">true</span>
+            <span className="if-branch-label if-branch-false">false</span>
             <Handle
                 type="target"
                 position={Position.Left}
@@ -93,18 +101,32 @@ export function IfNode({ id, data, selected }: NodeProps) {
                 style={{ top: '50%' }}
             />
             <Handle
+                type="target"
+                position={Position.Left}
+                id="data:condition"
+                className="data"
+                style={{ top: '45%' }}
+            />
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="data:threshold"
+                className="data"
+                style={{ top: '55%' }}
+            />
+            <Handle
                 type="source"
                 position={Position.Right}
                 id="control:true"
                 className="control"
-                style={{ top: '50%' }}
+                style={{ top: '46%' }}
             />
             <Handle
                 type="source"
                 position={Position.Right}
                 id="control:false"
                 className="control"
-                style={{ top: '55%', opacity: 0, pointerEvents: 'none' }}
+                style={{ top: '62%' }}
             />
         </div>
     );

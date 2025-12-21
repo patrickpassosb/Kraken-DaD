@@ -4,24 +4,40 @@ import { useNodeActions } from '../context/NodeActionContext';
 interface NodeActionToolbarProps {
     nodeId: string;
     disabled?: boolean;
-    selected?: boolean;
+    visible?: boolean;
 }
 
-export function NodeActionToolbar({ nodeId, disabled, selected }: NodeActionToolbarProps) {
+/** Inline toolbar that surfaces run/disable/delete actions for a node. */
+export function NodeActionToolbar({
+    nodeId,
+    disabled,
+    visible,
+}: NodeActionToolbarProps) {
     const { runNode, toggleNodeDisabled, deleteNode } = useNodeActions();
-    const toggleLabel = disabled ? 'Activate' : 'Deactivate';
+    const toggleLabel = disabled ? 'Enable' : 'Disable';
+    const isVisible = Boolean(visible);
+    const visibilityClass = isVisible ? 'node-toolbar-visible' : '';
 
     return (
-        <NodeToolbar isVisible={selected} position={Position.Top} className="node-toolbar nodrag nopan">
-            <button className="node-action-btn nodrag" onClick={() => runNode(nodeId)}>
-                Run
-            </button>
-            <button className="node-action-btn nodrag" onClick={() => toggleNodeDisabled(nodeId)}>
-                {toggleLabel}
-            </button>
-            <button className="node-action-btn nodrag" onClick={() => deleteNode(nodeId)}>
-                Delete
-            </button>
+        <NodeToolbar
+            isVisible={isVisible}
+            position={Position.Top}
+            className={`node-toolbar nodrag nopan ${visibilityClass}`.trim()}
+        >
+            <div className="node-toolbar-actions">
+                <button className="node-action-btn node-action-run nodrag" onClick={() => runNode(nodeId)}>
+                    Execute
+                </button>
+                <button
+                    className="node-action-btn node-action-toggle nodrag"
+                    onClick={() => toggleNodeDisabled(nodeId)}
+                >
+                    {toggleLabel}
+                </button>
+                <button className="node-action-btn node-action-delete nodrag" onClick={() => deleteNode(nodeId)}>
+                    Delete
+                </button>
+            </div>
         </NodeToolbar>
     );
 }

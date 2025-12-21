@@ -4,6 +4,7 @@ interface StatusPillProps {
     status?: NodeStatus;
 }
 
+/** Small badge reflecting execution status for nodes and timeline rows. */
 export function StatusPill({ status = 'idle' }: StatusPillProps) {
     const tone = statusTone(status);
     return (

@@ -2,6 +2,7 @@ import { Node, Edge } from '@xyflow/react';
 import { SCHEMA_VERSION } from '../../../../packages/strategy-core/schema.ts';
 import { Strategy } from '../api/executeStrategy';
 
+/** Converts React Flow handle ids into strategy edge type. */
 export function getPortType(handleId: string): 'data' | 'control' {
     if (handleId.startsWith('control:')) {
         return 'control';
@@ -9,6 +10,7 @@ export function getPortType(handleId: string): 'data' | 'control' {
     return 'data';
 }
 
+/** Strips `data:` / `control:` prefixes, returning the schema port id. */
 export function getPortId(handleId: string): string {
     // Strip the prefix (control: or data:) to get the actual port ID
     if (handleId.startsWith('control:')) {
@@ -20,6 +22,10 @@ export function getPortId(handleId: string): string {
     return handleId;
 }
 
+/**
+ * Serializes the canvas into a Strategy JSON aligned with strategy-core schema.
+ * Applies sane defaults for nodes that would otherwise violate validation.
+ */
 export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     const now = new Date().toISOString();
 
@@ -31,12 +37,40 @@ export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
             config.maxSpread = config.maxSpread ?? 5;
         }
 
+        if (node.type === 'data.kraken.ohlc') {
+            config.pair = config.pair ?? 'BTC/USD';
+            config.interval = config.interval ?? 1;
+            config.count = config.count ?? 120;
+        }
+
+        if (node.type === 'data.kraken.spread') {
+            config.pair = config.pair ?? 'BTC/USD';
+            config.count = config.count ?? 50;
+        }
+
+        if (node.type === 'data.kraken.assetPairs') {
+            config.pair = config.pair ?? 'BTC/USD';
+        }
+
+        if (node.type === 'logic.movingAverage') {
+            config.method = config.method ?? 'SMA';
+            config.period = typeof config.period === 'number' && !Number.isNaN(config.period)
+                ? config.period
+                : 14;
+        }
+
         if (node.type === 'logic.if') {
             config.comparator = config.comparator ?? '>';
             config.threshold =
                 typeof config.threshold === 'number' && !Number.isNaN(config.threshold)
                     ? config.threshold
                     : 0;
+        }
+
+        if (node.type === 'control.timeWindow') {
+            config.startTime = config.startTime ?? '00:00';
+            config.endTime = config.endTime ?? '23:59';
+            config.days = config.days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         }
 
         return {

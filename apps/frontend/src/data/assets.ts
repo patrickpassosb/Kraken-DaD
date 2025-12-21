@@ -34,20 +34,20 @@ const iconAliases: Record<string, string> = {
 };
 
 const baseAssetMeta: Record<string, AssetMeta> = {
-    BTC: { symbol: 'BTC', name: 'Bitcoin', icon: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png', color: '#f7931a' },
-    ETH: { symbol: 'ETH', name: 'Ethereum', icon: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png', color: '#6b6bff' },
+    BTC: { symbol: 'BTC', name: 'Bitcoin', icon: '/icons/bitcoin.png', color: '#f7931a' },
+    ETH: { symbol: 'ETH', name: 'Ethereum', icon: '/icons/ethereum.png', color: '#6b6bff' },
     USDC: { symbol: 'USDC', name: 'USD Coin', icon: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png', color: '#2775ca' },
-    USDT: { symbol: 'USDT', name: 'Tether', icon: 'https://assets.coingecko.com/coins/images/325/small/Tether.png', color: '#26a17b' },
-    SOL: { symbol: 'SOL', name: 'Solana', icon: 'https://assets.coingecko.com/coins/images/4128/small/solana.png', color: '#00ffa3' },
+    USDT: { symbol: 'USDT', name: 'Tether', icon: '/icons/Tether.png', color: '#26a17b' },
+    SOL: { symbol: 'SOL', name: 'Solana', icon: '/icons/solana.png', color: '#00ffa3' },
     ADA: { symbol: 'ADA', name: 'Cardano', icon: 'https://assets.coingecko.com/coins/images/975/small/cardano.png', color: '#0033ad' },
     XRP: { symbol: 'XRP', name: 'XRP', icon: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png', color: '#0a0a0a' },
-    BNB: { symbol: 'BNB', name: 'BNB', icon: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png', color: '#f3ba2f' },
-    DOGE: { symbol: 'DOGE', name: 'Dogecoin', icon: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png', color: '#c3a634' },
+    BNB: { symbol: 'BNB', name: 'BNB', icon: '/icons/bnb-icon2_2x.png', color: '#f3ba2f' },
+    DOGE: { symbol: 'DOGE', name: 'Dogecoin', icon: '/icons/dogecoin.png', color: '#c3a634' },
     DOT: { symbol: 'DOT', name: 'Polkadot', icon: 'https://assets.coingecko.com/coins/images/12171/small/aJGBjJFU_400x400.jpg', color: '#e6007a' },
     LINK: { symbol: 'LINK', name: 'Chainlink', icon: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png', color: '#345dd9' },
     LTC: { symbol: 'LTC', name: 'Litecoin', icon: 'https://assets.coingecko.com/coins/images/2/small/litecoin.png', color: '#b5b5b5' },
     BCH: { symbol: 'BCH', name: 'Bitcoin Cash', icon: 'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png', color: '#8dc351' },
-    TRX: { symbol: 'TRX', name: 'TRON', icon: 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png', color: '#ff060a' },
+    TRX: { symbol: 'TRX', name: 'TRON', icon: '/icons/tron-logo.png', color: '#ff060a' },
     MATIC: { symbol: 'MATIC', name: 'Polygon', icon: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png', color: '#8247e5' },
     XLM: { symbol: 'XLM', name: 'Stellar', icon: 'https://assets.coingecko.com/coins/images/100/small/Stellar_symbol_black_RGB.png', color: '#1b1b1b' },
     XMR: { symbol: 'XMR', name: 'Monero', icon: 'https://assets.coingecko.com/coins/images/69/small/monero_logo.png', color: '#ff6b00' },
@@ -76,6 +76,7 @@ export const assetMeta: Record<string, AssetMeta> = {
 
 const geckoCache: Record<string, string> = {};
 
+/** Looks up metadata for an asset symbol (includes icons/colors when known). */
 export function getAssetMeta(symbol: string): AssetMeta | undefined {
     return assetMeta[symbol.toUpperCase()];
 }
@@ -145,6 +146,7 @@ export function getAssetIconUrl(symbol: string): string | undefined {
     return undefined;
 }
 
+/** Deterministic color helper for assets when brand colors are missing. */
 export function hashedColor(symbol: string, offset = 0): string {
     let hash = 0;
     const input = symbol.toUpperCase();

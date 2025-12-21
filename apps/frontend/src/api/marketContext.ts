@@ -14,6 +14,9 @@ export interface MarketContextResponse {
     error?: string;
 }
 
+/**
+ * Requests a combined ticker/depth snapshot for a pair from the backend.
+ */
 export async function fetchMarketContext(pair: string): Promise<MarketContextResponse> {
     const url = `${API_BASE}/market/context?pair=${encodeURIComponent(pair)}`;
     const res = await fetch(url);

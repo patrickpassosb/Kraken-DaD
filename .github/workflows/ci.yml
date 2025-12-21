@@ -1,7 +1,7 @@
 name: ci
 
 on:
-  pull_request:
+  push:
     # Skip CI for docs/assets-only edits to keep feedback fast.
     paths-ignore:
       - '**/*.md'
@@ -9,12 +9,7 @@ on:
       - '**/*.jpg'
       - '**/*.jpeg'
       - '**/*.gif'
-  # Protect demo branches with the same validation that PRs get.
-  push:
-    branches: [main, master, new-ui]
-  # Allow ad-hoc runs (e.g., pre-demo smoke tests).
-  workflow_dispatch:
-
+      
 env:
   NODE_VERSION: 20
 
@@ -31,16 +26,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            apps/backend/package-lock.json
-            packages/kraken-client/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install Kraken client dependencies
-        working-directory: packages/kraken-client
-        run: npm ci
-
-      - name: Install backend toolchain (for TypeScript)
-        working-directory: apps/backend
+      - name: Install dependencies
         run: npm ci
 
       - name: Type-check shared packages
@@ -59,16 +47,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            apps/backend/package-lock.json
-            packages/kraken-client/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install Kraken client dependencies
-        working-directory: packages/kraken-client
-        run: npm ci
-
-      - name: Install backend dependencies
-        working-directory: apps/backend
+      - name: Install dependencies
         run: npm ci
 
       - name: Build backend (tsc no-emit)
@@ -90,10 +71,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: apps/frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install frontend dependencies
-        working-directory: apps/frontend
+      - name: Install dependencies
         run: npm ci
 
       - name: Build frontend (typecheck + Vite)

@@ -8,11 +8,11 @@
 
 ### Task Title
 <!-- Give your task a clear, specific name that describes what you're building or fixing -->
-**Title:** Repository code quality review and improvement recommendations
+**Title:** Repository redundancy and structure review
 
 ### Goal Statement
 <!-- Write one paragraph explaining what you want to achieve and why it matters for your project -->
-**Goal:** Produce a prioritized review of the Kraken-DaD codebase covering code quality, performance, security, maintainability, and scalability with concrete improvement actions.
+**Goal:** Identify unnecessary or redundant files, suggest removals or consolidations, and provide project structure/code quality improvements with concrete, prioritized actions.
 
 ---
 
@@ -39,8 +39,8 @@ We need actionable guidance on risks and improvements before evolving the demo f
 
 ### Success Criteria
 <!-- Define exactly how you'll know when this task is complete and successful -->
-- [x] Deliver a written review summarizing key issues and risks by area
-- [x] Provide prioritized, actionable recommendations with file-level pointers
+- [x] Deliver a written review identifying redundant/unnecessary files with justification
+- [x] Provide prioritized, actionable structure and code quality recommendations with file-level pointers
 - [x] Validate suggestions against current code to ensure accuracy
 
 ---
@@ -62,7 +62,7 @@ We need actionable guidance on risks and improvements before evolving the demo f
 ### Functional Requirements
 <!-- This is where the AI will understand exactly what the system should do - be specific about user actions and system behaviors -->
 
-Review focus areas: strategy execution core (types, executor), backend Fastify routes, frontend React Flow nodes and wiring, docs consistency. Identify usability, performance, and security concerns.
+Review focus areas: overall repo layout, duplicated configs/scripts, unused docs/tasks/tests, and cross-package redundancy. Identify maintainability and structure concerns.
 
 ### Non-Functional Requirements
 <!-- This is where you define performance, security, and usability standards -->
@@ -137,11 +137,11 @@ React Flow state in frontend; shared types drive backend executor.
 
 ## 9. Implementation Plan
 
-1) Read core/shared/back-end/front-end files; 2) Note issues by impact; 3) Summarize recommendations with file pointers.
+1) Inventory repo structure and key files; 2) Identify redundancy/unnecessary files; 3) Summarize recommendations with file pointers.
 
 ## 10b. Notes & Findings
 
-- Review completed across strategy core executor, Kraken client, backend routes, and frontend app shell. Key improvement areas captured in accompanying summary (code validation gaps, Kraken API resilience, SSE lifecycle, mock defaults, and strategy export safety).
+- Review complete. Key findings: unused Kraken adapter under strategy-core, unreferenced shared tsconfig, redundant shell scripts, and Dockerfile missing strategy-core copy for backend runtime.
 
 ---
 
@@ -165,15 +165,18 @@ No new code files planned; only documentation/reporting outputs.
 ### Implementation Workflow
 <!-- This is where you give specific instructions to your AI agent -->
 🎯 **MANDATORY PROCESS:**
-TODO:
+1) Use this task for repo-wide redundancy review requests.
+2) Scan repo for unused/duplicate files and configs; validate with `rg`.
+3) Report findings with file pointers and suggested removals/merges.
+4) Call out assumptions and ask for confirmation before deletions.
 
 ### Communication Preferences
 <!-- This is where you set expectations for how the AI should communicate -->
-TODO: How do you want the agent to communicate with you
+Concise review findings first, then recommendations and optional next steps.
 
 ### Code Quality Standards
 <!-- This is where you define your coding standards for the AI to follow -->
-TODO: Any specific code standards
+Prefer minimal changes; avoid sweeping refactors unless necessary.
 
 ---
 
@@ -182,7 +185,7 @@ TODO: Any specific code standards
 ### Impact Assessment
 <!-- This is where you think through broader consequences of your changes -->
 
-TODO: Tell the AI what sections of code you're worried about breaking, performance concerns, and user workflow impacts
+Focus on monorepo structure, shared packages, and build/run scripts to avoid breaking dev workflow.
 
 ---
 

@@ -1,7 +1,7 @@
 name: backend-cd
 
 on:
-  # Manual trigger keeps deployments safe and opt-in for hackathon demos.
+  push:
   workflow_dispatch:
     inputs:
       environment:
@@ -33,16 +33,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            apps/backend/package-lock.json
-            packages/kraken-client/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install Kraken client dependencies
-        working-directory: packages/kraken-client
-        run: npm ci
-
-      - name: Install backend dependencies
-        working-directory: apps/backend
+      - name: Install dependencies
         run: npm ci
 
       - name: Build backend (tsc no-emit)

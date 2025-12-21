@@ -8,6 +8,7 @@ type NodeActionContextValue = {
 
 const NodeActionContext = createContext<NodeActionContextValue | null>(null);
 
+/** Supplies canvas-level node actions (run/disable/delete) to toolbar buttons. */
 export function NodeActionProvider({
     value,
     children,
@@ -18,6 +19,7 @@ export function NodeActionProvider({
     return <NodeActionContext.Provider value={value}>{children}</NodeActionContext.Provider>;
 }
 
+/** Accessor for node action callbacks; returns no-op defaults outside provider scope. */
 export function useNodeActions() {
     const context = useContext(NodeActionContext);
     if (!context) {

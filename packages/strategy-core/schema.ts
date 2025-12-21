@@ -208,6 +208,12 @@ export interface ExecutionContext {
     readonly endTime?: string;
     /** Optional pre-fetched market data (populated by backend) */
     readonly marketData?: Record<string, MarketDataSnapshot>;
+    /** Optional OHLC data snapshots (pair+interval keyed) */
+    readonly ohlcData?: Record<string, OhlcSnapshot>;
+    /** Optional recent spread snapshots (pair keyed) */
+    readonly spreadData?: Record<string, SpreadSnapshot>;
+    /** Optional asset pair metadata (pair keyed) */
+    readonly assetPairData?: Record<string, AssetPairMetadata>;
     /** Optional target node ID for partial execution */
     readonly targetNodeId?: string;
 }
@@ -221,6 +227,65 @@ export interface MarketDataSnapshot {
     readonly ask?: number;
     readonly bid?: number;
     readonly spread?: number;
+    readonly timestamp?: number;
+}
+
+/**
+ * OHLC candle entry (timestamps in milliseconds).
+ */
+export interface OhlcCandle {
+    readonly time: number;
+    readonly open: number;
+    readonly high: number;
+    readonly low: number;
+    readonly close: number;
+    readonly vwap: number;
+    readonly volume: number;
+    readonly count: number;
+}
+
+/**
+ * OHLC snapshot for a pair/interval.
+ */
+export interface OhlcSnapshot {
+    readonly pair: string;
+    readonly interval: number;
+    readonly candles: readonly OhlcCandle[];
+    readonly timestamp: number;
+}
+
+/**
+ * Spread entry (timestamps in milliseconds).
+ */
+export interface SpreadEntry {
+    readonly time: number;
+    readonly bid: number;
+    readonly ask: number;
+    readonly spread: number;
+}
+
+/**
+ * Spread snapshot for a pair.
+ */
+export interface SpreadSnapshot {
+    readonly pair: string;
+    readonly entries: readonly SpreadEntry[];
+    readonly timestamp: number;
+}
+
+/**
+ * Asset pair metadata snapshot for a pair.
+ */
+export interface AssetPairMetadata {
+    readonly pair: string;
+    readonly base: string;
+    readonly quote: string;
+    readonly status?: string;
+    readonly pairDecimals?: number;
+    readonly lotDecimals?: number;
+    readonly orderMin?: number;
+    readonly costMin?: number;
+    readonly tickSize?: number;
     readonly timestamp?: number;
 }
 

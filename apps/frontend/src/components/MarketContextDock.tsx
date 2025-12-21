@@ -12,6 +12,9 @@ interface MarketContextProps {
     source?: string;
 }
 
+/**
+ * Displays the current market snapshot for the selected pair with icon, price, spread, and status.
+ */
 export function MarketContextDock({
     pair,
     lastPrice,

@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
+import { BlockIcon } from '../components/BlockIcon';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatAmount, formatPair, formatPrice } from '../utils/format';
 import { NodeStatus } from '../utils/status';
+import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export interface PlaceOrderNodeData {
     pair?: string;
@@ -25,10 +27,13 @@ function parseDecimalInput(raw: string): number | null {
     return Math.max(parsed, 0);
 }
 
-export function PlaceOrderNode({ id, data, selected }: NodeProps) {
+/** Action node that shapes a Kraken AddOrder intent (dry-run by default). */
+export function PlaceOrderNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as PlaceOrderNodeData;
     const isDisabled = nodeData?.disabled;
+    const { visible, onNodeEnter, onNodeLeave } =
+        useNodeToolbarHover();
 
     const [pair, setPair] = useState(nodeData?.pair || 'BTC/USD');
     const [side, setSide] = useState<'buy' | 'sell'>(nodeData?.side || 'buy');
@@ -54,18 +59,19 @@ export function PlaceOrderNode({ id, data, selected }: NodeProps) {
     );
 
     return (
-        <div className="node-card">
-            <NodeActionToolbar nodeId={id} disabled={isDisabled} selected={selected} />
+        <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
+            <NodeActionToolbar
+                nodeId={id}
+                disabled={isDisabled}
+                visible={visible}
+            />
             <div className="node-head">
                 <div className="node-title">
                     <span>Execution</span>
                     <span>Prepare Kraken order intent</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-green), #46ef9a)' }}
-                >
-                    ✓
+                <div className="node-icon" style={{ color: '#2bd27f' }}>
+                    <BlockIcon type="action.placeOrder" size={20} />
                 </div>
             </div>
             <div className="node-body">
