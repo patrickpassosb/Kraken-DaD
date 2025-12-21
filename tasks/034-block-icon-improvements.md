@@ -277,3 +277,33 @@ I need a full set of **individual PNG files**, not a single sheet.
 
 ### Deliverables
 - Provide a **zip** of the 26 PNGs (13 icons × 2 sizes), named exactly as above.
+
+---
+
+## Anti-Gravity / Gemini 3 Pro Execution Notes
+
+Use this when triggering Gemini 3 Pro via Anti-Gravity + NanoBananaPro:
+
+- Goal: Generate **individual transparent PNG icons** for all 13 strategy blocks, inspired by the draft sheet (`Icons.png`) but with consistent stroke weight, no checkerboard, and no duplicates.
+- Input references:
+  - This task file (`tasks/034-block-icon-improvements.md`) for sizing, naming, and style rules.
+  - Existing draft sheet: `Icons.png` (use only as inspiration; fix inconsistencies).
+- Constraints recap:
+  - 13 unique icons, each exported at 36x36 and 72x72 PNG, transparent background, single light ink color (`#E6EAF6` or similar).
+  - No gradients/shadows/backgrounds. Medium stroke weight; centered with 4–6px padding.
+  - Filenames exactly as listed in “Output Requirements” above.
+  - Semantics exactly as listed in “Semantics (must be recognizable)” above.
+- When running with NanoBananaPro, **write the PNGs directly into the repo** instead of returning a zip:
+  - Save to `apps/frontend/src/icons/blocks/`.
+  - Use the exact filenames above (both 1x and 2x).
+  - Ensure transparency (no checkerboard) and consistent stroke weight.
+- After generating files, **integrate into the app**:
+  - Add/Update `apps/frontend/src/icons/blockIcons.ts` to export a mapping from block IDs to icon asset paths (include src and srcSet pointing to @2x).
+  - Add/Update `apps/frontend/src/components/BlockIcon.tsx` to render by block ID (uses the mapping).
+  - Update `apps/frontend/src/nodes/nodeRegistry.ts` to reference the icon IDs (not hardcoded letters).
+  - Update palette rendering in `apps/frontend/src/canvas/FlowCanvas.tsx` to use `BlockIcon` instead of text glyphs.
+  - Keep sizes aligned with `.palette-icon` (36px) in CSS; adjust only if needed.
+- Verify visually in the running app that palette icons render correctly with no layout regressions.
+
+### Suggested prompt to send to Gemini 3 Pro (Anti-Gravity)
+“Execute task 34 in `tasks/034-block-icon-improvements.md`. Read the ‘Gemini Prompt v2 (Very Specific, Use This)’ section and follow it exactly. Use `Icons.png` only for inspiration; fix stroke weight consistency, remove checkerboard backgrounds, ensure transparency, and produce 13 unique icons at 36x36 and 72x72. Save each icon as transparent PNG with the exact filenames given (block-*.png and block-*@2x.png) into `apps/frontend/src/icons/blocks/`. Then update `blockIcons.ts`, `BlockIcon.tsx`, `nodeRegistry.ts`, and `FlowCanvas.tsx` so the palette uses these icons. Do not leave any extra files or sheets.”
