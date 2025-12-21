@@ -51,8 +51,8 @@ graph TD
     BE -- "Execute / Dry-Run" --> Shared
     BE -- "Credentials (Private)" --> BE
     
-    BE <-->|Public Data (REST/WS)| Kraken["Kraken Exchange API"]
-    BE <-->|Private Orders (REST)| Kraken
+    BE <-->|Public Data REST and WS| Kraken["Kraken Exchange API"]
+    BE <-->|Private Orders REST| Kraken
 
     style FE fill:#2a2a2a,stroke:#666,color:#fff
     style BE fill:#2a2a2a,stroke:#666,color:#fff
