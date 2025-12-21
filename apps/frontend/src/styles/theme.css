@@ -739,15 +739,27 @@ body {
 .palette-icon {
     width: 36px;
     height: 36px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: linear-gradient(135deg, rgba(121, 80, 242, 0.22), rgba(61, 44, 105, 0.5));
     color: #f7f8ff;
-    font-weight: 700;
-    font-size: 16px;
     border: 1px solid rgba(121, 80, 242, 0.4);
+    flex-shrink: 0;
 }
+
+.block-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.fallback-icon {
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
 
 .palette-label {
     display: flex;

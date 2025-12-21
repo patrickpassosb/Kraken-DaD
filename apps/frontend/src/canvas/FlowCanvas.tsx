@@ -26,6 +26,7 @@ import {
     type NodeTypeId,
 } from '../nodes/nodeRegistry';
 import { NodeStatus } from '../utils/status';
+import { BlockIcon } from '../components/BlockIcon';
 
 interface FlowCanvasProps {
     onNodesChange: (nodes: Node[]) => void;
@@ -313,22 +314,21 @@ export function FlowCanvas({
             if (!isValidConnection(connection)) return;
 
             const edgeType = connection.sourceHandle?.startsWith('control') ? 'control' : 'data';
-            setEdges((eds) =>
-                {
-                    const nextEdges = addEdge(
-                        {
-                            ...connection,
-                            type: edgeType,
-                            style: edgeStyleForType(edgeType),
-                        },
-                        eds
-                    );
-                    if (edgeType !== 'control') return nextEdges;
-                    const sourceId = connection.source ?? '';
-                    const targetId = connection.target ?? '';
-                    const impliedEdges = findImpliedDataEdges(sourceId, targetId, nodes);
-                    return appendImpliedEdges(nextEdges, impliedEdges);
-                }
+            setEdges((eds) => {
+                const nextEdges = addEdge(
+                    {
+                        ...connection,
+                        type: edgeType,
+                        style: edgeStyleForType(edgeType),
+                    },
+                    eds
+                );
+                if (edgeType !== 'control') return nextEdges;
+                const sourceId = connection.source ?? '';
+                const targetId = connection.target ?? '';
+                const impliedEdges = findImpliedDataEdges(sourceId, targetId, nodes);
+                return appendImpliedEdges(nextEdges, impliedEdges);
+            }
             );
         },
         [isValidConnection, nodes, setEdges]
@@ -762,17 +762,19 @@ export function FlowCanvas({
                                     <div className="palette-group-title">{group.label}</div>
                                     {group.items.map((item) => (
                                         <div
-                                        key={item.type + item.label}
-                                        className="palette-item"
-                                        onClick={() => handleAddNode(item.type, item.defaultPosition)}
-                                        title={`${item.label} — ${item.description}`}
-                                    >
-                                        <div className="palette-icon">{item.icon}</div>
-                                        <div className="palette-text">
-                                            <div className="palette-label">{item.label}</div>
-                                            <div className="palette-subtext">{item.description}</div>
-                                        </div>
-                                        <span className={`palette-role role-${item.role.toLowerCase()}`}>
+                                            key={item.type + item.label}
+                                            className="palette-item"
+                                            onClick={() => handleAddNode(item.type, item.defaultPosition)}
+                                            title={`${item.label} — ${item.description}`}
+                                        >
+                                            <div className="palette-icon">
+                                                <BlockIcon type={item.type} size={22} />
+                                            </div>
+                                            <div className="palette-text">
+                                                <div className="palette-label">{item.label}</div>
+                                                <div className="palette-subtext">{item.description}</div>
+                                            </div>
+                                            <span className={`palette-role role-${item.role.toLowerCase()}`}>
                                                 {item.role}
                                             </span>
                                         </div>
