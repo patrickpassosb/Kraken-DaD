@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
@@ -22,15 +22,24 @@ function parsePeriod(raw: string): number | null {
     return Math.max(parsed, 1);
 }
 
-export function MovingAverageNode({ id, data }: NodeProps) {
+export const MovingAverageNode = memo(function MovingAverageNode({
+    id,
+    data,
+}: NodeProps<MovingAverageNodeData>) {
     const { setNodes } = useReactFlow();
-    const nodeData = (data as MovingAverageNodeData) || {};
+    const nodeData = data ?? {};
     const isDisabled = nodeData.disabled;
     const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
     const [method, setMethod] = useState<MovingAverageMethod>(nodeData.method ?? 'SMA');
-    const [periodInput, setPeriodInput] = useState(String(nodeData.period ?? 14));
+    const [periodInput, setPeriodInput] = useState(
+        typeof nodeData.period === 'number' && nodeData.period > 0
+            ? String(nodeData.period)
+            : ''
+    );
+    const methodId = `moving-average-method-${id}`;
+    const periodId = `moving-average-period-${id}`;
 
     const updateData = useCallback(
         (updates: Partial<MovingAverageNodeData>) => {
@@ -42,6 +51,18 @@ export function MovingAverageNode({ id, data }: NodeProps) {
         },
         [id, setNodes]
     );
+
+    useEffect(() => {
+        setMethod(nodeData.method ?? 'SMA');
+    }, [nodeData.method]);
+
+    useEffect(() => {
+        if (typeof nodeData.period === 'number' && nodeData.period > 0) {
+            setPeriodInput(String(nodeData.period));
+            return;
+        }
+        setPeriodInput('');
+    }, [nodeData.period]);
 
     return (
         <div className="node-card" onMouseEnter={onNodeEnter} onMouseLeave={onNodeLeave}>
@@ -64,9 +85,11 @@ export function MovingAverageNode({ id, data }: NodeProps) {
             </div>
             <div className="node-body">
                 <div className="field">
-                    <label>Method</label>
+                    <label htmlFor={methodId}>Method</label>
                     <select
+                        id={methodId}
                         value={method}
+                        disabled={isDisabled}
                         onChange={(e) => {
                             const next = (e.target.value as MovingAverageMethod) || 'SMA';
                             setMethod(next);
@@ -78,19 +101,22 @@ export function MovingAverageNode({ id, data }: NodeProps) {
                     </select>
                 </div>
                 <div className="field">
-                    <label>Period</label>
+                    <label htmlFor={periodId}>Period</label>
                     <input
+                        id={periodId}
                         type="text"
                         inputMode="numeric"
                         value={periodInput}
+                        disabled={isDisabled}
                         onChange={(e) => {
                             const raw = e.target.value;
                             setPeriodInput(raw);
+                            if (raw.trim() === '') {
+                                updateData({ period: undefined });
+                                return;
+                            }
                             const parsed = parsePeriod(raw);
                             if (parsed === null) {
-                                if (raw.trim() === '') {
-                                    updateData({ period: 0 });
-                                }
                                 return;
                             }
                             updateData({ period: parsed });
@@ -148,4 +174,4 @@ export function MovingAverageNode({ id, data }: NodeProps) {
             />
         </div>
     );
-}
+});
