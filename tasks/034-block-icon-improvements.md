@@ -37,9 +37,10 @@ Block icons are placeholders (letters/emojis) that do not communicate function, 
 ### Success Criteria
 - [ ] Define Gemini prompt/spec for icon set (style, sizes, color rules, export format).
 - [ ] Create custom icons for each strategy block (palette first) using Gemini.
-- [ ] Integrate palette icons with consistent sizing and styling without layout regressions.
-- [ ] Icon mapping documented per block type and stored in a single registry.
+- [x] Integrate palette icons with consistent sizing and styling without layout regressions.
+- [x] Icon mapping documented per block type and stored in a single registry.
 - [ ] Node header icon plan defined for follow-up phase.
+- [x] Refresh palette icons for `data.kraken.spread`, `data.kraken.assetPairs`, `logic.movingAverage`, and `logic.if` so they read clearly at small sizes and match the Kraken theme.
 
 ---
 

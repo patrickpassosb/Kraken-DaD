@@ -42,30 +42,55 @@ export const IconPaths: Record<string, React.ReactNode> = {
     ),
     'data.kraken.spread': (
         <>
-            {/* Spread - distance between bid and ask */}
-            <path d="M5 7h14m-14 10h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M12 7v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <polyline points="10 10 12 7 14 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points="10 14 12 17 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Spread - Gap Measure (Technical Dimension Line) */}
+            {/* Top Bar (Ask) */}
+            <path d="M4 8h5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M15 8h5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+            {/* Bottom Bar (Bid) */}
+            <path d="M4 16h5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M15 16h5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+            {/* Dimension Line (The Spread) */}
+            <path d="M12 8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M10 10l2-2 2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M10 14l2 2 2-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>
     ),
     'data.kraken.assetPairs': (
         <>
-            <circle cx="8" cy="12" r="5" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="16" cy="12" r="5" stroke="currentColor" strokeWidth="2" fill="none" />
+            {/* AssetPairs - Connected Coins (Molecule / Pair) */}
+            {/* Connection Bar */}
+            <path d="M9 12h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+            {/* Coin 1 */}
+            <circle cx="7" cy="12" r="4.5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+
+            {/* Coin 2 */}
+            <circle cx="17" cy="12" r="4.5" stroke="currentColor" strokeWidth="2.5" fill="none" />
         </>
     ),
     'logic.movingAverage': (
         <>
-            {/* Moving Average - Smooth sine curve */}
-            <path d="M2 14c4-4 8-4 12 0s8 4 12 0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Moving Average - Smooth Technical Trend */}
+            {/* Single elegant curve representing the trend */}
+            <path d="M3 17C6 17 8 13 12 11C16 9 18 7 21 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Subtle under-line to suggest chart area or second average? Let's keep it minimal as requested "Smooth Curve" */}
         </>
     ),
     'logic.if': (
         <>
-            <path d="M12 4L4 12l8 8 8-8-8-8z" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinejoin="round" />
-            <path d="M12 9v4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            <circle cx="12" cy="16" r="1.5" fill="currentColor" />
+            {/* Condition (IF) - Simple Fork (Requested by User) */}
+            {/* Input Line */}
+            <path d="M4 12h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+            {/* Split (Fork) - diverging paths */}
+            <path d="M10 12L14 8H20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M10 12L14 16H20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+            {/* Arrowheads on exits? User just said "split into two paths". Let's add small tips to imply direction. */}
+            <path d="M18 6l2 2-2 2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M18 14l2 2-2 2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </>
     ),
     'risk.guard': (
