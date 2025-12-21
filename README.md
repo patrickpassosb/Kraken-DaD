@@ -110,7 +110,7 @@ flowchart LR
 - `apps/frontend/` — Vite + React Flow UI (dark Kraken Pro styling), nodes, canvas, API clients, formatting utils.
 - `apps/backend/` — Fastify server with `/execute`, `/execute/dry-run`, `/market/context`, `/kraken/credentials/*`, and `/health`.
 - `packages/strategy-core/` — Strategy schema, dry-run executor, block definitions (Kraken ticker + order blocks).
-- `packages/kraken-client/` — Typed Kraken REST helpers (public Ticker/Depth; private AddOrder/Cancel for validate or live).
+- `packages/kraken-client/` — Typed Kraken REST helpers (public Ticker/Depth; private AddOrder/Cancel for validate or live). Replaces legacy `strategy-core/kraken` adapters.
 - `docs/`, `tasks/` — Design notes and task trackers; `tasks/010-kraken-pro-ux.md` documents the current UX direction.
 
 ## Kraken API Usage
@@ -122,24 +122,29 @@ flowchart LR
 ## Running Locally
 Prereq: Node.js >= 18 (for native `fetch`).
 
+Install deps once at the repo root:
+```bash
+npm install
+```
+
 Backend
 ```bash
-cd apps/backend
-npm install
-npm run dev  # http://127.0.0.1:3001
+npm run dev:backend  # http://127.0.0.1:3001
 ```
 
 Frontend
 ```bash
-cd apps/frontend
-npm install
-npm run dev  # http://127.0.0.1:3000
+npm run dev:frontend  # http://127.0.0.1:3000
 ```
 
 Tests
 ```bash
-npm install
 npm test
+```
+
+Shared typecheck
+```bash
+npm run typecheck:shared
 ```
 
 Frontend API base URL
@@ -157,6 +162,12 @@ Use the UI
 Mode & Safety
 - Mode: Dry-run by default; live mode requires credentials + explicit toggle and warns before placing orders.
 - Recenter: Use the **Recenter** button or press **R** to fit the canvas if you pan/zoom away.
+
+## npm scripts (workspace)
+- `npm run dev:backend` runs the backend workspace dev server.
+- `npm run dev:frontend` runs the frontend workspace dev server.
+- `npm run test` runs root tests (strategy-core).
+- `npm run typecheck:shared` runs shared TypeScript checks for packages.
 
 ## API Endpoints
 - `GET /health` — simple health check.

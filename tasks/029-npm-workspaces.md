@@ -43,6 +43,8 @@ Multiple package-lock.json/node_modules create drift risk and extra install time
 - [x] Root scripts or usage notes documented for running workspace commands
 - [x] Add shared TypeScript typecheck script at repo root
 - [x] Remove unused strategy-core/kraken legacy adapters
+- [x] Remove per-package package-lock.json files and keep only the root lockfile
+- [x] Update docs to describe workspace-first npm scripts and adapter replacement
 
 ---
 
