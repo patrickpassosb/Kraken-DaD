@@ -17,10 +17,10 @@ Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #
 
 ---
 
-## Hackathon Alignment (Track #3)
-- **Innovation**: Moves beyond simple charts to **visual programming** for trading logic.
-- **Technical Execution**: Built as a robust **monorepo** with a shared `strategy-core` package, separation of concerns, and a custom `kraken-client`.
-- **Reusability**: The `strategy-core` and visual builder components are decoupled and [documented for reuse](./docs/strategy-builder-reuse.md).
+## Engineering Philosophy
+- **Visual Programming for Traders**: key innovation moving beyond simple dashboards to full **logic composition**, bringing the power of "Node-RED" style workflows to Kraken's ecosystem.
+- **Robust Architecture**: Built as a scalable **monorepo** with clear separation of concerns (Frontend, Backend, Shared Core). This isn't just a prototype; it's a foundation for production tooling.
+- **Systematic Reusability**: The core execution engine (`strategy-core`) and visual components are fully decoupled, allowing them to be embedded in other applications or extended by the community. See our [Reuse Guide](./docs/strategy-builder-reuse.md).
 
 ---
 
