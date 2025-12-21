@@ -220,3 +220,60 @@ Icons must convey the following meanings:
 Ensure all icons share identical style and visual weight.
 
 ---
+
+## Gemini Prompt v2 (Very Specific, Use This)
+
+You are designing a custom icon set for a dark Kraken-style trading UI.
+I need a full set of **individual PNG files**, not a single sheet.
+
+### Output Requirements (non-negotiable)
+- **Format:** PNG with **transparent background** (alpha). No checkerboard background, no baked background color, no border, no shadow.
+- **Sizes:** Export **two sizes for each icon**: `36x36` (@1x) and `72x72` (@2x).
+- **File naming:**
+  - `block-control.start.png` and `block-control.start@2x.png`
+  - `block-control.timeWindow.png` and `block-control.timeWindow@2x.png`
+  - `block-data.kraken.ticker.png` and `block-data.kraken.ticker@2x.png`
+  - `block-data.kraken.ohlc.png` and `block-data.kraken.ohlc@2x.png`
+  - `block-data.constant.png` and `block-data.constant@2x.png`
+  - `block-data.kraken.spread.png` and `block-data.kraken.spread@2x.png`
+  - `block-data.kraken.assetPairs.png` and `block-data.kraken.assetPairs@2x.png`
+  - `block-logic.movingAverage.png` and `block-logic.movingAverage@2x.png`
+  - `block-logic.if.png` and `block-logic.if@2x.png`
+  - `block-risk.guard.png` and `block-risk.guard@2x.png`
+  - `block-action.placeOrder.png` and `block-action.placeOrder@2x.png`
+  - `block-action.cancelOrder.png` and `block-action.cancelOrder@2x.png`
+  - `block-action.logIntent.png` and `block-action.logIntent@2x.png`
+- **Quantity:** Exactly 13 unique icons. Do not duplicate any.
+
+### Visual Style Requirements
+- **Style:** Clean, geometric, tech-forward; minimal but not thin.
+- **Stroke weight:** Consistent across all icons. Medium thickness for legibility at 20-22px.
+- **Fill:** Use strokes only or a minimal stroke + tiny filled accents; avoid full solid fills.
+- **Padding:** Keep 4–6px padding inside the 36x36 canvas. Centered composition.
+- **No gradients or shadows.** The UI already adds gradients; icons must be plain.
+- **Color:** Single light ink color only (cool light gray/white with a subtle blue tint).
+  - Suggested color: `#E6EAF6` or similar.
+  - If you need a second color, do **not** use it; stick to one color only.
+
+### Semantics (must be recognizable)
+1) `control.start` = start/play/launch (triangle play or “launch” cue)
+2) `control.timeWindow` = time window (clock + bracket/underline)
+3) `data.kraken.ticker` = market data (line chart with axis)
+4) `data.kraken.ohlc` = candles (candlestick bars)
+5) `data.constant` = constant/fixed value (equal sign or lock)
+6) `data.kraken.spread` = bid/ask spread (two arrows apart or gap)
+7) `data.kraken.assetPairs` = asset pairs (linked nodes/chain)
+8) `logic.movingAverage` = moving average (smooth curve with dots)
+9) `logic.if` = decision/branch (split/branching paths)
+10) `risk.guard` = protection (shield)
+11) `action.placeOrder` = execute/confirm (check + bolt or strong check)
+12) `action.cancelOrder` = cancel/undo (X + back arrow, not refresh)
+13) `action.logIntent` = audit/log (document with pencil)
+
+### Consistency Checks
+- All icons must look like they belong in the same family.
+- No icon should be visually heavier or lighter than the others.
+- Avoid overly complex details; icons must read clearly at 36x36.
+
+### Deliverables
+- Provide a **zip** of the 26 PNGs (13 icons × 2 sizes), named exactly as above.
