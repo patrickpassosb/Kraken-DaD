@@ -1,10 +1,10 @@
 # Kraken DaD
 
-**Kraken Drag-and-Drop Strategy Builder** — *Build the tools beneath the surface.*
+**Kraken Drag-and-Drop**
 
 [![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red)](https://www.youtube.com/watch?v=PLACEHOLDER) *(Click to watch the walkthrough)*
 
-Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #3. It allows traders to visually compose strategies using a "Node-RED for Trading" interface, execute them safely in a dry-run environment, and (optionally) deploy them for live trading.
+Kraken DaD is a **Kraken-native low-code strategy builder**. It allows traders to visually compose strategies using a "Node-RED for Trading" interface, execute them safely in a dry-run environment, and (optionally) deploy them for live trading.
 
 ---
 
