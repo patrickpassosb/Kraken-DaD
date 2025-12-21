@@ -1,6 +1,26 @@
 # Kraken DaD
 
-Kraken DaD is a **Kraken-native drag-and-drop strategy builder**. The frontend uses React Flow to compose strategies, the backend runs a Fastify API that executes those strategies in **dry-run by default**, and the shared `strategy-core` package defines the schema and execution engine. Live trading is explicitly gated and requires backend-held credentials.
+**Kraken Drag-and-Drop Strategy Builder** — *Build the tools beneath the surface.*
+
+[![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red)](https://www.youtube.com/watch?v=PLACEHOLDER) *(Click to watch the walkthrough)*
+
+Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #3. It allows traders to visually compose strategies using a "Node-RED for Trading" interface, execute them safely in a dry-run environment, and (optionally) deploy them for live trading.
+
+---
+
+## 🚀 Key Features
+- **Visual Strategy Composition**: React Flow-powered canvas with drag-and-drop blocks.
+- **Real-Time Market Context**: Integrated Kraken WebSocket streams for live ticker/price updates.
+- **Safety First Architecture**: Strategies run in **Dry-Run Mode** by default. Live execution is gated, opt-in, and securely handled by the backend.
+- **Professional UX**: Dark mode, dense information layout, and "Kraken Pro" aesthetic.
+- **Production Ready**: Monorepo architecture (Fastify + Vite), strictly typed (TypeScript), and Docker-ready.
+
+---
+
+## 🏆 Hackathon Alignment (Track #3)
+- **Innovation**: Moves beyond simple charts to **visual programming** for trading logic.
+- **Technical Execution**: Built as a robust **monorepo** with a shared `strategy-core` package, separation of concerns, and a custom `kraken-client`.
+- **Reusability**: The `strategy-core` and visual builder components are decoupled and [documented for reuse](./docs/strategy-builder-reuse.md).
 
 ---
 
@@ -15,6 +35,31 @@ Kraken DaD is a **Kraken-native drag-and-drop strategy builder**. The frontend u
 ---
 
 ## Architecture & Data Flow
+
+```mermaid
+graph TD
+    subgraph "Kraken DaD Monorepo"
+        FE[Frontend (Vite + React Flow)]
+        BE[Backend (Fastify + Node.js)]
+        Shared[Shared Pkg: strategy-core]
+    end
+
+    User((Trader)) <-->|Drag & Drop| FE
+    FE -- "Submit Strategy (JSON)" --> BE
+    BE -- "Server-Sent Events (Live Context)" --> FE
+    
+    BE -- "Execute / Dry-Run" --> Shared
+    BE -- "Credentials (Private)" --> BE
+    
+    BE <-->|Public Data (REST/WS)| Kraken[Kraken Exchange API]
+    BE <-->|Private Orders (REST)| Kraken
+
+    style FE fill:#2a2a2a,stroke:#666,color:#fff
+    style BE fill:#2a2a2a,stroke:#666,color:#fff
+    style Shared fill:#1a1a1a,stroke:#888,stroke-dasharray: 5 5,color:#ccc
+    style Kraken fill:#5841d8,stroke:#fff,color:#fff
+```
+
 1) **Canvas** (React Flow) → users drag blocks with typed handles (`control:*`, `data:*`).
 2) **Serialization** → `toStrategyJSON` normalizes nodes/edges into the shared schema.
 3) **Backend execution** → `/execute` builds market context (Kraken REST/WS with fallbacks), runs the dry-run engine, optionally validates/calls Kraken private endpoints when live mode is enabled.
@@ -57,9 +102,12 @@ Execution ordering is deterministic: control edges drive the topological sort; d
 Prereq: Node.js ≥ 18
 
 ```bash
+# From the project root:
 npm install
-npm run dev:backend   # http://127.0.0.1:3001
-npm run dev:frontend  # http://127.0.0.1:3000
+
+# Start both frontend and backend (in separate terminals):
+npm run dev:backend   # API: http://127.0.0.1:3001
+npm run dev:frontend  # UI:  http://127.0.0.1:3000
 ```
 
 Environment:

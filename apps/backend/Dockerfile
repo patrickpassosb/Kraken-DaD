@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY apps/backend/package.json apps/backend/
 COPY apps/frontend/package.json apps/frontend/
 COPY packages/kraken-client/package.json packages/kraken-client/
+COPY packages/strategy-core/package.json packages/strategy-core/
 
 # Install dependencies from root (hoist strategy)
 RUN npm ci

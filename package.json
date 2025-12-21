@@ -1,5 +1,6 @@
 {
     "name": "kraken-dad",
+    "author": "Patrick Passos",
     "private": true,
     "type": "module",
     "workspaces": [
