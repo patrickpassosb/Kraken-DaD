@@ -8,7 +8,7 @@ Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #
 
 ---
 
-## 🚀 Key Features
+## Key Features
 - **Visual Strategy Composition**: React Flow-powered canvas with drag-and-drop blocks.
 - **Real-Time Market Context**: Integrated Kraken WebSocket streams for live ticker/price updates.
 - **Safety First Architecture**: Strategies run in **Dry-Run Mode** by default. Live execution is gated, opt-in, and securely handled by the backend.
@@ -17,7 +17,7 @@ Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #
 
 ---
 
-## 🏆 Hackathon Alignment (Track #3)
+## Hackathon Alignment (Track #3)
 - **Innovation**: Moves beyond simple charts to **visual programming** for trading logic.
 - **Technical Execution**: Built as a robust **monorepo** with a shared `strategy-core` package, separation of concerns, and a custom `kraken-client`.
 - **Reusability**: The `strategy-core` and visual builder components are decoupled and [documented for reuse](./docs/strategy-builder-reuse.md).
@@ -39,9 +39,9 @@ Kraken DaD is a **Kraken-native low-code strategy builder** designed for Track #
 ```mermaid
 graph TD
     subgraph "Kraken DaD Monorepo"
-        FE[Frontend (Vite + React Flow)]
-        BE[Backend (Fastify + Node.js)]
-        Shared[Shared Pkg: strategy-core]
+        FE["Frontend (Vite + React Flow)"]
+        BE["Backend (Fastify + Node.js)"]
+        Shared["Shared Pkg: strategy-core"]
     end
 
     User((Trader)) <-->|Drag & Drop| FE
@@ -51,7 +51,7 @@ graph TD
     BE -- "Execute / Dry-Run" --> Shared
     BE -- "Credentials (Private)" --> BE
     
-    BE <-->|Public Data (REST/WS)| Kraken[Kraken Exchange API]
+    BE <-->|Public Data (REST/WS)| Kraken["Kraken Exchange API"]
     BE <-->|Private Orders (REST)| Kraken
 
     style FE fill:#2a2a2a,stroke:#666,color:#fff
