@@ -15,11 +15,19 @@ export interface MovingAverageNodeData extends Record<string, unknown> {
 }
 
 function parsePeriod(raw: string): number | null {
-    const cleaned = raw.trim().replace(/[^0-9]/g, '');
-    if (!cleaned) return null;
+    const cleaned = raw.trim();
+    if (!/^\d+$/.test(cleaned)) return null;
     const parsed = Number.parseInt(cleaned, 10);
     if (!Number.isFinite(parsed)) return null;
     return Math.max(parsed, 1);
+}
+
+function normalizeMethod(method?: MovingAverageMethod): MovingAverageMethod {
+    return method === 'EMA' ? 'EMA' : 'SMA';
+}
+
+function sanitizePeriodInput(raw: string): string {
+    return raw.replace(/\D/g, '');
 }
 
 type MovingAverageNodeType = Node<MovingAverageNodeData>;
@@ -34,7 +42,7 @@ export const MovingAverageNode = memo(function MovingAverageNode({
     const { visible, onNodeEnter, onNodeLeave } =
         useNodeToolbarHover();
 
-    const [method, setMethod] = useState<MovingAverageMethod>(nodeData.method ?? 'SMA');
+    const [method, setMethod] = useState<MovingAverageMethod>(normalizeMethod(nodeData.method));
     const [periodInput, setPeriodInput] = useState(
         typeof nodeData.period === 'number' && nodeData.period > 0
             ? String(nodeData.period)
@@ -55,7 +63,7 @@ export const MovingAverageNode = memo(function MovingAverageNode({
     );
 
     useEffect(() => {
-        setMethod(nodeData.method ?? 'SMA');
+        setMethod(normalizeMethod(nodeData.method));
     }, [nodeData.method]);
 
     useEffect(() => {
@@ -112,21 +120,24 @@ export const MovingAverageNode = memo(function MovingAverageNode({
                         disabled={isDisabled}
                         onChange={(e) => {
                             const raw = e.target.value;
-                            setPeriodInput(raw);
-                            if (raw.trim() === '') {
+                            setPeriodInput(sanitizePeriodInput(raw));
+                        }}
+                        onBlur={() => {
+                            if (periodInput.trim() === '') {
                                 updateData({ period: undefined });
                                 return;
                             }
-                            const parsed = parsePeriod(raw);
+                            const parsed = parsePeriod(periodInput);
                             if (parsed === null) {
+                                setPeriodInput(
+                                    typeof nodeData.period === 'number' && nodeData.period > 0
+                                        ? String(nodeData.period)
+                                        : ''
+                                );
                                 return;
                             }
-                            updateData({ period: parsed });
-                        }}
-                        onBlur={() => {
-                            const parsed = parsePeriod(periodInput);
-                            if (parsed === null) return;
                             setPeriodInput(parsed.toString());
+                            updateData({ period: parsed });
                         }}
                     />
                 </div>
