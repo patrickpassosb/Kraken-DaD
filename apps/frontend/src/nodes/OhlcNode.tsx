@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -69,11 +70,8 @@ export function OhlcNode({ id, data }: NodeProps) {
                     <span>OHLC Candles</span>
                     <span>Kraken public OHLC snapshot</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #3b82f6)' }}
-                >
-                    O
+                <div className="node-icon">
+                    <BlockIcon type="data.kraken.ohlc" size={20} />
                 </div>
             </div>
             <div className="node-body">

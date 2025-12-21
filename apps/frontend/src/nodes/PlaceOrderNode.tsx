@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { BlockIcon } from '../components/BlockIcon';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
@@ -69,11 +70,8 @@ export function PlaceOrderNode({ id, data }: NodeProps) {
                     <span>Execution</span>
                     <span>Prepare Kraken order intent</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-green), #46ef9a)' }}
-                >
-                    ✓
+                <div className="node-icon">
+                    <BlockIcon type="action.placeOrder" size={20} />
                 </div>
             </div>
             <div className="node-body">

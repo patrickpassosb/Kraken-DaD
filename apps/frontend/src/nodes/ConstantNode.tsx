@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -125,11 +126,8 @@ export function ConstantNode({ id, data }: NodeProps) {
                     <span>Constant</span>
                     <span>Static input value</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #3d2c69)' }}
-                >
-                    C
+                <div className="node-icon">
+                    <BlockIcon type="data.constant" size={20} />
                 </div>
             </div>
             <div className="node-body">

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -59,11 +60,8 @@ export function RiskNode({ id, data }: NodeProps) {
                     <span>Orderbook Guard</span>
                     <span>Blocks if spread too wide</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), var(--kraken-purple-strong))', color: '#0b0a12' }}
-                >
-                    ⚑
+                <div className="node-icon">
+                    <BlockIcon type="risk.guard" size={20} />
                 </div>
             </div>
             <div className="node-body">

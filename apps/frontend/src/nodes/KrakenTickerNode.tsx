@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { BlockIcon } from '../components/BlockIcon';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
@@ -48,11 +49,8 @@ export function KrakenTickerNode({ id, data }: NodeProps) {
                     <span>Market Data</span>
                     <span>Kraken public ticker</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #4dd9ff)' }}
-                >
-                    $
+                <div className="node-icon">
+                    <BlockIcon type="data.kraken.ticker" size={20} />
                 </div>
             </div>
             <div className="node-body">

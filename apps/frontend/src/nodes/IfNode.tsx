@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { formatPrice } from '../utils/format';
@@ -49,11 +50,8 @@ export function IfNode({ id, data }: NodeProps) {
                     <span>Condition</span>
                     <span>Human-readable logic</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-amber), #ffd166)' }}
-                >
-                    ?
+                <div className="node-icon">
+                    <BlockIcon type="logic.if" size={20} />
                 </div>
             </div>
             <div className="node-body">

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -46,11 +47,8 @@ export function LogIntentNode({ id, data }: NodeProps) {
                     <span>Audit Log</span>
                     <span>Record intent without execution</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple), var(--kraken-purple-strong))' }}
-                >
-                    ℹ
+                <div className="node-icon">
+                    <BlockIcon type="action.logIntent" size={20} />
                 </div>
             </div>
             <div className="node-body">

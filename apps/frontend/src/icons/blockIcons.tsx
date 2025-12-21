@@ -72,10 +72,12 @@ export const IconPaths: Record<string, React.ReactNode> = {
     ),
     'logic.movingAverage': (
         <>
-            {/* Moving Average - Smooth Technical Trend */}
-            {/* Single elegant curve representing the trend */}
-            <path d="M3 17C6 17 8 13 12 11C16 9 18 7 21 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Subtle under-line to suggest chart area or second average? Let's keep it minimal as requested "Smooth Curve" */}
+            {/* Moving Average - Price + Indicator (Standard Financial) */}
+            {/* Price Line (Jagged, Thinner, Background) */}
+            <polyline points="3 14 7 10 11 13 15 9 21 5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+
+            {/* MA Line (Smooth, Thicker, Foreground) */}
+            <path d="M3 16C7 15 11 11 15 11C18 11 21 6 21 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </>
     ),
     'logic.if': (

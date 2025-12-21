@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -54,11 +55,8 @@ export function SpreadNode({ id, data }: NodeProps) {
                     <span>Recent Spreads</span>
                     <span>Kraken bid/ask spread history</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-purple-strong), #38bdf8)' }}
-                >
-                    S
+                <div className="node-icon">
+                    <BlockIcon type="data.kraken.spread" size={20} />
                 </div>
             </div>
             <div className="node-body">

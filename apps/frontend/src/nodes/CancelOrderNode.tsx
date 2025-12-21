@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -46,11 +47,8 @@ export function CancelOrderNode({ id, data }: NodeProps) {
                     <span>Order Control</span>
                     <span>Cancel prepared order</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-red), #ff8897)' }}
-                >
-                    ✕
+                <div className="node-icon">
+                    <BlockIcon type="action.cancelOrder" size={20} />
                 </div>
             </div>
             <div className="node-body">

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { BlockIcon } from '../components/BlockIcon';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -69,11 +70,8 @@ export function TimeWindowNode({ id, data }: NodeProps) {
                     <span>Time Window</span>
                     <span>UTC control gating</span>
                 </div>
-                <div
-                    className="node-icon"
-                    style={{ background: 'linear-gradient(135deg, var(--kraken-cyan), #0ea5e9)' }}
-                >
-                    T
+                <div className="node-icon">
+                    <BlockIcon type="control.timeWindow" size={20} />
                 </div>
             </div>
             <div className="node-body">
