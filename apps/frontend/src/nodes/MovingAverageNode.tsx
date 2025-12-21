@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useState } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, Node, NodeProps, useReactFlow } from '@xyflow/react';
 import { StatusPill } from '../components/StatusPill';
 import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeStatus } from '../utils/status';
@@ -7,7 +7,7 @@ import { useNodeToolbarHover } from './useNodeToolbarHover';
 
 export type MovingAverageMethod = 'SMA' | 'EMA';
 
-export interface MovingAverageNodeData {
+export interface MovingAverageNodeData extends Record<string, unknown> {
     method?: MovingAverageMethod;
     period?: number;
     status?: NodeStatus;
@@ -22,10 +22,12 @@ function parsePeriod(raw: string): number | null {
     return Math.max(parsed, 1);
 }
 
+type MovingAverageNodeType = Node<MovingAverageNodeData>;
+
 export const MovingAverageNode = memo(function MovingAverageNode({
     id,
     data,
-}: NodeProps<MovingAverageNodeData>) {
+}: NodeProps<MovingAverageNodeType>) {
     const { setNodes } = useReactFlow();
     const nodeData = data ?? {};
     const isDisabled = nodeData.disabled;
