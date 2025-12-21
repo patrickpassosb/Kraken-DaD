@@ -771,7 +771,16 @@ export function FlowCanvas({
                                             onClick={() => handleAddNode(item.type, item.defaultPosition)}
                                             title={`${item.label} — ${item.description}`}
                                         >
-                                            <div className="palette-icon">
+                                            <div
+                                                className="palette-icon"
+                                                style={
+                                                    item.type === 'action.placeOrder'
+                                                        ? { color: '#2bd27f' }
+                                                        : item.type === 'action.cancelOrder'
+                                                            ? { color: '#ff5f6d' }
+                                                            : undefined
+                                                }
+                                            >
                                                 <BlockIcon type={item.type} size={22} />
                                             </div>
                                             <div className="palette-text">

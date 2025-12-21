@@ -72,12 +72,21 @@ export const IconPaths: Record<string, React.ReactNode> = {
     ),
     'logic.movingAverage': (
         <>
-            {/* Moving Average - Intertwined Curves (Crossover/Golden Cross) */}
-            {/* Slow Average (Broader curve) */}
-            <path d="M3 15C8 15 13 12 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+            {/* Moving Average - Candlesticks + SMA (High Fidelity) */}
+            {/* Candle 1 (Bearish) */}
+            <rect x="4" y="6" width="3" height="8" rx="0.5" fill="currentColor" opacity="0.4" />
+            <line x1="5.5" y1="4" x2="5.5" y2="16" stroke="currentColor" strokeWidth="1" opacity="0.4" />
 
-            {/* Fast Average (Steeper curve, intersecting) */}
-            <path d="M3 18C8 18 12 9 21 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Candle 2 (Bullish) */}
+            <rect x="10" y="8" width="3" height="6" rx="0.5" fill="currentColor" opacity="0.7" />
+            <line x1="11.5" y1="7" x2="11.5" y2="15" stroke="currentColor" strokeWidth="1" opacity="0.7" />
+
+            {/* Candle 3 (Bullish - higher) */}
+            <rect x="16" y="5" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.7" />
+            <line x1="17.5" y1="3" x2="17.5" y2="13" stroke="currentColor" strokeWidth="1" opacity="0.7" />
+
+            {/* SMA Line (Smooth overlay) */}
+            <path d="M2 14C6 14 10 11 14 9C17 7.5 22 4 22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>
     ),
     'logic.if': (
