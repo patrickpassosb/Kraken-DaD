@@ -165,15 +165,18 @@ No new code files planned; only documentation/reporting outputs.
 ### Implementation Workflow
 <!-- This is where you give specific instructions to your AI agent -->
 🎯 **MANDATORY PROCESS:**
-TODO:
+1) Use this task for repo-wide redundancy review requests.
+2) Scan repo for unused/duplicate files and configs; validate with `rg`.
+3) Report findings with file pointers and suggested removals/merges.
+4) Call out assumptions and ask for confirmation before deletions.
 
 ### Communication Preferences
 <!-- This is where you set expectations for how the AI should communicate -->
-TODO: How do you want the agent to communicate with you
+Concise review findings first, then recommendations and optional next steps.
 
 ### Code Quality Standards
 <!-- This is where you define your coding standards for the AI to follow -->
-TODO: Any specific code standards
+Prefer minimal changes; avoid sweeping refactors unless necessary.
 
 ---
 
@@ -182,7 +185,7 @@ TODO: Any specific code standards
 ### Impact Assessment
 <!-- This is where you think through broader consequences of your changes -->
 
-TODO: Tell the AI what sections of code you're worried about breaking, performance concerns, and user workflow impacts
+Focus on monorepo structure, shared packages, and build/run scripts to avoid breaking dev workflow.
 
 ---
 
