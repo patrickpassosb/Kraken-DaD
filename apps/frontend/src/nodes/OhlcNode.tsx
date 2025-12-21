@@ -34,6 +34,7 @@ function parseCountInput(raw: string): number | null {
     return Math.max(parsed, 1);
 }
 
+/** Data node that requests OHLC snapshots for a pair/interval. */
 export function OhlcNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as OhlcNodeData) || {};

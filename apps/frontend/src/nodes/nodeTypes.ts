@@ -28,4 +28,5 @@ export const nodeTypes = {
     'risk.guard': RiskNode,
 };
 
+/** Registry consumed by React Flow to resolve node component implementations. */
 export type NodeType = keyof typeof nodeTypes;

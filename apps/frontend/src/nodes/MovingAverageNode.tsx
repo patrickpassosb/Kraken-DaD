@@ -32,6 +32,7 @@ function sanitizePeriodInput(raw: string): string {
 
 type MovingAverageNodeType = Node<MovingAverageNodeData>;
 
+/** Logic node computing SMA/EMA from an input price series. */
 export const MovingAverageNode = memo(function MovingAverageNode({
     id,
     data,

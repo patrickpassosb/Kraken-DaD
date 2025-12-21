@@ -28,6 +28,7 @@ export interface NodeDefinition {
     defaultData?: Record<string, unknown>;
 }
 
+/** Catalog of available block types and palette metadata for the canvas. */
 export const nodeDefinitions: NodeDefinition[] = [
     {
         type: 'control.start',
@@ -202,6 +203,7 @@ export function createNodeWithDefaults(
     };
 }
 
+/** Prebuilt demo path: Start -> Ticker -> Condition -> Order. */
 export function buildTemplateNodes(): Node[] {
     return [
         createNodeWithDefaults('control.start', 'start-template'),

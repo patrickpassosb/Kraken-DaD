@@ -7,6 +7,11 @@ interface CredentialsBody {
 }
 
 export async function krakenCredentialsRoute(fastify: FastifyInstance) {
+    /**
+     * GET /kraken/credentials/status
+     *
+     * Indicates whether private API keys are configured and their source.
+     */
     fastify.get(
         '/kraken/credentials/status',
         {

@@ -12,6 +12,7 @@ export interface LogIntentNodeData {
     disabled?: boolean;
 }
 
+/** Audit node that records an intent without performing side effects. */
 export function LogIntentNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as LogIntentNodeData) || {};

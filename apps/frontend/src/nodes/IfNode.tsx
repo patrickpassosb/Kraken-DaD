@@ -13,6 +13,7 @@ export interface ConditionNodeData {
     disabled?: boolean;
 }
 
+/** Logic node that branches control flow based on a numeric comparison. */
 export function IfNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConditionNodeData) || {};

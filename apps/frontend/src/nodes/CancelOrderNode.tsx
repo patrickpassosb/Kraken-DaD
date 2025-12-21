@@ -11,6 +11,7 @@ export interface CancelOrderNodeData {
     disabled?: boolean;
 }
 
+/** Action node that emits a Kraken CancelOrder intent. */
 export function CancelOrderNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as CancelOrderNodeData;

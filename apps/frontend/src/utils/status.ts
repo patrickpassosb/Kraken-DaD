@@ -1,5 +1,6 @@
 export type NodeStatus = 'idle' | 'running' | 'executed' | 'skipped' | 'error';
 
+/** Human-readable labels for status chips used on nodes. */
 export function statusLabel(status: NodeStatus): string {
     switch (status) {
         case 'running':
@@ -15,6 +16,7 @@ export function statusLabel(status: NodeStatus): string {
     }
 }
 
+/** Returns semantic colors for status pills in the canvas. */
 export function statusTone(status: NodeStatus): { background: string; dot: string } {
     switch (status) {
         case 'running':

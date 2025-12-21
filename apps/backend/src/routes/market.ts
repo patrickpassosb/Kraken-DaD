@@ -6,6 +6,12 @@ interface MarketQuery {
 }
 
 export async function marketRoute(fastify: FastifyInstance) {
+    /**
+     * GET /market/context
+     *
+     * Returns a single snapshot combining ticker + depth so the frontend can build
+     * preview panels without chaining multiple REST calls.
+     */
     fastify.get(
         '/market/context',
         {

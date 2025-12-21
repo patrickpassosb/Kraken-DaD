@@ -131,6 +131,10 @@ async function seedFromRest(pair: string, log: FastifyInstance['log']) {
     }
 }
 
+/**
+ * Opens a Kraken WS ticker stream for the requested pair and stores the latest
+ * snapshot; reconnects automatically when subscribers still exist.
+ */
 function startWs(pair: string, log: FastifyInstance['log']) {
     const key = pairKey(pair);
     const existing = getOrCreateStreamState(key);
@@ -200,6 +204,12 @@ interface StreamQuery {
 }
 
 export async function marketStreamRoute(fastify: FastifyInstance) {
+    /**
+     * GET /market/stream
+     *
+     * SSE endpoint that emits ticker updates. Uses REST seed + WS stream +
+     * periodic heartbeat to keep clients warm.
+     */
     fastify.get(
         '/market/stream',
         {

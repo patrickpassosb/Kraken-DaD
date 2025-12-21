@@ -20,10 +20,12 @@ export const tradingPairs: TradingPair[] = [
     { id: 'BTC/EUR', base: 'BTC', quote: 'EUR', label: 'BTC/EUR' },
 ];
 
+/** Finds a bundled pair entry, case-insensitive. */
 export function findPair(id: string): TradingPair | undefined {
     return tradingPairs.find((p) => p.id.toUpperCase() === id.toUpperCase());
 }
 
+/** Returns metadata for base/quote assets when available. */
 export function getAssetsForPair(pairId: string): { base?: AssetMeta; quote?: AssetMeta } {
     const pair = findPair(pairId);
     if (!pair) return {};

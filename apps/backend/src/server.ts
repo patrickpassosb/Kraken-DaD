@@ -18,6 +18,10 @@ import { pairsRoute } from './routes/pairs.js';
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
+/**
+ * Bootstraps the Fastify instance, wires routes, and starts listening.
+ * Keeps configuration minimal because the backend is intentionally lean for demo purposes.
+ */
 async function main() {
     dotenv.config();
 
@@ -27,7 +31,7 @@ async function main() {
         },
     });
 
-    // CORS middleware for frontend access
+    // CORS middleware for frontend access; Fastify hooks keep this close to the server definition
     fastify.addHook('onRequest', async (request, reply) => {
         reply.header('Access-Control-Allow-Origin', '*');
         reply.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -38,12 +42,12 @@ async function main() {
         }
     });
 
-    // Health check
+    // Health check keeps deployment probes and simple CLI tests fast
     fastify.get('/health', async () => {
         return { status: 'ok', timestamp: new Date().toISOString() };
     });
 
-    // Register execute routes
+    // Register execute routes; each route is a plugin to keep server.ts focused on wiring
     await fastify.register(executeRoute);
     await fastify.register(krakenCredentialsRoute);
     await fastify.register(marketRoute);

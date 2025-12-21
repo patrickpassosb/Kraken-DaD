@@ -2,6 +2,7 @@ import { Node, Edge } from '@xyflow/react';
 import { SCHEMA_VERSION } from '../../../../packages/strategy-core/schema.ts';
 import { Strategy } from '../api/executeStrategy';
 
+/** Converts React Flow handle ids into strategy edge type. */
 export function getPortType(handleId: string): 'data' | 'control' {
     if (handleId.startsWith('control:')) {
         return 'control';
@@ -9,6 +10,7 @@ export function getPortType(handleId: string): 'data' | 'control' {
     return 'data';
 }
 
+/** Strips `data:` / `control:` prefixes, returning the schema port id. */
 export function getPortId(handleId: string): string {
     // Strip the prefix (control: or data:) to get the actual port ID
     if (handleId.startsWith('control:')) {
@@ -20,6 +22,10 @@ export function getPortId(handleId: string): string {
     return handleId;
 }
 
+/**
+ * Serializes the canvas into a Strategy JSON aligned with strategy-core schema.
+ * Applies sane defaults for nodes that would otherwise violate validation.
+ */
 export function toStrategyJSON(nodes: Node[], edges: Edge[]): Strategy {
     const now = new Date().toISOString();
 

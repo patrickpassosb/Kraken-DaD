@@ -15,6 +15,9 @@ const symbolOverrides: Record<string, string> = {
     MET: 'METIS', // normalize short forms
 };
 
+/**
+ * Aligns Kraken asset altnames to common symbols (e.g., XBT -> BTC) for frontend display.
+ */
 function normalizeSymbol(altname: string): string {
     const upper = altname.toUpperCase();
     if (symbolOverrides[upper]) return symbolOverrides[upper];
@@ -24,6 +27,11 @@ function normalizeSymbol(altname: string): string {
 }
 
 export async function pairsRoute(fastify: FastifyInstance) {
+    /**
+     * GET /market/pairs
+     *
+     * Returns a flattened pair catalog with normalized symbols for dropdowns.
+     */
     fastify.get('/market/pairs', async (_req: FastifyRequest, reply: FastifyReply) => {
         try {
             const [assets, pairs] = await Promise.all([fetchAssets(), fetchAssetPairs()]);

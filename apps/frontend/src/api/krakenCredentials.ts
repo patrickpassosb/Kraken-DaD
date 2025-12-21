@@ -5,6 +5,9 @@ export interface KrakenCredentialsStatus {
     source: 'runtime' | 'env' | 'none';
 }
 
+/**
+ * Reads whether Kraken private API creds are configured on the backend.
+ */
 export async function fetchKrakenCredentialsStatus(): Promise<KrakenCredentialsStatus> {
     const response = await fetch(`${API_BASE}/kraken/credentials/status`);
     if (!response.ok) {
@@ -13,6 +16,9 @@ export async function fetchKrakenCredentialsStatus(): Promise<KrakenCredentialsS
     return response.json();
 }
 
+/**
+ * Persists credentials server-side for the current session (in-memory only).
+ */
 export async function saveKrakenCredentials(
     key: string,
     secret: string
@@ -32,6 +38,9 @@ export async function saveKrakenCredentials(
     return payload;
 }
 
+/**
+ * Removes runtime credentials on the backend; env-based creds remain.
+ */
 export async function clearKrakenCredentials(): Promise<KrakenCredentialsStatus> {
     const response = await fetch(`${API_BASE}/kraken/credentials`, {
         method: 'DELETE',

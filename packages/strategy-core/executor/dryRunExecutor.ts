@@ -178,6 +178,9 @@ function extractSeriesValues(raw: unknown): number[] {
     return values;
 }
 
+/**
+ * Computes a simple moving average for each index in the series.
+ */
 function computeSma(series: number[], period: number): number[] {
     const result: number[] = [];
     let sum = 0;
@@ -192,6 +195,9 @@ function computeSma(series: number[], period: number): number[] {
     return result;
 }
 
+/**
+ * Computes an exponential moving average for each index in the series.
+ */
 function computeEma(series: number[], period: number): number[] {
     if (series.length === 0) return [];
     const alpha = 2 / (period + 1);
@@ -205,6 +211,9 @@ function computeEma(series: number[], period: number): number[] {
     return result;
 }
 
+/**
+ * Derives summary statistics from a spread series for guard blocks.
+ */
 function computeSpreadStats(series: number[]): {
     latest: number;
     average: number;
@@ -233,6 +242,9 @@ function computeSpreadStats(series: number[]): {
     return { latest, average: sum / series.length, min, max, median };
 }
 
+/**
+ * Reads market price from context, falling back to a deterministic mock.
+ */
 function resolveMarketPrice(pair: string, ctx: ExecutionContext, fallback: number): number {
     const market = ctx.marketData?.[pairKey(pair)];
     return market?.last ?? fallback;
@@ -895,6 +907,9 @@ interface GraphIndex {
     outgoingDataEdges: Map<string, StrategyEdge[]>;
 }
 
+/**
+ * Precomputes adjacency lists for control/data edges to speed up validation and execution.
+ */
 function buildGraphIndex(strategy: Strategy): GraphIndex {
     const nodeMap = new Map<string, StrategyNode>();
     const controlEdges: StrategyEdge[] = [];
@@ -939,6 +954,10 @@ function buildGraphIndex(strategy: Strategy): GraphIndex {
 // VALIDATION
 // =============================================================================
 
+/**
+ * Performs static validation before execution to prevent runtime errors (cycles,
+ * missing ports, unknown blocks, ambiguous data edges).
+ */
 function validateStrategy(
     strategy: Strategy,
     graph: GraphIndex
@@ -1115,6 +1134,9 @@ function validateStrategy(
 // TOPOLOGICAL SORT
 // =============================================================================
 
+/**
+ * Orders nodes by control/data dependencies; detects cycles that would deadlock execution.
+ */
 function topologicalSort(
     strategy: Strategy,
     graph: GraphIndex
@@ -1174,6 +1196,9 @@ function topologicalSort(
     return { order };
 }
 
+/**
+ * Collects the subgraph needed to run a specific node (used for partial execution).
+ */
 function collectDependencyNodes(
     targetNodeId: string,
     graph: GraphIndex
@@ -1204,6 +1229,10 @@ function collectDependencyNodes(
 // DATA RESOLUTION
 // =============================================================================
 
+/**
+ * Resolves incoming data for a node from the cache, emitting warnings for disabled inputs
+ * and errors for missing required ports.
+ */
 function resolveInputs(
     nodeId: string,
     graph: GraphIndex,
@@ -1308,6 +1337,10 @@ function validatePortType(
 // MAIN EXECUTOR
 // =============================================================================
 
+/**
+ * Main entry point for dry-run execution. Validates the graph, determines execution
+ * order, runs block handlers, and returns structured logs/warnings/errors.
+ */
 export function executeDryRun(
     strategy: Strategy,
     ctx: ExecutionContext

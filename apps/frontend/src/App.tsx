@@ -39,6 +39,7 @@ const demoNodes: Node[] = [];
 
 const demoEdges: Edge[] = [];
 
+/** Normalizes execution errors into user-friendly messages. */
 function friendlyError(err: unknown): string {
     const raw = err instanceof Error ? err.message : 'Unable to run strategy';
     if (raw.toLowerCase().includes('kraken')) {
@@ -53,6 +54,7 @@ function friendlyError(err: unknown): string {
     return 'Strategy needs valid connections and a start trigger. Please review the canvas.';
 }
 
+/** Local fallback when the backend or Kraken API is unreachable. */
 function mockMarketContext(pair: string): MarketContext {
     const defaults: Record<string, Omit<MarketContext, 'pair'>> = {
         'BTC/USD': { lastPrice: 90135.6, spread: 0.8, changePct: 0.5, status: 'Open' },
@@ -72,6 +74,7 @@ function normalizePrice(value: unknown): number | undefined {
     return undefined;
 }
 
+/** Extracts key order fields from the canvas graph for the preview panel. */
 function deriveOrderPreview(nodes: Node[], edges: Edge[], context: MarketContext, fallbackPair: string) {
     const orderNode = nodes.find((n) => n.type === 'action.placeOrder');
     const data = (orderNode?.data as Record<string, unknown>) || {};
@@ -101,12 +104,17 @@ function deriveOrderPreview(nodes: Node[], edges: Edge[], context: MarketContext
     };
 }
 
+/** Translates executor log status to canvas coloring. */
 function mapLogToStatus(logStatus: string): NodeStatus {
     if (logStatus === 'error') return 'error';
     if (logStatus === 'skipped') return 'skipped';
     return 'executed';
 }
 
+/**
+ * Top-level shell orchestrating the strategy canvas, market context, order preview,
+ * execution controls, and credential management.
+ */
 function App() {
     const [nodes, setNodes] = useState<Node[]>(demoNodes);
     const [edges, setEdges] = useState<Edge[]>(demoEdges);

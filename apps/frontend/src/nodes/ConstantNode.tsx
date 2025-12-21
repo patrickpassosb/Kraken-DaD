@@ -48,6 +48,7 @@ function resolveInputValue(data: ConstantNodeData, valueType: ConstantValueType)
     return String(value);
 }
 
+/** Data node that emits a literal constant with configurable type. */
 export function ConstantNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as ConstantNodeData) || {};

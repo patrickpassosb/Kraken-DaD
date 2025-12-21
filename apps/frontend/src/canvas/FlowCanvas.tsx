@@ -224,6 +224,10 @@ function laneIndexForType(type?: string): number {
 const GRID_SIZE = 20;
 const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
+/**
+ * Hosts the React Flow canvas, palette, and layout helpers.
+ * Handles implied data edges, tidy layout, keyboard shortcuts, and node actions.
+ */
 export function FlowCanvas({
     onNodesChange,
     onEdgesChange,

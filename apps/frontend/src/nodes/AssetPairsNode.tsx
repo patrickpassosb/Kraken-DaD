@@ -11,6 +11,7 @@ export interface AssetPairsNodeData {
     disabled?: boolean;
 }
 
+/** Data node that requests Kraken AssetPairs metadata for precision/limits. */
 export function AssetPairsNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as AssetPairsNodeData) || {};

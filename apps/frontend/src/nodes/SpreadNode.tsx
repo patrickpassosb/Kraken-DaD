@@ -20,6 +20,7 @@ function parseCount(raw: string): number | null {
     return Math.max(parsed, 1);
 }
 
+/** Data node that emits recent spread stats for a pair. */
 export function SpreadNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as SpreadNodeData) || {};

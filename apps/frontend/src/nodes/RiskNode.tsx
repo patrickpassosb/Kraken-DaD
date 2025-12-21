@@ -22,6 +22,7 @@ function parseDecimalInput(raw: string): number | null {
     return Math.max(parsed, 0);
 }
 
+/** Risk node that blocks control flow when spreads exceed a configured threshold. */
 export function RiskNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as RiskNodeData) || {};

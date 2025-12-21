@@ -15,6 +15,7 @@ export interface TimeWindowNodeData {
     disabled?: boolean;
 }
 
+/** Control node that only passes flow when current UTC time is within configured windows. */
 export function TimeWindowNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as TimeWindowNodeData) || {};

@@ -12,6 +12,7 @@ export interface KrakenTickerNodeData {
     disabled?: boolean;
 }
 
+/** Data node that fetches Kraken ticker snapshots (or uses backend mock). */
 export function KrakenTickerNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = (data as KrakenTickerNodeData) || {};

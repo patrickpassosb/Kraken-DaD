@@ -8,6 +8,9 @@ export interface PairItem {
     name?: string;
 }
 
+/**
+ * Loads the Kraken pair catalog from the backend; falls back to bundled list upstream.
+ */
 export async function fetchPairs(): Promise<PairItem[]> {
     const res = await fetch(`${API_BASE}/market/pairs`);
     if (!res.ok) {

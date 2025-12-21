@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { executeDryRun } from '../../packages/strategy-core/executor/dryRunExecutor.ts';
 import { SCHEMA_VERSION, Strategy } from '../../packages/strategy-core/schema.ts';
 
+// Sanity tests cover validation, deterministic ordering, and block outputs.
 const baseMetadata = {
     name: 'Test Strategy',
     createdAt: '2024-12-20T00:00:00.000Z',

@@ -206,16 +206,25 @@ export async function executeRoute(fastify: FastifyInstance) {
     );
 }
 
+/**
+ * Normalizes asset pair keys for use as map keys (uppercases and trims).
+ */
 function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+/**
+ * Stable cache key for OHLC lookups that include interval.
+ */
 function ohlcKey(pair: string, interval: number): string {
     return `${pairKey(pair)}::${interval}`;
 }
 
 const SUPPORTED_OHLC_INTERVALS = new Set([1, 5, 15, 30, 60, 240, 1440, 10080, 21600]);
 
+/**
+ * Enforces Kraken-supported OHLC intervals and falls back to 1 minute if invalid.
+ */
 function normalizeInterval(value: unknown): number {
     if (typeof value === 'number' && SUPPORTED_OHLC_INTERVALS.has(value)) return value;
     if (typeof value === 'string') {
@@ -227,6 +236,9 @@ function normalizeInterval(value: unknown): number {
     return 1;
 }
 
+/**
+ * Parses counts from user input and bounds them to prevent expensive API calls.
+ */
 function normalizeCount(value: unknown, fallback: number, min: number, max: number): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
         return Math.min(Math.max(Math.round(value), min), max);
@@ -240,6 +252,9 @@ function normalizeCount(value: unknown, fallback: number, min: number, max: numb
     return fallback;
 }
 
+/**
+ * Parses numeric Kraken metadata fields that often arrive as strings.
+ */
 function parseNumber(value: unknown): number | undefined {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     if (typeof value === 'string') {
@@ -249,6 +264,10 @@ function parseNumber(value: unknown): number | undefined {
     return undefined;
 }
 
+/**
+ * Tries to align requested pair names with Kraken's AssetPairs metadata, covering
+ * different symbol aliases (XBT vs BTC) and slash/no-slash variants.
+ */
 function resolveAssetPairMetadata(
     pair: string,
     assetPairs: Record<string, KrakenAssetPair>
@@ -294,10 +313,16 @@ function resolveAssetPairMetadata(
     };
 }
 
+/**
+ * Defaults to market unless the caller explicitly requests limit.
+ */
 function normalizeOrderType(value: unknown): 'market' | 'limit' {
     return value === 'limit' ? 'limit' : 'market';
 }
 
+/**
+ * Defaults to buy unless the caller explicitly requests sell.
+ */
 function normalizeSide(value: unknown): 'buy' | 'sell' {
     return value === 'sell' ? 'sell' : 'buy';
 }
@@ -311,6 +336,10 @@ function normalizePrice(value: unknown): number | undefined {
     return undefined;
 }
 
+/**
+ * Normalizes order params coming from block configs or downstream nodes and
+ * guards against malformed limit orders without a price reference.
+ */
 function resolveOrderParams(params: Record<string, unknown>): {
     order?: { pair: string; type: 'buy' | 'sell'; ordertype: 'market' | 'limit'; volume: string; price?: string };
     error?: string;
@@ -343,6 +372,10 @@ const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: numbe
     'ETH/USD': { last: 3450.12, ask: 3450.6, bid: 3449.5, spread: 1.1 },
 };
 
+/**
+ * Collects all market/ohlc/spread/assetPair inputs needed for the current strategy
+ * and fetches them in parallel with conservative timeouts to keep UX responsive.
+ */
 async function buildExecutionData(
     strategy: Strategy,
     fastify: FastifyInstance
@@ -545,6 +578,10 @@ async function buildExecutionData(
     return { marketData, ohlcData, spreadData, assetPairData, warnings };
 }
 
+/**
+ * Runs the dry-run executor, optionally validates Kraken private requests, and
+ * executes live actions when mode === 'live'.
+ */
 async function runExecution(
     strategy: Strategy,
     fastify: FastifyInstance,
@@ -586,6 +623,10 @@ async function runExecution(
     return result;
 }
 
+/**
+ * Calls Kraken validate endpoints for each action intent to surface exchange-side
+ * errors before real submission. Skips silently when creds are missing.
+ */
 async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyInstance) {
     const creds = hasPrivateCreds();
     if (!creds) {
@@ -651,6 +692,10 @@ async function applyKrakenValidation(result: ExecutionResult, fastify: FastifyIn
     result.krakenValidations = validations;
 }
 
+/**
+ * Executes live Kraken requests for each action intent. Returns a copy of the
+ * execution result with live actions appended and errors surfaced.
+ */
 async function applyKrakenLive(result: ExecutionResult, fastify: FastifyInstance): Promise<ExecutionResult> {
     const creds = hasPrivateCreds();
     if (!creds) {

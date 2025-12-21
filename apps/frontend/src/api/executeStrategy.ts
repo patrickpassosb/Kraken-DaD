@@ -75,6 +75,10 @@ export interface Strategy {
     }>;
 }
 
+/**
+ * Submits a strategy to the backend executor. Supports optional validation toggle
+ * and partial execution by target node id. Throws when the backend replies with an error.
+ */
 export async function executeStrategy(
     strategy: Strategy,
     options: { mode?: ExecutionMode; validate?: boolean; targetNodeId?: string } = {}

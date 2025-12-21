@@ -111,6 +111,9 @@ function nextNonce(): string {
     return String(lastNonce);
 }
 
+/**
+ * Stores runtime credentials (in-memory only). These override env credentials.
+ */
 export function setPrivateCreds(creds: KrakenCredentials): void {
     runtimeCreds = {
         key: creds.key.trim(),
@@ -118,10 +121,16 @@ export function setPrivateCreds(creds: KrakenCredentials): void {
     };
 }
 
+/**
+ * Clears runtime credentials; env-based creds remain available.
+ */
 export function clearPrivateCreds(): void {
     runtimeCreds = null;
 }
 
+/**
+ * Indicates whether private creds are available and where they came from.
+ */
 export function getPrivateCredsStatus(): KrakenCredentialsStatus {
     if (runtimeCreds) {
         return { configured: true, source: 'runtime' };
@@ -134,6 +143,10 @@ export function getPrivateCredsStatus(): KrakenCredentialsStatus {
     return { configured: false, source: 'none' };
 }
 
+/**
+ * Normalizes user-friendly pair strings into Kraken's format (e.g., BTC/USD -> XBTUSD)
+ * while keeping a display variant for UI use.
+ */
 export function normalizePair(pair: string): { krakenPair: string; display: string } {
     const trimmed = pair.trim().toUpperCase().replace(/\s+/g, '');
     const cleaned = trimmed.replace('XBT', 'BTC');
@@ -171,6 +184,9 @@ function toNumber(value: unknown): number | undefined {
 
 type FetchOptions = { signal?: AbortSignal };
 
+/**
+ * Fetches the latest ticker snapshot for a pair via Kraken REST.
+ */
 export async function fetchTicker(pair: string, options: FetchOptions = {}): Promise<KrakenTickerSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     const url = `${API_BASE}/0/public/Ticker?pair=${encodeURIComponent(krakenPair)}`;
@@ -215,6 +231,9 @@ export async function fetchTicker(pair: string, options: FetchOptions = {}): Pro
     };
 }
 
+/**
+ * Retrieves the Kraken assets catalog (symbols and display metadata).
+ */
 export async function fetchAssets(options: FetchOptions = {}): Promise<Record<string, KrakenAsset>> {
     const url = `${API_BASE}/0/public/Assets`;
     const response = await fetch(url, { method: 'GET', signal: options.signal });
@@ -229,6 +248,9 @@ export async function fetchAssets(options: FetchOptions = {}): Promise<Record<st
     return payload.result;
 }
 
+/**
+ * Retrieves the Kraken AssetPairs catalog with precision/limits metadata.
+ */
 export async function fetchAssetPairs(options: FetchOptions = {}): Promise<Record<string, KrakenAssetPair>> {
     const url = `${API_BASE}/0/public/AssetPairs`;
     const response = await fetch(url, { method: 'GET', signal: options.signal });
@@ -243,6 +265,9 @@ export async function fetchAssetPairs(options: FetchOptions = {}): Promise<Recor
     return payload.result;
 }
 
+/**
+ * Fetches orderbook depth for a pair; used to derive bid/ask/spread when ticker lacks it.
+ */
 export async function fetchDepth(pair: string, count = 10, options: FetchOptions = {}): Promise<KrakenDepthSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     const url = `${API_BASE}/0/public/Depth?pair=${encodeURIComponent(krakenPair)}&count=${count}`;
@@ -285,6 +310,9 @@ export async function fetchDepth(pair: string, count = 10, options: FetchOptions
     };
 }
 
+/**
+ * Fetches OHLC candles for a pair/interval. Returns timestamps in ms.
+ */
 export async function fetchOHLC(
     pair: string,
     interval = 1,
@@ -342,6 +370,9 @@ export async function fetchOHLC(
     };
 }
 
+/**
+ * Fetches recent bid/ask spreads for a pair.
+ */
 export async function fetchSpread(pair: string, options: FetchOptions = {}): Promise<KrakenSpreadSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     const url = `${API_BASE}/0/public/Spread?pair=${encodeURIComponent(krakenPair)}`;
@@ -385,6 +416,9 @@ export async function fetchSpread(pair: string, options: FetchOptions = {}): Pro
     };
 }
 
+/**
+ * Returns available credentials (runtime or env) without throwing when missing.
+ */
 export function hasPrivateCreds(): KrakenCredentials | null {
     if (runtimeCreds) {
         return runtimeCreds;
@@ -411,6 +445,9 @@ interface AddOrderParams {
     price?: string;
 }
 
+/**
+ * Calls Kraken AddOrder with validate=true to check parameters without placing a trade.
+ */
 export async function validateAddOrder(params: AddOrderParams): Promise<Record<string, unknown>> {
     const creds = getPrivateCreds();
     const { krakenPair } = normalizePair(params.pair);
@@ -429,6 +466,9 @@ export async function validateAddOrder(params: AddOrderParams): Promise<Record<s
     return privatePost('/0/private/AddOrder', body, creds.secret, creds.key);
 }
 
+/**
+ * Calls Kraken CancelOrder with validate=true for dry-run confirmation.
+ */
 export async function validateCancelOrder(txid: string): Promise<Record<string, unknown>> {
     const creds = getPrivateCreds();
     const body = new URLSearchParams({
@@ -439,6 +479,9 @@ export async function validateCancelOrder(txid: string): Promise<Record<string, 
     return privatePost('/0/private/CancelOrder', body, creds.secret, creds.key);
 }
 
+/**
+ * Places a live Kraken order. Caller is responsible for ensuring intent safety.
+ */
 export async function placeOrder(params: AddOrderParams): Promise<Record<string, unknown>> {
     const creds = getPrivateCreds();
     const { krakenPair } = normalizePair(params.pair);
@@ -456,6 +499,9 @@ export async function placeOrder(params: AddOrderParams): Promise<Record<string,
     return privatePost('/0/private/AddOrder', body, creds.secret, creds.key);
 }
 
+/**
+ * Cancels a Kraken order by transaction id.
+ */
 export async function cancelOrder(txid: string): Promise<Record<string, unknown>> {
     const creds = getPrivateCreds();
     const body = new URLSearchParams({
@@ -506,6 +552,9 @@ function signRequest(path: string, body: URLSearchParams, secret: string): strin
     return hmac.digest('base64');
 }
 
+/**
+ * Fetches a single ticker tick over Kraken WS, with a short timeout fallback.
+ */
 export async function fetchTickerWsOnce(pair: string, timeoutMs = 3000): Promise<KrakenTickerSnapshot> {
     const { krakenPair, display } = normalizePair(pair);
     return new Promise((resolve, reject) => {

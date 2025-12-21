@@ -29,6 +29,10 @@ type FlowEdgeData = {
 
 const isRightOfSourceHandle = (sourceX: number, targetX: number) => sourceX - HANDLE_SIZE > targetX;
 
+/**
+ * Custom edge renderer that supports curved/straight paths, delete/insert actions,
+ * and optional hiding for implied data edges.
+ */
 function FlowEdge({
     id,
     data,

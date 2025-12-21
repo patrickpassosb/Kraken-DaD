@@ -9,6 +9,7 @@ export interface StartNodeData {
     disabled?: boolean;
 }
 
+/** Control entry node that emits the initial trigger signal. */
 export function StartNode({ id, data }: NodeProps) {
     const nodeData = (data as StartNodeData) || {};
     const isDisabled = nodeData.disabled;

@@ -76,6 +76,7 @@ export const assetMeta: Record<string, AssetMeta> = {
 
 const geckoCache: Record<string, string> = {};
 
+/** Looks up metadata for an asset symbol (includes icons/colors when known). */
 export function getAssetMeta(symbol: string): AssetMeta | undefined {
     return assetMeta[symbol.toUpperCase()];
 }
@@ -145,6 +146,7 @@ export function getAssetIconUrl(symbol: string): string | undefined {
     return undefined;
 }
 
+/** Deterministic color helper for assets when brand colors are missing. */
 export function hashedColor(symbol: string, offset = 0): string {
     let hash = 0;
     const input = symbol.toUpperCase();

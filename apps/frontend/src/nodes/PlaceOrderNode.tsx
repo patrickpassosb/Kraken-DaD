@@ -26,6 +26,7 @@ function parseDecimalInput(raw: string): number | null {
     return Math.max(parsed, 0);
 }
 
+/** Action node that shapes a Kraken AddOrder intent (dry-run by default). */
 export function PlaceOrderNode({ id, data }: NodeProps) {
     const { setNodes } = useReactFlow();
     const nodeData = data as PlaceOrderNodeData;

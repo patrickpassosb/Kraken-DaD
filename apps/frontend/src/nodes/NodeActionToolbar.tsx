@@ -7,6 +7,7 @@ interface NodeActionToolbarProps {
     visible?: boolean;
 }
 
+/** Inline toolbar that surfaces run/disable/delete actions for a node. */
 export function NodeActionToolbar({
     nodeId,
     disabled,

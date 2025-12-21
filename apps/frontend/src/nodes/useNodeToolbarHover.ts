@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/**
+ * Small hover helper that delays toolbar hide/show to avoid flicker when moving between buttons.
+ */
 export function useNodeToolbarHover(delay: number = 240) {
     const [nodeHover, setNodeHover] = useState(false);
     const timeoutRef = useRef<number | null>(null);
