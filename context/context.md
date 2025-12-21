@@ -103,9 +103,8 @@ The monorepo **does not imply a single deployment**.
 
 * **React**
 * **TypeScript**
-* **react-flow** (strategy canvas)
-* **Zustand** (state management)
-* **Tailwind CSS** (dark theme)
+* **@xyflow/react** (React Flow strategy canvas)
+* **Vite** (frontend tooling)
 * Kraken Pro–inspired UI design
 
 ### Responsibilities
@@ -135,8 +134,8 @@ Reference UI:
 * **Node.js** (runtime)
 * **TypeScript** (language)
 * **Fastify** (web framework)
-* **Zod** (schema validation)
-* **Pino** (logging)
+* **dotenv** (env loading)
+* **ws** (WebSocket client)
 
 ### Why Fastify
 
@@ -197,18 +196,18 @@ This model is shared between frontend and backend via `strategy-core`.
 
 ## 9. Deployment Strategy
 
-### Frontend Deployment
+### Frontend Deployment (Planned)
 
-* **Platform:** Vercel
+* **Target Platform:** Vercel
 * **Root directory:** `apps/frontend`
 * Independent deployment
 
-### Backend Deployment
+### Backend Deployment (Planned)
 
-* **Platform:** Google Cloud Run
+* **Target Platform:** Google Cloud Run
 * **Runtime:** Dockerized Node.js app
 * **Root directory:** `apps/backend`
-* Uses GCP Secret Manager for API keys
+* Uses env vars or secret manager for API keys
 
 Frontend and backend are deployed **separately**, despite living in the same repo.
 
