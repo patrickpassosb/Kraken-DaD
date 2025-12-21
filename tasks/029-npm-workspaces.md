@@ -8,11 +8,11 @@
 
 ### Task Title
 <!-- Give your task a clear, specific name that describes what you're building or fixing -->
-**Title:** Repository redundancy and structure review
+**Title:** Implement npm workspaces for monorepo
 
 ### Goal Statement
 <!-- Write one paragraph explaining what you want to achieve and why it matters for your project -->
-**Goal:** Identify unnecessary or redundant files, suggest removals or consolidations, and provide project structure/code quality improvements with concrete, prioritized actions.
+**Goal:** Configure npm workspaces at the repo root to reduce dependency duplication, add shared typecheck script, and re-export Kraken API surface to avoid duplicate implementations.
 
 ---
 
@@ -20,28 +20,29 @@
 
 ### Technology & Architecture
 <!-- This is where you document your current tech stack so the AI understands your environment -->
-- **Frameworks & Versions:** Node.js TypeScript monorepo; Fastify backend; Vite + React Flow frontend
+- **Frameworks & Versions:** Fastify backend, Vite + React frontend
 - **Language:** TypeScript
-- **Database & ORM:** None (dry-run demo, Kraken API stubs)
-- **UI & Styling:** React + React Flow, likely CSS modules/vanilla
-- **Authentication:** None (demo, dry-run only)
-- **Key Architectural Patterns:** Monorepo with shared `strategy-core`; Fastify routes; React flow canvas
+- **Database & ORM:** None
+- **UI & Styling:** React + React Flow
+- **Authentication:** None
+- **Key Architectural Patterns:** Monorepo with shared packages
 
 ### Current State
 <!-- Describe what exists today - what's working, what's broken, what's missing -->
-Demo implements a flow-based strategy builder and dry-run executor. Needs review for consistency, resiliency, and maintainability across backend, frontend, and shared core.
+Root package.json exists but apps/packages install separately; introduce npm workspaces to consolidate installs.
 
 ## 3. Context & Problem Definition
 
 ### Problem Statement
 <!-- This is where you clearly define the specific problem you're solving -->
-We need actionable guidance on risks and improvements before evolving the demo further. The review should highlight high-impact fixes and design improvements.
+Multiple package-lock.json/node_modules create drift risk and extra install time; workspaces unify installs and simplify script execution.
 
 ### Success Criteria
 <!-- Define exactly how you'll know when this task is complete and successful -->
-- [x] Deliver a written review identifying redundant/unnecessary files with justification
-- [x] Provide prioritized, actionable structure and code quality recommendations with file-level pointers
-- [x] Validate suggestions against current code to ensure accuracy
+- [x] Root package.json defines npm workspaces for apps/* and packages/*
+- [x] Root scripts or usage notes documented for running workspace commands
+- [x] Add shared TypeScript typecheck script at repo root
+- [x] Remove unused strategy-core/kraken legacy adapters
 
 ---
 
@@ -49,11 +50,11 @@ We need actionable guidance on risks and improvements before evolving the demo f
 
 ### Development Mode Context
 <!-- This is where you tell the AI agent about your project's constraints and priorities -->
-- **🚨 Project Stage:** Early demo/prototype
-- **Breaking Changes:** Acceptable if they improve correctness/stability
-- **Data Handling:** No persistent data; keep dry-run only
-- **User Base:** Internal demo users
-- **Priority:** Prioritize correctness and clarity over speed
+- **🚨 Project Stage:** Prototype
+- **Breaking Changes:** Acceptable if they improve maintainability
+- **Data Handling:** No persistent data
+- **User Base:** Internal demo
+- **Priority:** Maintainability over speed
 
 ---
 
@@ -62,19 +63,19 @@ We need actionable guidance on risks and improvements before evolving the demo f
 ### Functional Requirements
 <!-- This is where the AI will understand exactly what the system should do - be specific about user actions and system behaviors -->
 
-Review focus areas: overall repo layout, duplicated configs/scripts, unused docs/tasks/tests, and cross-package redundancy. Identify maintainability and structure concerns.
+- System uses npm workspaces to manage dependencies across apps and packages
 
 ### Non-Functional Requirements
 <!-- This is where you define performance, security, and usability standards -->
-- **Performance:** Snappy canvas interactions; backend dry-run should respond quickly for small strategies
-- **Security:** No secrets; enforce dry-run, avoid enabling private trading
-- **Usability:** Clear node labels, validation, and error surfacing
-- **Responsive Design:** Desktop-focused; note gaps if found
-- **Theme Support:** Not required
+- **Performance:** No runtime impact; install time improves
+- **Security:** No change
+- **Usability:** Clear developer workflow
+- **Responsive Design:** N/A
+- **Theme Support:** N/A
 
 ### Technical Constraints
 <!-- This is where you list limitations the AI agent must work within -->
-- Maintain dry-run behavior and public Kraken-only usage
+- Must keep existing package.json scripts working
 
 ---
 
@@ -83,17 +84,17 @@ Review focus areas: overall repo layout, duplicated configs/scripts, unused docs
 ### Database Schema Changes
 <!-- This is where you specify any database modifications needed -->
 
-None (no database)
+TODO: Add your SQL schema changes here (new tables, columns, indexes, etc.)
 
 ### Data Model Updates
 <!-- This is where you define TypeScript types, schema updates, or data structure changes -->
 
-Not in scope (review only)
+TODO: Define your TypeScript types, interfaces, and data structure changes
 
 ### Data Migration Plan
 <!-- This is where you plan how to handle existing data during changes -->
 
-Not applicable
+TODO: Plan your data migration steps (backup, apply changes, transform data, validate)
 
 ---
 
@@ -102,17 +103,17 @@ Not applicable
 ### Data Access Pattern Rules
 <!-- This is where you tell the AI agent how to structure backend code in your project -->
 
-Backend mutations/routes live in `apps/backend/src/routes`; shared types/executor in `packages/strategy-core`.
+TODO: Define where different types of code should go in your project (mutations, queries, API routes)
 
 ### Server Actions
 <!-- List the backend mutation operations you need -->
 
-N/A (review task)
+TODO: List your create, update, delete operations and what they do
 
 ### Database Queries
 <!-- Specify how you'll fetch data -->
 
-Fastify routes call executor and Kraken adapter; no DB queries.
+TODO: Define your data fetching approach (direct queries vs separate functions)
 
 ---
 
@@ -121,27 +122,27 @@ Fastify routes call executor and Kraken adapter; no DB queries.
 ### New Components
 <!-- This is where you specify UI components to be created -->
 
-No new components; review existing React nodes and panels.
+TODO: List the new components you need to create and their purpose
 
 ### Page Updates
 <!-- This is where you list pages that need modifications -->
 
-Focus on canvas interactions (`App.tsx`, nodes in `apps/frontend/src/nodes/`).
+TODO: List the pages that need changes and what modifications are required
 
 ### State Management
 <!-- This is where you plan how data flows through your frontend -->
 
-React Flow state in frontend; shared types drive backend executor.
+TODO: Define your state management approach and data flow strategy
 
 ---
 
 ## 9. Implementation Plan
 
-1) Inventory repo structure and key files; 2) Identify redundancy/unnecessary files; 3) Summarize recommendations with file pointers.
-
-## 10b. Notes & Findings
-
-- Review complete. Key findings: unused Kraken adapter under strategy-core, unreferenced shared tsconfig, redundant shell scripts, and Dockerfile missing strategy-core copy for backend runtime.
+1) Update root package.json to add workspaces and scripts
+2) Add shared typecheck script
+3) Remove unused strategy-core/kraken legacy adapters
+4) Regenerate root package-lock.json (if needed)
+5) Document usage for workspace installs and scripts
 
 ---
 
@@ -150,13 +151,13 @@ React Flow state in frontend; shared types drive backend executor.
 ### Real-Time Progress Tracking
 <!-- This is where you tell the AI agent to update progress as work is completed -->
 
-Track progress in commit/PR summary.
+Track progress in this task file.
 
 ---
 
 ## 11. File Structure & Organization
 
-No new code files planned; only documentation/reporting outputs.
+Modify: package.json, package-lock.json (if regenerated), docs/README if needed.
 
 ---
 
@@ -165,15 +166,15 @@ No new code files planned; only documentation/reporting outputs.
 ### Implementation Workflow
 <!-- This is where you give specific instructions to your AI agent -->
 🎯 **MANDATORY PROCESS:**
-TODO:
+Use Context7 for npm workspaces references; keep edits minimal.
 
 ### Communication Preferences
 <!-- This is where you set expectations for how the AI should communicate -->
-TODO: How do you want the agent to communicate with you
+Concise, step-by-step notes.
 
 ### Code Quality Standards
 <!-- This is where you define your coding standards for the AI to follow -->
-TODO: Any specific code standards
+Follow existing formatting.
 
 ---
 
@@ -182,7 +183,7 @@ TODO: Any specific code standards
 ### Impact Assessment
 <!-- This is where you think through broader consequences of your changes -->
 
-TODO: Tell the AI what sections of code you're worried about breaking, performance concerns, and user workflow impacts
+Minimize breaking changes to existing scripts.
 
 ---
 

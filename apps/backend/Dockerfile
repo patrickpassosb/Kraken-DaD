@@ -14,6 +14,7 @@ RUN npm ci --prefix apps/backend
 # Copy source after installs to leverage Docker layer cache.
 COPY apps/backend apps/backend
 COPY packages/kraken-client packages/kraken-client
+COPY packages/strategy-core packages/strategy-core
 
 ENV NODE_ENV=production
 EXPOSE 3000
