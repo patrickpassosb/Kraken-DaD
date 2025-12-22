@@ -10,8 +10,8 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "noEmit": true,
-        "allowImportingTsExtensions": true,
+        "noEmit": false,
+        "outDir": "dist",
         "preserveSymlinks": true
     },
     "include": [

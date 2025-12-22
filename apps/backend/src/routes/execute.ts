@@ -15,13 +15,13 @@ import {
     OhlcSnapshot,
     SpreadSnapshot,
     AssetPairMetadata,
-} from '../../../../packages/strategy-core/schema.ts';
+} from '@kraken-dad/strategy-core/schema';
 import {
     executeDryRun,
     ExecutionResult,
     ExecutionWarning,
     LiveActionResult,
-} from '../../../../packages/strategy-core/executor/dryRunExecutor.ts';
+} from '@kraken-dad/strategy-core/executor';
 import {
     fetchTicker,
     fetchDepth,
@@ -452,8 +452,8 @@ async function buildExecutionData(
                 wsTicker.status === 'fulfilled'
                     ? wsTicker.value
                     : restResults.status === 'fulfilled' && restResults.value[0].status === 'fulfilled'
-                    ? restResults.value[0].value
-                    : null;
+                        ? restResults.value[0].value
+                        : null;
 
             const depth =
                 restResults.status === 'fulfilled' && restResults.value[1].status === 'fulfilled'

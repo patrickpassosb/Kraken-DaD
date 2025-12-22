@@ -20,7 +20,7 @@ Kraken DaD is a **Kraken-native low-code strategy builder**. It allows traders t
 ## Engineering Philosophy
 - **Visual Programming for Traders**: key innovation moving beyond simple dashboards to full **logic composition**, bringing the power of "Node-RED" style workflows to Kraken's ecosystem.
 - **Robust Architecture**: Built as a scalable **monorepo** with clear separation of concerns (Frontend, Backend, Shared Core). This isn't just a prototype; it's a foundation for production tooling.
-- **Systematic Reusability**: The core execution engine (`strategy-core`) and visual components are fully decoupled, allowing them to be embedded in other applications or extended by the community. See our [Reuse Guide](./docs/strategy-builder-reuse.md).
+- **Systematic Reusability**: The core execution engine (`strategy-core`) and visual components are fully decoupled, allowing them to be embedded in other applications or extended. See the [Reuse Guide](./docs/strategy-builder-reuse.md).
 
 ---
 
@@ -30,7 +30,17 @@ Kraken DaD is a **Kraken-native low-code strategy builder**. It allows traders t
 - `packages/strategy-core` — Strategy schema + dry-run executor (topological sort, validation, block handlers).
 - `packages/kraken-client` — Thin Kraken REST/WS client (ticker, depth, OHLC, spreads, AddOrder/CancelOrder scaffolding).
 - `docs/` — Reuse/JSON examples and lifecycle notes.
-- `tasks/` — Agent task trackers (see `tasks/036-full-repo-documentation.md` for this effort).
+- `tasks/` — Agent task trackers.
+
+---
+
+## Technical Highlights & Rationale
+
+- **Fastify & Node.js ESM**: Fastify was chosen for its industry-leading performance and low overhead. The backend is built using strict Node.js ESM to leverage modern module resolution and top-level await.
+- **Topological Execution Engine**: Strategies are not just simple loops. They use a **Directed Acyclic Graph (DAG)** execution model with a topological sort to ensure data dependencies are resolved before logic nodes execute.
+- **Stateless Streaming (SSE)**: Instead of complex WebSocket management on the client, the backend leverages **Server-Sent Events (SSE)**. This allows for a lightweight, unidirectional stream of market data that is easier to maintain and "instant-on."
+- **Mock-to-Live Pipeline**: A core safety feature is the `validate` flag. By utilizing Kraken's `validate=true` API parameter, strategies can be dry-run with **real exchange-side feedback** without committing actual capital.
+- **Monorepo Architecture**: Using NPM Workspaces allows the sharing of `strategy-core` logic between the executor and potential future CLI tools, ensuring "DRY" code across the entire project.
 
 ---
 
@@ -158,6 +168,16 @@ Market data:
 - Strategy JSON reference: `docs/strategy-json-example.md`.
 - Adding blocks: `docs/add-block-guide.md`.
 - Reuse guidance: `docs/strategy-builder-reuse.md`.
+
+---
+
+---
+
+## Future Enhancements
+- **Multi-Exchange Support**: Extend `kraken-client` abstraction to support other CEXs while maintaining the same visual logic.
+- **Backtesting Suite**: Implement a historical price provider to run strategies against past OHLC data with PnL reporting.
+- **Template Gallery**: Community-contributed strategy skeletons for common patterns (Mean Reversion, Grid Trading).
+- **Mobile-Optimized Viewer**: A read-only dashboard to monitor active strategy performance on the go.
 
 ---
 

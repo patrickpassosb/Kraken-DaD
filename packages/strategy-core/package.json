@@ -1,0 +1,14 @@
+{
+    "name": "@kraken-dad/strategy-core",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "schema.ts",
+    "engines": {
+        "node": ">=18"
+    },
+    "exports": {
+        "./schema": "./schema.ts",
+        "./executor": "./executor/dryRunExecutor.ts"
+    }
+}
