@@ -629,23 +629,43 @@ export function FlowCanvas({
         };
 
         const rowById = new Map<string, number>();
-        let nextRow = 0;
-        const claimRow = () => nextRow++;
+        const rowOccupancy = new Map<number, Set<number>>();
         const rowVisit = new Set<string>();
 
-        const assignRows = (id: string) => {
+        const getEffectiveDepth = (id: string) => {
+            const node = nodeMap.get(id);
+            return Math.max(depthFor(id), laneIndexForType(node?.type));
+        };
+
+        const findAvailableRow = (requestedRow: number, depth: number): number => {
+            let r = requestedRow;
+            while (rowOccupancy.get(r)?.has(depth)) {
+                r++;
+            }
+            return r;
+        };
+
+        const occupyRow = (row: number, depth: number) => {
+            if (!rowOccupancy.has(row)) rowOccupancy.set(row, new Set());
+            rowOccupancy.get(row)!.add(depth);
+        };
+
+        const assignRows = (id: string, preferredRow: number = 0) => {
             if (rowVisit.has(id)) return;
             rowVisit.add(id);
+
+            const depth = getEffectiveDepth(id);
             if (!rowById.has(id)) {
-                rowById.set(id, claimRow());
+                const row = findAvailableRow(preferredRow, depth);
+                rowById.set(id, row);
+                occupyRow(row, depth);
             }
+
             const baseRow = rowById.get(id) ?? 0;
             const children = (outgoing.get(id) ?? []).slice().sort(byNodeOrder);
             children.forEach((childId, index) => {
-                if (!rowById.has(childId)) {
-                    rowById.set(childId, index === 0 ? baseRow : claimRow());
-                }
-                assignRows(childId);
+                // Try to stay on the same row for the first child, otherwise try the row below
+                assignRows(childId, index === 0 ? baseRow : baseRow + 1);
             });
             rowVisit.delete(id);
         };
@@ -661,7 +681,7 @@ export function FlowCanvas({
             .map((node) => node.id)
             .sort(byNodeOrder)
             .forEach((nodeId) => {
-                rowById.set(nodeId, claimRow());
+                assignRows(nodeId);
             });
 
         const NODE_HEIGHT_FALLBACK = 220;
@@ -689,12 +709,12 @@ export function FlowCanvas({
         const layoutPositions = new Map<string, { x: number; y: number }>();
 
         nodes.forEach((node) => {
-            const controlDepth = depthFor(node.id);
+            const effectiveDepth = getEffectiveDepth(node.id);
             const row = rowById.get(node.id) ?? 0;
             const height = node.height ?? NODE_HEIGHT_FALLBACK;
             const rowCenter = rowCenters.get(row) ?? yStart;
             layoutPositions.set(node.id, {
-                x: snapToGrid(xStart + controlDepth * xSpacing),
+                x: snapToGrid(xStart + effectiveDepth * xSpacing),
                 y: rowCenter - height / 2,
             });
         });
