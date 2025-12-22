@@ -173,7 +173,7 @@ Market data:
 ---
 
 ## Future Enhancements
-- **Multi-Exchange Support**: Extend `kraken-client` abstraction to support other CEXs while maintaining the same visual logic.
+- **Advanced Strategy Blocks**: Expand the library with technical indicators (RSI, MACD, Bollinger Bands), custom Javascript nodes, and cross-asset arbitrage logic.
 - **Backtesting Suite**: Implement a historical price provider to run strategies against past OHLC data with PnL reporting.
 - **Template Gallery**: Community-contributed strategy skeletons for common patterns (Mean Reversion, Grid Trading).
 - **Mobile-Optimized Viewer**: A read-only dashboard to monitor active strategy performance on the go.
