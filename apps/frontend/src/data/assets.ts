@@ -65,8 +65,8 @@ const baseAssetMeta: Record<string, AssetMeta> = {
     TON: { symbol: 'TON', name: 'Toncoin', icon: 'https://assets.coingecko.com/coins/images/17980/small/ton_symbol.png', color: '#0098ea' },
     MNT: { symbol: 'MNT', name: 'Mantle', icon: 'https://assets.coingecko.com/coins/images/30980/small/token-logo.png', color: '#0d857c' },
     METIS: { symbol: 'METIS', name: 'Metis', icon: 'https://assets.coingecko.com/coins/images/15595/small/metis.jpeg', color: '#47c2b1' },
-    EUR: { symbol: 'EUR', name: 'Euro', icon: '/icons/eur.svg', color: '#1e4dd8' },
-    USD: { symbol: 'USD', name: 'US Dollar', icon: '/icons/usd.svg', color: '#1463ff' },
+    EUR: { symbol: 'EUR', name: 'Euro', color: '#1e4dd8' },
+    USD: { symbol: 'USD', name: 'US Dollar', icon: '/icons/coins/USD.png', color: '#1463ff' },
 };
 
 export const assetMeta: Record<string, AssetMeta> = {
