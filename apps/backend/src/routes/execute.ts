@@ -7,7 +7,7 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import {
+import type {
     Strategy,
     ExecutionContext,
     ExecutionMode,
@@ -18,6 +18,8 @@ import {
 } from '@kraken-dad/strategy-core/schema';
 import {
     executeDryRun,
+} from '@kraken-dad/strategy-core/executor';
+import type {
     ExecutionResult,
     ExecutionWarning,
     LiveActionResult,

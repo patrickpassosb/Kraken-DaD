@@ -169,7 +169,6 @@ Market data:
 - Adding blocks: `docs/add-block-guide.md`.
 - Reuse guidance: `docs/strategy-builder-reuse.md`.
 
----
 
 ---
 

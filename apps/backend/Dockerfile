@@ -20,8 +20,8 @@ COPY apps/backend apps/backend
 COPY packages/kraken-client packages/kraken-client
 COPY packages/strategy-core packages/strategy-core
 
-# Build the backend
-RUN npm run build -w @kraken-dad/backend
+# Build the backend and packages
+RUN npm run build
 
 # Stage 2: Runtime
 FROM node:20-slim

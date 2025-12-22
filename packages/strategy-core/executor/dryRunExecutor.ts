@@ -10,6 +10,9 @@
 
 
 import {
+    SCHEMA_VERSION,
+} from '../schema.js';
+import type {
     Strategy,
     StrategyNode,
     StrategyEdge,
@@ -25,7 +28,6 @@ import {
     SpreadSnapshot,
     SpreadEntry,
     AssetPairMetadata,
-    SCHEMA_VERSION,
 } from '../schema.js';
 
 // =============================================================================
@@ -166,10 +168,10 @@ function extractSeriesValues(raw: unknown): number[] {
             typeof entry === 'number'
                 ? entry
                 : typeof entry === 'string'
-                ? Number.parseFloat(entry)
-                : typeof entry === 'object' && entry !== null
-                ? normalizePrice((entry as Record<string, unknown>).close ?? (entry as Record<string, unknown>).value)
-                : undefined;
+                    ? Number.parseFloat(entry)
+                    : typeof entry === 'object' && entry !== null
+                        ? normalizePrice((entry as Record<string, unknown>).close ?? (entry as Record<string, unknown>).value)
+                        : undefined;
         if (!Number.isFinite(resolved ?? NaN)) {
             throw new Error('Moving Average requires a numeric series');
         }
@@ -564,10 +566,10 @@ blockHandlers.set('data.kraken.spread', (node, _inputs, ctx) => {
         snapshot?.entries?.length
             ? [...snapshot.entries].slice(-count)
             : buildMockSpreadEntries(
-                  resolveMarketPrice(pair, ctx, 42000),
-                  ctx.marketData?.[pairKey(pair)]?.spread ?? 2.5,
-                  count
-              );
+                resolveMarketPrice(pair, ctx, 42000),
+                ctx.marketData?.[pairKey(pair)]?.spread ?? 2.5,
+                count
+            );
     const series = entries.map((entry) => entry.spread);
     const stats = computeSpreadStats(series);
 
@@ -1377,15 +1379,15 @@ export function executeDryRun(
 
     const strategyToRun = targetNodeId
         ? (() => {
-              const requiredNodes = collectDependencyNodes(targetNodeId, fullGraph);
-              return {
-                  ...strategy,
-                  nodes: strategy.nodes.filter((node) => requiredNodes.has(node.id)),
-                  edges: strategy.edges.filter(
-                      (edge) => requiredNodes.has(edge.source) && requiredNodes.has(edge.target)
-                  ),
-              };
-          })()
+            const requiredNodes = collectDependencyNodes(targetNodeId, fullGraph);
+            return {
+                ...strategy,
+                nodes: strategy.nodes.filter((node) => requiredNodes.has(node.id)),
+                edges: strategy.edges.filter(
+                    (edge) => requiredNodes.has(edge.source) && requiredNodes.has(edge.target)
+                ),
+            };
+        })()
         : strategy;
 
     const graph = targetNodeId ? buildGraphIndex(strategyToRun) : fullGraph;
@@ -1581,7 +1583,7 @@ export function executeDryRun(
         for (const edge of outgoingControls) {
             const triggerValue =
                 Object.prototype.hasOwnProperty.call(outputs, edge.sourcePort) &&
-                outputs[edge.sourcePort] !== undefined
+                    outputs[edge.sourcePort] !== undefined
                     ? outputs[edge.sourcePort]
                     : undefined;
             const shouldTrigger =

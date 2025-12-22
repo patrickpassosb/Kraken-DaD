@@ -17,11 +17,22 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
+# Verify gcloud authentication
+if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q "@"; then
+    echo "Error: No active gcloud account found. Please run 'gcloud auth login'"
+    exit 1
+fi
+
 echo "🚀 Starting deployment for $SERVICE_NAME in project $PROJECT_ID..."
 
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Project root is one level up from scripts/
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # 1. Build the image locally (using the root context for monorepo support)
-echo "📦 Building Docker image..."
-docker build -f apps/backend/Dockerfile -t "$IMAGE_TAG" .
+echo "📦 Building Docker image from root: $PROJECT_ROOT..."
+docker build -f "$PROJECT_ROOT/apps/backend/Dockerfile" -t "$IMAGE_TAG" "$PROJECT_ROOT"
 
 # 2. Push to Google Container Registry
 echo "📤 Pushing image to GCR..."

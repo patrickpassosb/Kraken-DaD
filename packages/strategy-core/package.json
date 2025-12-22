@@ -3,12 +3,12 @@
     "version": "0.1.0",
     "private": true,
     "type": "module",
-    "main": "schema.ts",
+    "main": "schema.js",
     "engines": {
         "node": ">=18"
     },
     "exports": {
-        "./schema": "./schema.ts",
-        "./executor": "./executor/dryRunExecutor.ts"
+        "./schema": "./schema.js",
+        "./executor": "./executor/dryRunExecutor.js"
     }
 }

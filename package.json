@@ -8,6 +8,7 @@
         "packages/*"
     ],
     "scripts": {
+        "build": "tsc -p packages/strategy-core && tsc -p packages/kraken-client && npm run build -w @kraken-dad/backend",
         "test": "tsx --test",
         "dev:backend": "npm run dev -w @kraken-dad/backend",
         "dev:frontend": "npm run dev -w @kraken-dad/frontend",

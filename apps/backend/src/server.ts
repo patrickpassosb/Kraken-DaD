@@ -58,6 +58,7 @@ async function main() {
     try {
         await fastify.listen({ host: HOST, port: PORT });
         console.log(`Server running at http://${HOST}:${PORT}`);
+        fastify.log.info(`Server listening on port ${PORT}`);
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);
