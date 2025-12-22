@@ -1,3 +1,6 @@
+/**
+ * Runtime credential storage routes (in-memory) so live orders require explicit approval.
+ */
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { clearPrivateCreds, getPrivateCredsStatus, setPrivateCreds } from '@kraken-dad/kraken-client';
 

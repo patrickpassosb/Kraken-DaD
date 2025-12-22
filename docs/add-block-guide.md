@@ -1,56 +1,56 @@
 # Add a New Block Guide
 
-This guide walks through adding a new block to Kraken DaD end-to-end (core schema, executor behavior, and UI).
+When you need a new trading primitive or helper, update the core executor, the canvas UI, the palette metadata, and any tests/documentation so the entire stack (frontend + backend + shared packages) knows about the block. This guide walks through the full path.
 
-## 1) Define the block in strategy-core
+## 1. Extend the strategy-core definition and handler
 
-Edit `packages/strategy-core/executor/dryRunExecutor.ts`:
+1. Add an entry to `packages/strategy-core/executor/dryRunExecutor.ts` inside `blockDefinitions` describing
+   * `type`, `category`, `name`, `description`, `inputs`, `outputs` and required metadata
+   * `dataType` and `required` flags so validation catches misconfigured graphs
+2. Add a matching `blockHandlers.set('your.block.type', (node, inputs, ctx) => ...)` that:
+   * Reads `node.config` and data inputs, applies defaults, validates required fields, and throws with meaningful errors when inputs are missing
+   * Returns `{ outputs, actionIntent? }` so downstream nodes can read results and the UI can surface action intents
+   * Uses shared helpers (`normalizePrice`, `resolveMarketPrice`, etc.) as needed
+3. Document the new block in `docs/execution-lifecycle.md` if it introduces new errors or control semantics.
 
-- Add a `blockDefinitions.set('your.block.type', { ... })` entry.
-- Add a matching `blockHandlers.set('your.block.type', (node, inputs, ctx) => { ... })` handler.
-- Define clear input/output ports (ids must match handle ids without `control:`/`data:`).
+## 2. Build the React Flow node component
 
-## 2) Create the node UI component
+1. Create a new component under `apps/frontend/src/nodes/` (e.g., `MyNewNode.tsx`).
+   * Wrap the render in `NodeActionToolbar`, `StatusPill`, `BlockIcon`, and `useNodeToolbarHover` to keep the UX consistent.
+   * Place `Handle` connectors that match the port IDs defined in the block definition (`control:`, `data:` prefixes).
+   * Keep state updates localized; use `setNodes` from `useReactFlow` to persist configuration changes to the node's `data`.
+2. Provide a `Start`-like layout (header, body fields, footer, handles) so the new block feels native.
 
-Add a node component in `apps/frontend/src/nodes/` (e.g., `MyNewNode.tsx`):
+## 3. Register the node type and palette metadata
 
-- Use `NodeProps` from `@xyflow/react`.
-- Add `Handle` elements for control/data ports using ids like `control:in` and `data:value`.
-- Store node config in `node.data` and update it via `useReactFlow().setNodes`.
+1. Wire the component into `apps/frontend/src/nodes/nodeTypes.ts` so React Flow knows which component to render.
+2. Add a `NodeDefinition` entry in `apps/frontend/src/nodes/nodeRegistry.ts` describing:
+   * Palette group, label, role, description, icon/text for the palette
+   * A default position and sensible `defaultData` values (pair, amount, thresholds, etc.)
+3. Update `BlockIcon` (`apps/frontend/src/components/BlockIcon.tsx` + `apps/frontend/src/icons/blockIcons.tsx`) if a new visual is needed.
+4. If the node should appear when inserting into a control edge, add it to `CONTROL_INSERT_HANDLES` and ensure `FlowCanvas` populates implied edges via `IMPLIED_DATA_EDGES`.
 
-## 3) Register the node type
+## 4. Land implied data wiring and defaults
 
-Update `apps/frontend/src/nodes/nodeTypes.ts`:
+- `FlowCanvas` uses `findImpliedDataEdges` to auto-wire ticker prices or order IDs when you connect specific node pairs. Update those tables if your block has predictable data paths.
+- Keep `FlowCanvas`'s `handleAddNode` logic aware of nodes that should inherit the active pair or disable the strategy start constraint.
 
-- Import the new node component.
-- Add it to the `nodeTypes` map with the same type id used in strategy-core.
+## 5. Add tests and JSON samples
 
-## 4) Add the block to the palette
+1. Extend `tests/strategy-core/strategy-core.test.ts` with a scenario that exercises the new block through the dry-run executor and asserts outputs/warnings/errors.
+2. Update `docs/strategy-json-example.md` (or create a new example) showing the serialized JSON including your block.
+3. Run `npm run test` and `npm run typecheck:shared` to verify the addition.
 
-Update `apps/frontend/src/nodes/nodeRegistry.ts`:
+## 6. Document the block
 
-- Add a `NodeDefinition` entry (label, role, description, icon, group, default position, defaults).
-- If needed, update `PaletteGroupId` or group labels.
+- Update `docs/add-block-guide.md` (this file) to mention the new block, if necessary.
+- Consider adding a section to `README.md` under the Strategy Blocks list so newcomers can discover the block's purpose.
 
-## 5) Wire implied edges (optional)
-
-If the block should auto-wire data edges on control insert, update:
-
-- `IMPLIED_DATA_EDGES` in `apps/frontend/src/canvas/FlowCanvas.tsx`
-- `CONTROL_INSERT_HANDLES` in `apps/frontend/src/canvas/FlowCanvas.tsx`
-
-## 6) Add tests
-
-Add a unit test in `tests/strategy-core/` for:
-
-- Validation: required ports are enforced.
-- Execution: outputs match expected logic.
-
-## Checklist
-
-- [ ] Block definition and handler added
-- [ ] Node UI component created
-- [ ] Node registered in `nodeTypes`
-- [ ] Palette entry added
-- [ ] Optional implied edges updated
-- [ ] Tests updated
+### Checklist
+- [ ] `blockDefinitions` + handler added in `strategy-core`
+- [ ] UI component implemented under `apps/frontend/src/nodes`
+- [ ] Node registered via `nodeTypes` and `nodeRegistry`
+- [ ] Palette entry configured with icon + default data
+- [ ] Implied edges/tidy layout rules updated if needed
+- [ ] Tests cover handler outputs and validation errors
+- [ ] Documentation updated (`README`, docs, JSON example)

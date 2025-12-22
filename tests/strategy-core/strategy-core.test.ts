@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+/**
+ * Sanity checks for strategy-core dry-run executor: validation, ordering, and block outputs.
+ */
 import { executeDryRun } from '../../packages/strategy-core/executor/dryRunExecutor.ts';
 import { SCHEMA_VERSION, Strategy } from '../../packages/strategy-core/schema.ts';
 

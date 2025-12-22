@@ -123,10 +123,16 @@ const CONTROL_INSERT_HANDLES: Record<NodeTypeId, InsertHandles | null> = {
     'action.logIntent': null,
 };
 
+/**
+ * Returns a visual style preset that matches control/data semantics.
+ */
 function edgeStyleForType(type?: string) {
     return type === 'control' ? EDGE_STYLE_CONTROL : EDGE_STYLE_DATA;
 }
 
+/**
+ * Looks up a node's type by id, taking pending insertions into account.
+ */
 function resolveNodeType(
     nodeId: string,
     nodes: Node[],
@@ -139,6 +145,9 @@ function resolveNodeType(
     return node?.type ? (node.type as NodeTypeId) : null;
 }
 
+/**
+ * Looks for auto-connected data edges when certain node pairs are linked via control.
+ */
 function findImpliedDataEdges(
     sourceId: string,
     targetId: string,
@@ -163,6 +172,9 @@ function findImpliedDataEdges(
     }));
 }
 
+/**
+ * Inserts implied edges without duplicating existing data paths.
+ */
 function appendImpliedEdges(
     baseEdges: Edge[],
     impliedEdges: Edge[]
@@ -196,6 +208,9 @@ function appendImpliedEdges(
     return nextEdges;
 }
 
+/**
+ * Maps execution status to highlight CSS helpers.
+ */
 function nodeHighlight(status?: NodeStatus): string {
     if (status === 'executed') return 'node-highlight-executed';
     if (status === 'running') return 'node-highlight-running';
@@ -203,6 +218,9 @@ function nodeHighlight(status?: NodeStatus): string {
     return '';
 }
 
+/**
+ * Builds the CSS class list that reflects status, disabled state, and specialized layouts.
+ */
 function nodeClassName(status?: NodeStatus, disabled?: boolean, type?: string): string {
     const classes = [];
     const highlight = nodeHighlight(status);
@@ -212,6 +230,9 @@ function nodeClassName(status?: NodeStatus, disabled?: boolean, type?: string): 
     return classes.join(' ');
 }
 
+/**
+ * Predictable lane ordering keeps canvas categories aligned vertically.
+ */
 function laneIndexForType(type?: string): number {
     if (!type) return 0;
     if (type.startsWith('control')) return 0;
@@ -222,6 +243,9 @@ function laneIndexForType(type?: string): number {
 }
 
 const GRID_SIZE = 20;
+/**
+ * Rounds coordinates to a fixed grid for tidy layout and alignment.
+ */
 const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 /**
@@ -253,6 +277,9 @@ export function FlowCanvas({
         []
     );
 
+    /**
+     * Opens the palette with the selected edge so the user can insert a node inline.
+     */
     const handleEdgeInsertRequest = useCallback(
         (edgeId: string, position: { x: number; y: number }) => {
             setPendingInsert({ edgeId, position });
@@ -291,6 +318,9 @@ export function FlowCanvas({
         });
     }, [edges, handleEdgeInsertRequest]);
 
+    /**
+     * Enforces match between control/data handles and prevents duplicate data inputs.
+     */
     const isValidConnection = useCallback(
         (connection: Connection | Edge) => {
             if (!connection.sourceHandle || !connection.targetHandle) return false;
@@ -313,6 +343,9 @@ export function FlowCanvas({
         [edges]
     );
 
+    /**
+     * Adds a new edge, applies implied data wiring, and respects validation.
+     */
     const onConnect = useCallback(
         (connection: Connection) => {
             if (!isValidConnection(connection)) return;
@@ -346,6 +379,9 @@ export function FlowCanvas({
         onEdgesChange(edges);
     }, [edges, onEdgesChange]);
 
+    /**
+     * Loads the curated demo template and recenters the view.
+     */
     const handleLoadTemplate = useCallback(() => {
         const templateNodes = buildTemplateNodes().map((node) => {
             if (node.data && typeof node.data === 'object' && 'pair' in node.data) {
@@ -361,6 +397,9 @@ export function FlowCanvas({
         fitView({ padding: 0.2, duration: 300 });
     }, [activePair, fitView, setEdges, setNodes, setPendingInsert, setPendingTidy]);
 
+    /**
+     * Instantiates nodes, wires implied edges, and honors pending inserts into control chains.
+     */
     const handleAddNode = useCallback(
         (type: string, position?: { x: number; y: number }) => {
             const meta = nodeDefinitionMap[type];
@@ -451,6 +490,9 @@ export function FlowCanvas({
         );
     }, [nodeStatuses, setNodes]);
 
+    /**
+     * Cleans up connected edges when nodes are removed.
+     */
     const onNodesDelete = useCallback(
         (deleted: Node[]) => {
             const deletedIds = new Set(deleted.map((n) => n.id));
@@ -462,6 +504,9 @@ export function FlowCanvas({
         [setNodes, setEdges]
     );
 
+    /**
+     * Removes dangling data edges when their control carrier is deleted.
+     */
     const onEdgesDelete = useCallback(
         (deleted: Edge[]) => {
             const deletedIds = new Set(deleted.map((e) => e.id));
@@ -483,6 +528,9 @@ export function FlowCanvas({
         [setEdges]
     );
 
+    /**
+     * Delegates node-level execution requests back to the App controls.
+     */
     const handleRunNode = useCallback(
         (nodeId: string) => {
             onRunNode?.(nodeId);
@@ -490,6 +538,9 @@ export function FlowCanvas({
         [onRunNode]
     );
 
+    /**
+     * Toggles a node's disabled flag, preventing it from executing while keeping layout intact.
+     */
     const handleToggleNodeDisabled = useCallback(
         (nodeId: string) => {
             setNodes((nds) =>
@@ -512,6 +563,9 @@ export function FlowCanvas({
         [setNodes]
     );
 
+    /**
+     * Deletes a node and its associated edges when requested from the toolbar.
+     */
     const handleDeleteNode = useCallback(
         (nodeId: string) => {
             setNodes((nds) => nds.filter((node) => node.id !== nodeId));
@@ -520,6 +574,9 @@ export function FlowCanvas({
         [setEdges, setNodes]
     );
 
+    /**
+     * Ensures the viewport fits all nodes with sensible padding.
+     */
     const handleFitView = useCallback(() => {
         if (nodes.length === 0) {
             fitView({ padding: 0.9, minZoom: 0.8, maxZoom: 1.2 });
@@ -528,6 +585,9 @@ export function FlowCanvas({
         }
     }, [fitView, nodes.length]);
 
+    /**
+     * Computes a deterministic control-flow layout with column/row spacing and snaps nodes to grid.
+     */
     const handleTidyLayout = useCallback(() => {
         if (nodes.length === 0) {
             handleFitView();

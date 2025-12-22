@@ -1,3 +1,6 @@
+/**
+ * Hardcoded pair list plus helpers used when live pair catalog is absent.
+ */
 import { AssetMeta, getAssetMeta } from './assets';
 
 export interface TradingPair {

@@ -1,3 +1,6 @@
+/**
+ * Aggregates Kraken ticker + depth snapshots for the UI's market dock/preview.
+ */
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { fetchTicker, fetchDepth } from '@kraken-dad/kraken-client';
 

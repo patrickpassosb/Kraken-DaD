@@ -65,6 +65,9 @@ function mockMarketContext(pair: string): MarketContext {
     return { pair: normalized, ...context };
 }
 
+/**
+ * Parses user-filled price inputs, tolerating strings, and returns a finite number.
+ */
 function normalizePrice(value: unknown): number | undefined {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     if (typeof value === 'string') {

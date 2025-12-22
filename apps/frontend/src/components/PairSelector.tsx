@@ -10,6 +10,9 @@ interface PairSelectorProps {
     pairs?: PairItem[];
 }
 
+/**
+ * Renders an asset-specific icon with fallback initials and gradient.
+ */
 function AssetBadge({ symbol }: { symbol: string }) {
     const meta = getAssetMeta(symbol);
     const [iconOk, setIconOk] = useState(true);

@@ -2,6 +2,10 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import WebSocket from 'ws';
 import { fetchTicker, fetchDepth, normalizePair } from '@kraken-dad/kraken-client';
 
+/**
+ * Maintains cached ticker snapshots and SSE plumbing so clients can receive
+ * lightweight Kraken updates without opening raw WS connections themselves.
+ */
 type TickerSnapshot = {
     pair: string;
     last: number;
@@ -26,10 +30,16 @@ const MARKET_FALLBACKS: Record<string, { last: number; ask?: number; bid?: numbe
 
 const streams = new Map<string, StreamState>();
 
+/**
+ * Normalizes symbols for cache keys (uppercase, no whitespace).
+ */
 function pairKey(pair: string): string {
     return pair.trim().toUpperCase();
 }
 
+/**
+ * Lazily creates per-pair stream state (socket + subscriber count).
+ */
 function getOrCreateStreamState(pair: string): StreamState {
     const key = pairKey(pair);
     const existing = streams.get(key);
@@ -39,6 +49,9 @@ function getOrCreateStreamState(pair: string): StreamState {
     return initial;
 }
 
+/**
+ * Returns a fallback snapshot used when Kraken traffic is unavailable.
+ */
 function fallbackSnapshot(pair: string): TickerSnapshot {
     const key = pairKey(pair);
     const fallback = MARKET_FALLBACKS[key] ?? { last: 42000, spread: 2.5 };
@@ -53,12 +66,18 @@ function fallbackSnapshot(pair: string): TickerSnapshot {
     };
 }
 
+/**
+ * Stores the latest ticker snapshot for a pair.
+ */
 function setSnapshot(pair: string, snapshot: TickerSnapshot) {
     const key = pairKey(pair);
     const current = getOrCreateStreamState(key);
     streams.set(key, { ...current, lastSnapshot: snapshot });
 }
 
+/**
+ * Reads the cached snapshot or falls back to a static placeholder.
+ */
 function getSnapshot(pair: string): TickerSnapshot {
     const key = pairKey(pair);
     const state = getOrCreateStreamState(key);
@@ -66,6 +85,9 @@ function getSnapshot(pair: string): TickerSnapshot {
     return fallbackSnapshot(key);
 }
 
+/**
+ * When the WS connection drops, schedule a reconnect while subscribers remain.
+ */
 function scheduleReconnect(pair: string, delayMs: number, log: FastifyInstance['log']) {
     const key = pairKey(pair);
     const state = getOrCreateStreamState(key);
@@ -78,6 +100,9 @@ function scheduleReconnect(pair: string, delayMs: number, log: FastifyInstance['
     streams.set(key, state);
 }
 
+/**
+ * Tears down sockets/timers when no clients remain subscribed.
+ */
 function cleanupStream(pair: string, log: FastifyInstance['log']) {
     const key = pairKey(pair);
     const state = streams.get(key);
@@ -95,6 +120,9 @@ function cleanupStream(pair: string, log: FastifyInstance['log']) {
     log.debug({ pair: key }, 'Cleaned up Kraken stream state');
 }
 
+/**
+ * Tracks an incoming SSE client that wants live updates for this pair.
+ */
 function incrementSubscribers(pair: string): number {
     const state = getOrCreateStreamState(pair);
     state.subscribers += 1;
@@ -102,6 +130,9 @@ function incrementSubscribers(pair: string): number {
     return state.subscribers;
 }
 
+/**
+ * Decrements subscriber count and cleans up if nobody remains.
+ */
 function decrementSubscribers(pair: string, log: FastifyInstance['log']): number {
     const key = pairKey(pair);
     const state = getOrCreateStreamState(key);
@@ -113,6 +144,9 @@ function decrementSubscribers(pair: string, log: FastifyInstance['log']): number
     return state.subscribers;
 }
 
+/**
+ * Fetches a REST snapshot to kickstart the SSE stream before WS ticks flow in.
+ */
 async function seedFromRest(pair: string, log: FastifyInstance['log']) {
     try {
         const [ticker, depth] = await Promise.all([fetchTicker(pair), fetchDepth(pair, 10)]);
@@ -134,6 +168,9 @@ async function seedFromRest(pair: string, log: FastifyInstance['log']) {
 /**
  * Opens a Kraken WS ticker stream for the requested pair and stores the latest
  * snapshot; reconnects automatically when subscribers still exist.
+ */
+/**
+ * Opens the Kraken WS ticker stream and updates cache/reconnects as needed.
  */
 function startWs(pair: string, log: FastifyInstance['log']) {
     const key = pairKey(pair);
@@ -203,6 +240,9 @@ interface StreamQuery {
     retry?: string;
 }
 
+/**
+ * SSE endpoint that proxies the cached ticker snapshots to browsers.
+ */
 export async function marketStreamRoute(fastify: FastifyInstance) {
     /**
      * GET /market/stream

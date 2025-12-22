@@ -8,6 +8,13 @@ Kraken DaD is a **Kraken-native low-code strategy builder**. It allows traders t
 
 ---
 
+## Why it exists
+
+Traditional trading tools focus on dashboards or manual API calls. Kraken DaD builds a *logic composer*—inspired by Node-RED and the official Kraken Pro aesthetic—so you can chain the same decision-making blocks that the strategy engine understands, then gate, validate, and optionally execute them safely.
+
+
+---
+
 ## Key Features
 - **Visual Strategy Composition**: React Flow-powered canvas with drag-and-drop blocks.
 - **Real-Time Market Context**: Integrated Kraken WebSocket streams for live ticker/price updates.

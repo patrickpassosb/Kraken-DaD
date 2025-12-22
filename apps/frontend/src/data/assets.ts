@@ -1,3 +1,6 @@
+/**
+ * Asset metadata, alias tables, and helpers powering icon/fallback styling in the UI.
+ */
 import { assetMeta as generatedAssetMeta } from './assets.generated';
 
 export interface AssetMeta {
@@ -81,6 +84,9 @@ export function getAssetMeta(symbol: string): AssetMeta | undefined {
     return assetMeta[symbol.toUpperCase()];
 }
 
+/**
+ * Helper to build CoinGecko CDN URLs by asset ID.
+ */
 function getCoinGeckoUrl(id: string): string {
     return `https://assets.coingecko.com/coins/images/${id}/small.png`;
 }
@@ -117,6 +123,9 @@ const geckoHints: Record<string, string> = {
     SOL: '4128',
 };
 
+/**
+ * Resolves the best-known icon URL for an asset (prefers metadata, falls back to CoinGecko or cryptoicons).
+ */
 export function getAssetIconUrl(symbol: string): string | undefined {
     const meta = getAssetMeta(symbol);
     if (meta?.icon) return meta.icon;

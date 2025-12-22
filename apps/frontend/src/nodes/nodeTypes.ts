@@ -1,3 +1,6 @@
+/**
+ * Maps strategy block ids to the React Flow components that render them.
+ */
 import { StartNode } from './StartNode';
 import { KrakenTickerNode } from './KrakenTickerNode';
 import { ConstantNode } from './ConstantNode';

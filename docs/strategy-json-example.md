@@ -1,6 +1,6 @@
 # Strategy JSON Example
 
-This is a minimal strategy payload that runs a Kraken ticker → condition → place order flow.
+The Kraken DaD executor expects a strict schema defined in `packages/strategy-core/schema.ts` (see `SCHEMA_VERSION`). A payload includes a `version`, descriptive `metadata`, a node list, and the control/data `edges` that drive execution. The JSON below represents a simple flow: start → ticker → condition → place order.
 
 ```json
 {
@@ -82,6 +82,24 @@ This is a minimal strategy payload that runs a Kraken ticker → condition → p
 }
 ```
 
-Notes:
-- `sourcePort`/`targetPort` values are port IDs without the `control:`/`data:` prefixes.
-- Control edges drive execution order; data edges move values between nodes.
+### Metadata
+- `version` must match `SCHEMA_VERSION`. When `strategy-core` increments the schema, serializers like `toStrategyJSON` bump the value automatically.
+- `metadata` captures a human-friendly name/description plus `createdAt`/`updatedAt` timestamps.
+
+### Nodes
+Each node entry contains
+- `id`: unique identifier used by edges and logs
+- `type`: block id (`control.*`, `data.*`, `logic.*`, `action.*`)
+- `config`: node-specific settings (pair, thresholds, amount, etc.)
+- `position`: React Flow coordinates for UI persistence
+
+### Edges
+- **Control edges** (type `control`) determine execution order. `sourcePort`/`targetPort` map to handle IDs like `control:out` and `control:in`.
+- **Data edges** (type `data`) move values (price, spread, order IDs). `sourcePort`/`targetPort` drop the `data:` prefix in the schema; e.g., `price` in the example above.
+- Each edge must reference existing node IDs and valid port names, otherwise the dry-run executor emits a `PORT_NOT_FOUND` error.
+
+### Partial execution & validation
+- `executeStrategy` can pass `targetNodeId` to only run the subgraph that leads into a specific node (via `collectDependencyNodes`).
+- The backend honors `validate=true` by calling Kraken `validateAddOrder`/`validateCancelOrder` before the UI receives `krakenValidations`.
+
+See `docs/execution-lifecycle.md` for a complete list of validation errors, warnings, and action intent structures associated with this JSON payload.

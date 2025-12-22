@@ -1,3 +1,6 @@
+/**
+ * Offers normalized Kraken pair metadata for dropdowns and defaults.
+ */
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { fetchAssets, fetchAssetPairs } from '@kraken-dad/kraken-client';
 

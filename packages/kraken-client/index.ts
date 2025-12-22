@@ -1,3 +1,6 @@
+/**
+ * Lightweight Kraken helpers for REST/WS market data plus private order intents.
+ */
 import { createHash, createHmac } from 'crypto';
 import WebSocket from 'ws';
 
@@ -101,6 +104,9 @@ interface KrakenCredentialsStatus {
 let runtimeCreds: KrakenCredentials | null = null;
 let lastNonce = 0;
 
+/**
+ * Generates a strictly increasing nonce so Kraken private endpoints accept sequential invocations.
+ */
 function nextNonce(): string {
     const now = Date.now();
     if (now <= lastNonce) {
@@ -157,12 +163,18 @@ export function normalizePair(pair: string): { krakenPair: string; display: stri
     return { krakenPair, display: `${baseNorm.replace('XBT', 'BTC')}/${quote}` };
 }
 
+/**
+ * Throws with the HTTP status when Kraken responds with a non-2xx code.
+ */
 function ensureFetchResponse(response: Response) {
     if (!response.ok) {
         throw new Error(`Kraken API error: HTTP ${response.status}`);
     }
 }
 
+/**
+ * Pulls the first bucket from Kraken REST replies (payloads are keyed by pair symbols).
+ */
 function firstResult<T>(result?: Record<string, T>): T {
     if (!result) {
         throw new Error('Kraken API error: empty result');
@@ -174,6 +186,9 @@ function firstResult<T>(result?: Record<string, T>): T {
     return result[key];
 }
 
+/**
+ * Converts string or numeric fields into finite numbers, returning undefined for invalid inputs.
+ */
 function toNumber(value: unknown): number | undefined {
     const num = typeof value === 'string' ? parseFloat(value) : typeof value === 'number' ? value : undefined;
     if (num === undefined || Number.isNaN(num)) {
@@ -511,6 +526,9 @@ export async function cancelOrder(txid: string): Promise<Record<string, unknown>
     return privatePost('/0/private/CancelOrder', body, creds.secret, creds.key);
 }
 
+/**
+ * Sends signed POST payload to Kraken private APIs and unwraps the JSON result.
+ */
 async function privatePost(
     path: string,
     body: URLSearchParams,
@@ -539,6 +557,9 @@ async function privatePost(
     return payload.result ?? {};
 }
 
+/**
+ * Builds Kraken's HMAC-SHA512 signature using the request path and hashed body.
+ */
 function signRequest(path: string, body: URLSearchParams, secret: string): string {
     const secretBuffer = Buffer.from(secret, 'base64');
     const bodyString = body.toString();

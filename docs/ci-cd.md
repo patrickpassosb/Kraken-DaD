@@ -1,18 +1,27 @@
 # CI/CD overview
 
-This repo now uses two focused GitHub Actions workflows:
+The repository uses two GitHub Actions workflows:
 
-1. **`ci.yml`** – PR/main validation
-   - Triggers on PRs, pushes to `main`/`master`, and manual `workflow_dispatch`.
-   - Skips docs/assets-only changes for faster feedback.
-   - Separate jobs for shared packages (TypeScript check via `tsconfig.shared.json`), backend build, and frontend build. All steps use Node 20 with npm caching keyed to the relevant `package-lock.json` files.
-   - Frontend is built (tsc + Vite) but not deployed because Vercel already handles production deploys.
+## `ci.yml` — validation for every push/PR
 
-2. **`backend-cd.yml`** – optional backend packaging
-   - Manual-only workflow so deploys stay opt-in and demo-safe.
-   - Reuses the same install/build steps as CI.
-   - Optional Docker image build (disabled by default) produces a tarball artifact for Cloud Run/App Runner or other registries when enabled.
+This workflow runs automatically on pushes and pull requests, but it skips docs/assets-only commits to keep feedback fast. Each job uses Node.js 20 and reuses `package-lock.json` caching.
 
-## Deployment notes
-- The frontend remains Vercel-managed; CI catches type/build issues before Vercel promotes a build.
-- Backend Dockerfile (`apps/backend/Dockerfile`) runs the Fastify server via `tsx` for a minimal dev-friendly image. Replace the command with a compiled `dist` entrypoint if emit is added later.
+1. **Shared package type checks** (`npm exec --prefix apps/backend -- tsc -p tsconfig.shared.json`)
+   - Verifies the shared workspace typings without rebuilding the backend.
+   - Runs in its own job so changes to `packages/strategy-core` or `packages/kraken-client` fail fast.
+2. **Backend build** (`apps/backend`) and **Frontend build** (`apps/frontend`)
+   - Each job checks out the repo, installs dependencies via `npm ci`, and runs `npm run build` inside the respective package.
+   - The frontend build is a Vite build that also type-checks the UI, keeping production assets “build ready.”
+
+## `backend-cd.yml` — optional backend packaging
+
+This workflow is manual (`workflow_dispatch`) and can also run on push events.
+- It shares the same Node.js setup and install steps as `ci.yml`.
+- Runs `npm run build` inside `apps/backend` (TypeScript no-emit plus sanity checks).
+- When `build_image` is true, it builds `apps/backend/Dockerfile` locally, tags the image, and exports it to a tarball artifact for manual deployment (Cloud Run, App Runner, etc.). This keeps deployments opt-in while still providing a reproducible artifact.
+
+### Key principles
+
+- **Caching**: All jobs cache npm dependencies via `actions/setup-node@v4` using `package-lock.json`.
+- **Separation**: Shared workspace validation runs separately from frontend/backend builds, so cross-package issues surface early.
+- **Manual deploys**: Docker packaging is optional to keep everyday PRs fast while still supporting controlled releases.

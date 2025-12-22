@@ -210,7 +210,24 @@ interface NodeExecutionLog {
 
 ---
 
-## 8. Summary
+## 9. Market data context
+
+The backend builds execution context before calling `executeDryRun`. `apps/backend/src/routes/execute.ts` inspects the strategy for which pairs, OHLC intervals, spreads, and asset metadata are required, then calls `buildExecutionData`:
+- Ticker data is fetched via both REST `fetchTicker`/`fetchDepth` and a one-shot WS (`fetchTickerWsOnce`) with 2.5s timeouts. Falling back to `MARKET_FALLBACKS` ensures the UI never stalls.
+- OHLC and spread snapshots are chopped to at most the requested counts (`normalizeInterval` / `normalizeCount` keep Kraken’s limits intact).
+- Asset pair metadata is normalized through `resolveAssetPairMetadata`, which reconciles display aliases, `wsname`, and Kraken IDs for tick size validation.
+- Every fetch writes a warning (`ExecutionWarning`) when Kraken is unreachable, so the front-end can surface “backup snapshot” messaging.
+
+The assembled context (`marketData`, `ohlcData`, `spreadData`, `assetPairData`) is stitched into `ExecutionContext` and passed into `executeDryRun`. This keeps environment data deterministic and localized to each request/strategy run.
+
+## 10. Kraken validation & live actions
+
+`executeRoute` drives validation and optional live execution:
+- Dry-run mode always triggers the shared executor, then `applyKrakenValidation` calls `validateAddOrder`/`validateCancelOrder` for each `ActionIntent` (if credentials are configured). Validation responses (and errors when Kraken rejects a dry-run) are appended to `ExecutionResult.krakenValidations`.
+- Live mode (`mode === 'live'`) first ensures credentials exist (`hasPrivateCreds`). If no creds are configured, the route fails fast with `LIVE_CREDENTIALS_MISSING`. Otherwise, `applyKrakenLive` reuses `resolveOrderParams` to guard limit orders, posts to `/0/private/AddOrder` or `/0/private/CancelOrder`, and pushes `LiveActionResult`s plus any runtime errors.
+- The backend keeps credential toggles in memory via `packages/kraken-client` helpers (`setPrivateCreds`, `clearPrivateCreds`) so the UI never asks the browser to store secrets.
+
+## 11. Summary
 
 | Aspect | Rule |
 |--------|------|
