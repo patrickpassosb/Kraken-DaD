@@ -1,8 +1,14 @@
+/**
+ * Lightweight Kraken helpers for REST/WS market data plus private order intents.
+ */
 import { createHash, createHmac } from 'crypto';
 import WebSocket from 'ws';
 const API_BASE = 'https://api.kraken.com';
 let runtimeCreds = null;
 let lastNonce = 0;
+/**
+ * Generates a strictly increasing nonce so Kraken private endpoints accept sequential invocations.
+ */
 function nextNonce() {
     const now = Date.now();
     if (now <= lastNonce) {
@@ -55,11 +61,17 @@ export function normalizePair(pair) {
     const krakenPair = `${baseNorm}${quote}`;
     return { krakenPair, display: `${baseNorm.replace('XBT', 'BTC')}/${quote}` };
 }
+/**
+ * Throws with the HTTP status when Kraken responds with a non-2xx code.
+ */
 function ensureFetchResponse(response) {
     if (!response.ok) {
         throw new Error(`Kraken API error: HTTP ${response.status}`);
     }
 }
+/**
+ * Pulls the first bucket from Kraken REST replies (payloads are keyed by pair symbols).
+ */
 function firstResult(result) {
     if (!result) {
         throw new Error('Kraken API error: empty result');
@@ -70,6 +82,9 @@ function firstResult(result) {
     }
     return result[key];
 }
+/**
+ * Converts string or numeric fields into finite numbers, returning undefined for invalid inputs.
+ */
 function toNumber(value) {
     const num = typeof value === 'string' ? parseFloat(value) : typeof value === 'number' ? value : undefined;
     if (num === undefined || Number.isNaN(num)) {
@@ -359,6 +374,9 @@ export async function cancelOrder(txid) {
     });
     return privatePost('/0/private/CancelOrder', body, creds.secret, creds.key);
 }
+/**
+ * Sends signed POST payload to Kraken private APIs and unwraps the JSON result.
+ */
 async function privatePost(path, body, secret, apiKey) {
     const url = `${API_BASE}${path}`;
     const signature = signRequest(path, body, secret);
@@ -378,6 +396,9 @@ async function privatePost(path, body, secret, apiKey) {
     }
     return payload.result ?? {};
 }
+/**
+ * Builds Kraken's HMAC-SHA512 signature using the request path and hashed body.
+ */
 function signRequest(path, body, secret) {
     const secretBuffer = Buffer.from(secret, 'base64');
     const bodyString = body.toString();

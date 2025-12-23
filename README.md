@@ -2,7 +2,7 @@
 
 **Kraken Drag-and-Drop**
 
-[![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red)](https://www.youtube.com/watch?v=PLACEHOLDER) *(Click to watch the walkthrough)*
+[![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red)](https://youtu.be/y7i5judS6wo?si=nydQv8mCfV9o-o-W) *(Click to watch the walkthrough)*
 
 Kraken DaD is a **Kraken-native low-code strategy builder**. It allows traders to visually compose strategies using a "Node-RED for Trading" interface, execute them safely in a dry-run environment, and (optionally) deploy them for live trading.
 
